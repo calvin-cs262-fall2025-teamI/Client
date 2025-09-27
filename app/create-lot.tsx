@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Button,
-  Dimensions,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,7 +24,11 @@ export default function CreateLotScreen() {
   const [rows, setRows] = useState("4");
   const [cols, setCols] = useState("10");
   const [spaces, setSpaces] = useState<Space[]>([]);
+  const [editingSpace, setEditingSpace] = useState<Space | null>(null);
 
+  const scale = 40; // pixels per meter
+
+  // Standard dimensions (meters)
   const spaceWidth = 2.5;
   const spaceDepth = 5;
   const aisleWidth = 6;
@@ -36,13 +39,7 @@ export default function CreateLotScreen() {
   const lotWidth = colCount * spaceWidth;
   const lotHeight = rowCount * (spaceDepth + aisleWidth) - aisleWidth;
 
-  const screenWidth = Dimensions.get("window").width - 40;
-  const screenHeight = Dimensions.get("window").height - 200;
-  const scaleX = screenWidth / lotWidth;
-  const scaleY = screenHeight / lotHeight;
-  const scale = Math.min(scaleX, scaleY, 15);
-
-  // Initialize spaces whenever rows/cols change
+  // Initialize spaces when rows/cols change
   useEffect(() => {
     let id = 1;
     const arr: Space[] = [];
@@ -53,19 +50,6 @@ export default function CreateLotScreen() {
     }
     setSpaces(arr);
   }, [rowCount, colCount]);
-
-  const handleChangeSpaceType = (space: Space) => {
-    Alert.alert(
-      "Select Space Type",
-      `Change type for space ${space.id}`,
-      [
-        { text: "Regular", onPress: () => updateSpaceType(space.id, "regular") },
-        { text: "Visitor", onPress: () => updateSpaceType(space.id, "visitor") },
-        { text: "Handicapped", onPress: () => updateSpaceType(space.id, "handicapped") },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  };
 
   const updateSpaceType = (id: number, type: SpaceType) => {
     setSpaces((prev) => prev.map((s) => (s.id === id ? { ...s, type } : s)));
@@ -91,10 +75,10 @@ export default function CreateLotScreen() {
         body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error("Failed to save lot");
-      Alert.alert("Success", "Parking lot saved successfully!");
+      alert("Parking lot saved successfully!");
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Could not save parking lot");
+      alert("Could not save parking lot");
     }
   };
 
@@ -108,80 +92,87 @@ export default function CreateLotScreen() {
           <LabelInput label="Columns" value={cols} setValue={setCols} />
         </View>
 
-        <View style={styles.canvas}>
-          <ScrollView horizontal contentContainerStyle={{ width: lotWidth * scale }}>
-            <ScrollView contentContainerStyle={{ height: lotHeight * scale }}>
-              <Svg
-                viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-                width={lotWidth * scale}
-                height={lotHeight * scale}
-              >
-                {/* Background */}
-                <Rect
-                  x={0}
-                  y={0}
-                  width={lotWidth}
-                  height={lotHeight}
-                  fill="#e9f0f7"
-                  stroke="#64748b"
-                  strokeWidth={0.05}
-                />
-
-                {/* Parking Spaces */}
-                {spaces.map((s) => {
-                  const x = s.col * spaceWidth;
-                  const y = s.row * (spaceDepth + aisleWidth);
-                  return (
-                    <React.Fragment key={s.id}>
-                      <Rect
-                        x={x}
-                        y={y}
-                        width={spaceWidth}
-                        height={spaceDepth}
-                        fill={getSpaceColor(s.type)}
-                        stroke="#0b486b"
-                        strokeWidth={0.05}
-                        onPress={() => handleChangeSpaceType(s)}
-                      />
-                      <SvgText
-                        x={x + spaceWidth / 2}
-                        y={y + spaceDepth / 2}
-                        fill="#0b486b"
-                        fontSize={0.6}
-                        textAnchor="middle"
-                        alignmentBaseline="middle"
-                      >
-                        {`${s.type === "regular" ? "P" : s.type[0].toUpperCase()}${s.id}`}
-                      </SvgText>
-                    </React.Fragment>
-                  );
-                })}
-              </Svg>
-            </ScrollView>
-          </ScrollView>
-        </View>
-
-        {/* Legend */}
-        <View style={styles.legendContainer}>
-          <Text style={styles.legendTitle}>Legend:</Text>
-          <View style={styles.legendRow}>
-            <View style={[styles.legendColor, { backgroundColor: "#fff", borderWidth: 1 }]} />
-            <Text style={styles.legendLabel}>Regular</Text>
+        <ScrollView horizontal style={styles.canvas}>
+          <View style={{ width: lotWidth * scale, height: lotHeight * scale }}>
+            <Svg
+              viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+              width={lotWidth * scale}
+              height={lotHeight * scale}
+            >
+              {/* Background */}
+              <Rect
+                x={0}
+                y={0}
+                width={lotWidth}
+                height={lotHeight}
+                fill="#e9f0f7"
+                stroke="#64748b"
+                strokeWidth={0.05}
+              />
+              {/* Spaces */}
+              {spaces.map((s) => (
+                <React.Fragment key={s.id}>
+                  <Rect
+                    x={s.col * spaceWidth}
+                    y={s.row * (spaceDepth + aisleWidth)}
+                    width={spaceWidth}
+                    height={spaceDepth}
+                    fill={getSpaceColor(s.type)}
+                    stroke="#0b486b"
+                    strokeWidth={0.05}
+                    onPress={() => setEditingSpace(s)}
+                  />
+                  <SvgText
+                    x={s.col * spaceWidth + spaceWidth / 2}
+                    y={s.row * (spaceDepth + aisleWidth) + spaceDepth / 2}
+                    fill="#0b486b"
+                    fontSize={0.5}
+                    textAnchor="middle"
+                    alignmentBaseline="middle"
+                    onPress={() => setEditingSpace(s)}
+                  >
+                    {`P${s.id}`}
+                  </SvgText>
+                </React.Fragment>
+              ))}
+            </Svg>
           </View>
-          <View style={styles.legendRow}>
-            <View style={[styles.legendColor, { backgroundColor: "#FFD700" }]} />
-            <Text style={styles.legendLabel}>Visitor</Text>
-          </View>
-          <View style={styles.legendRow}>
-            <View style={[styles.legendColor, { backgroundColor: "#00BFFF" }]} />
-            <Text style={styles.legendLabel}>Handicapped</Text>
-          </View>
-        </View>
+        </ScrollView>
 
-        {/* Save button */}
         <View style={styles.buttonContainer}>
           <Button title="Save Parking Lot" onPress={handleSave} />
         </View>
+
+        {/* Modal for editing space type */}
+        {editingSpace && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modal}>
+              <Text style={{ fontWeight: "bold", marginBottom: 10 }}>
+                Change type for space {editingSpace.id}
+              </Text>
+              {(["regular", "visitor", "handicapped"] as SpaceType[]).map(
+                (type) => (
+                  <Pressable
+                    key={type}
+                    style={styles.modalButton}
+                    onPress={() => {
+                      updateSpaceType(editingSpace.id, type);
+                      setEditingSpace(null);
+                    }}
+                  >
+                    <Text style={{ color: "#fff" }}>{type}</Text>
+                  </Pressable>
+                )
+              )}
+              <Pressable
+                style={[styles.modalButton, { backgroundColor: "#aaa" }]}
+                onPress={() => setEditingSpace(null)}
+              >
+                <Text style={{ color: "#fff" }}>Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -240,20 +231,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    alignItems: "center",
-    justifyContent: "center",
   },
   buttonContainer: { marginTop: 20 },
-  legendContainer: {
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
   },
-  legendTitle: { fontWeight: "700", marginBottom: 8, color: "#0f172a" },
-  legendRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
-  legendColor: { width: 20, height: 20, marginRight: 8, borderColor: "#0b486b" },
-  legendLabel: { fontSize: 14, color: "#475569" },
+  modal: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 8,
+    width: 200,
+    alignItems: "center",
+  },
+  modalButton: {
+    backgroundColor: "#0b486b",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    marginVertical: 4,
+    width: "100%",
+    alignItems: "center",
+  },
 });
