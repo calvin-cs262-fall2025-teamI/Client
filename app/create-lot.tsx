@@ -61,6 +61,8 @@ export default function CreateLotScreen() {
         return "#FFD700";
       case "handicapped":
         return "#00BFFF";
+      case "authorized personnel":
+        return "#FF4500";
       default:
         return "#fff";
     }
@@ -150,7 +152,7 @@ export default function CreateLotScreen() {
               <Text style={{ fontWeight: "bold", marginBottom: 10 }}>
                 Change type for space {editingSpace.id}
               </Text>
-              {(["regular", "visitor", "handicapped"] as SpaceType[]).map(
+              {(["regular", "visitor", "handicapped", "authorized personnel"] as SpaceType[]).map(
                 (type) => (
                   <Pressable
                     key={type}
