@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
-type SpaceType = "regular" | "visitor" | "handicapped";
+type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
 
 interface Space {
   id: number;
