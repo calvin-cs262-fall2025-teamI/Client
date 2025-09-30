@@ -140,7 +140,7 @@ export default function CreateLotScreen() {
             </Svg>
           </View>
         </ScrollView>
-
+        <Legend />
         <View style={styles.buttonContainer}>
           <Button title="Save Parking Lot" onPress={handleSave} />
         </View>
@@ -202,6 +202,29 @@ function LabelInput({
   );
 }
 
+function Legend() {
+  const legendItems: { type: SpaceType; label: string; color: string }[] = [
+    { type: "regular", label: "Regular", color: "#fff" },
+    { type: "visitor", label: "Visitor", color: "#FFD700" },
+    { type: "handicapped", label: "Handicapped", color: "#00BFFF" },
+    { type: "authorized personnel", label: "Authorized Personnel", color: "#FF4500" },
+  ];
+
+  return (
+    <View style={styles.legendContainer}>
+      {legendItems.map((item) => (
+        <View key={item.type} style={styles.legendItem}>
+          <View
+            style={[styles.legendColor, { backgroundColor: item.color, borderColor: "#0b486b" }]}
+          />
+          <Text style={styles.legendLabel}>{item.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f3f6f9" },
   container: { padding: 20 },
@@ -262,4 +285,27 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
   },
+  legendContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 8,
+  },
+  legendColor: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    marginRight: 6,
+  },
+  legendLabel: {
+    fontSize: 14,
+    color: "#0f172a",
+  },
+
 });
