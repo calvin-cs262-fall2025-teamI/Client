@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from "react";
-import {
-  Button,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Button, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
+
 
 type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
 
@@ -25,8 +18,9 @@ export default function CreateLotScreen() {
   const [cols, setCols] = useState("10");
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
+  const [lotName, setLotName] = useState("");
 
-  const scale = 40; // pixels per meter
+  const scale = Platform.OS === "web" ? 40 : 18; // smaller on mobile
 
   // Standard dimensions (meters)
   const spaceWidth = 2.5;
@@ -69,7 +63,12 @@ export default function CreateLotScreen() {
   };
 
   const handleSave = async () => {
-    const payload = { rows: rowCount, cols: colCount, spaces };
+    if (!lotName.trim()) {
+      alert("Please enter a lot name before saving.");
+      return;
+    }
+
+    const payload = { name: lotName, rows: rowCount, cols: colCount, spaces };
     try {
       const response = await fetch("http://localhost:3000/api/parking-lots", {
         method: "POST",
@@ -88,10 +87,10 @@ export default function CreateLotScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Parking Lot Maker</Text>
-
         <View style={styles.controls}>
-          <LabelInput label="Rows" value={rows} setValue={setRows} />
-          <LabelInput label="Columns" value={cols} setValue={setCols} />
+          <LabelInput label="Lot Name" value={lotName} setValue={setLotName} textType="default" />
+          <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" />
+          <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" />
         </View>
 
         <ScrollView horizontal style={styles.canvas}>
@@ -184,10 +183,12 @@ function LabelInput({
   label,
   value,
   setValue,
+  textType = "numeric",
 }: {
   label: string;
   value: string;
   setValue: (t: string) => void;
+  textType?: "numeric" | "default";
 }) {
   return (
     <View style={styles.inputGroup}>
@@ -196,7 +197,7 @@ function LabelInput({
         style={styles.input}
         value={value}
         onChangeText={setValue}
-        keyboardType="numeric"
+        keyboardType={textType === "numeric" ? "numeric" : "default"}
       />
     </View>
   );
@@ -286,25 +287,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   legendContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "flex-start",
     marginTop: 12,
     marginBottom: 20,
+    padding: 10,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 8,
+    marginVertical: 4,
   },
   legendColor: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     borderWidth: 1,
     marginRight: 6,
   },
   legendLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#0f172a",
   },
 
