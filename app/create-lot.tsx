@@ -19,6 +19,9 @@ export default function CreateLotScreen() {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
   const [lotName, setLotName] = useState("");
+  const [mergeRow1, setMergeRow1] = useState("");
+  const [mergeRow2, setMergeRow2] = useState("");
+  const [mergedAisles, setMergedAisles] = useState<Set<number>>(new Set());
 
   const scale = Platform.OS === "web" ? 40 : 18; // smaller on mobile
 
@@ -26,13 +29,68 @@ export default function CreateLotScreen() {
   const spaceWidth = 2.5;
   const spaceDepth = 5;
   const aisleWidth = 6;
+  const mergedAisleWidth = 0.1;
+
 
   const rowCount = parseInt(rows) || 0;
   const colCount = parseInt(cols) || 0;
 
-  const lotWidth = colCount * spaceWidth;
-  const lotHeight = rowCount * (spaceDepth + aisleWidth) - aisleWidth;
+  const getAisleWidth = (afterRow: number) => {
+    return mergedAisles.has(afterRow) ? mergedAisleWidth : aisleWidth;
+  };
 
+  const calculateLotHeight = () => {
+    let totalHeight = 0;
+    for (let r = 0; r < rowCount; r++) {
+      totalHeight += spaceDepth;
+      if (r < rowCount - 1) {
+        totalHeight += getAisleWidth(r);
+      }
+    }
+    return totalHeight;
+  };
+
+  const getRowYPosition = (row: number) => {
+    let y = 0;
+    for (let r = 0; r < row; r++) {
+      y += spaceDepth + getAisleWidth(r);
+    }
+    return y;
+  };
+
+  const lotWidth = colCount * spaceWidth;
+  const lotHeight = calculateLotHeight();
+
+  const handleMergeRows = () => {
+    const r1 = parseInt(mergeRow1);
+    const r2 = parseInt(mergeRow2);
+
+    if (isNaN(r1) || isNaN(r2)) {
+      alert("Please enter valid row numbers.");
+      return;
+    }
+
+    if (r1 < 0 || r1 >= rowCount || r2 < 0 || r2 >= rowCount) {
+      alert(`Row numbers must be between 0 and ${rowCount - 1}.`);
+      return;
+    }
+
+    if (Math.abs(r1 - r2) !== 1) {
+      alert("Rows must be adjacent to merge.");
+      return;
+    }
+
+    const lowerRow = Math.min(r1, r2);
+    setMergedAisles(prev => new Set(prev).add(lowerRow));
+    setMergeRow1("");
+    setMergeRow2("");
+    alert(`Successfully merged rows ${r1} and ${r2}!`);
+  };
+
+  const handleResetMerges = () => {
+    setMergedAisles(new Set());
+    alert("All row merges have been reset.");
+  };
   // Initialize spaces when rows/cols change
   useEffect(() => {
     let id = 1;
@@ -68,7 +126,13 @@ export default function CreateLotScreen() {
       return;
     }
 
-    const payload = { name: lotName, rows: rowCount, cols: colCount, spaces };
+    const payload = {
+      name: lotName,
+      rows: rowCount,
+      cols: colCount,
+      spaces,
+      mergedAisles: Array.from(mergedAisles)
+    };
     try {
       const response = await fetch("http://localhost:3000/api/parking-lots", {
         method: "POST",
@@ -92,7 +156,36 @@ export default function CreateLotScreen() {
           <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" />
           <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" />
         </View>
-
+        <View style={styles.controls}>
+          <Text style={styles.sectionTitle}>Merge Adjacent Rows</Text>
+          <LabelInput
+            label="First Row Number"
+            value={mergeRow1}
+            setValue={setMergeRow1}
+            textType="numeric"
+          />
+          <LabelInput
+            label="Second Row Number"
+            value={mergeRow2}
+            setValue={setMergeRow2}
+            textType="numeric"
+          />
+          <View style={styles.mergeButtons}>
+            <View style={styles.buttonWrapper}>
+              <Button title="Merge Rows" onPress={handleMergeRows} />
+            </View>
+            {mergedAisles.size > 0 && (
+              <View style={styles.buttonWrapper}>
+                <Button title="Reset Merges" onPress={handleResetMerges} color="#dc2626" />
+              </View>
+            )}
+          </View>
+          {mergedAisles.size > 0 && (
+            <Text style={styles.mergedInfo}>
+              Merged aisles: {Array.from(mergedAisles).sort((a, b) => a - b).map(r => `After row ${r}`).join(", ")}
+            </Text>
+          )}
+        </View>
         <ScrollView horizontal style={styles.canvas}>
           <View style={{ width: lotWidth * scale, height: lotHeight * scale }}>
             <Svg
@@ -115,7 +208,7 @@ export default function CreateLotScreen() {
                 <React.Fragment key={s.id}>
                   <Rect
                     x={s.col * spaceWidth}
-                    y={s.row * (spaceDepth + aisleWidth)}
+                    y={getRowYPosition(s.row)}
                     width={spaceWidth}
                     height={spaceDepth}
                     fill={getSpaceColor(s.type)}
@@ -125,7 +218,7 @@ export default function CreateLotScreen() {
                   />
                   <SvgText
                     x={s.col * spaceWidth + spaceWidth / 2}
-                    y={s.row * (spaceDepth + aisleWidth) + spaceDepth / 2}
+                    y={getRowYPosition(s.row) + spaceDepth / 2}
                     fill="#0b486b"
                     fontSize={0.5}
                     textAnchor="middle"
@@ -286,6 +379,26 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: "#0f172a",
+  },
+  mergeButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+  buttonWrapper: {
+    flex: 1,
+  },
+  mergedInfo: {
+    marginTop: 12,
+    fontSize: 13,
+    color: "#059669",
+    fontWeight: "500",
+  },
   legendContainer: {
     flexDirection: "column",
     alignItems: "flex-start",
@@ -312,5 +425,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#0f172a",
   },
-
 });
