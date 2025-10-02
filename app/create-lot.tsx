@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
@@ -22,8 +24,10 @@ export default function CreateLotScreen() {
   const [mergeRow1, setMergeRow1] = useState("");
   const [mergeRow2, setMergeRow2] = useState("");
   const [mergedAisles, setMergedAisles] = useState<Set<number>>(new Set());
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
 
-  const scale = Platform.OS === "web" ? 40 : 18; // smaller on mobile
+  const baseScaleValue = Platform.OS === "web" ? 40 : 18; // smaller on mobile
 
   // Standard dimensions (meters)
   const spaceWidth = 2.5;
@@ -91,6 +95,24 @@ export default function CreateLotScreen() {
     setMergedAisles(new Set());
     alert("All row merges have been reset.");
   };
+  // Zoom in/out map
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((e) => {
+      scale.value = savedScale.value * e.scale;
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+    });
+  const handleResetZoom = () => {
+    scale.value = withSpring(1);
+    savedScale.value = 1;
+  };
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
   // Initialize spaces when rows/cols change
   useEffect(() => {
     let id = 1;
@@ -148,127 +170,146 @@ export default function CreateLotScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Parking Lot Maker</Text>
-        <View style={styles.controls}>
-          <LabelInput label="Lot Name" value={lotName} setValue={setLotName} textType="default" />
-          <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" />
-          <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" />
-        </View>
-        <View style={styles.controls}>
-          <Text style={styles.sectionTitle}>Merge Adjacent Rows</Text>
-          <LabelInput
-            label="First Row Number"
-            value={mergeRow1}
-            setValue={setMergeRow1}
-            textType="numeric"
-          />
-          <LabelInput
-            label="Second Row Number"
-            value={mergeRow2}
-            setValue={setMergeRow2}
-            textType="numeric"
-          />
-          <View style={styles.mergeButtons}>
-            <View style={styles.buttonWrapper}>
-              <Button title="Merge Rows" onPress={handleMergeRows} />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.title}>Parking Lot Maker</Text>
+          <View style={styles.controls}>
+            <LabelInput label="Lot Name" value={lotName} setValue={setLotName} textType="default" />
+            <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" />
+            <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" />
+          </View>
+          <View style={styles.controls}>
+            <Text style={styles.sectionTitle}>Merge Adjacent Rows</Text>
+            <LabelInput
+              label="First Row Number"
+              value={mergeRow1}
+              setValue={setMergeRow1}
+              textType="numeric"
+            />
+            <LabelInput
+              label="Second Row Number"
+              value={mergeRow2}
+              setValue={setMergeRow2}
+              textType="numeric"
+            />
+            <View style={styles.mergeButtons}>
+              <View style={styles.buttonWrapper}>
+                <Button title="Merge Rows" onPress={handleMergeRows} />
+              </View>
+              {mergedAisles.size > 0 && (
+                <View style={styles.buttonWrapper}>
+                  <Button title="Reset Merges" onPress={handleResetMerges} color="#dc2626" />
+                </View>
+              )}
             </View>
             {mergedAisles.size > 0 && (
-              <View style={styles.buttonWrapper}>
-                <Button title="Reset Merges" onPress={handleResetMerges} color="#dc2626" />
-              </View>
+              <Text style={styles.mergedInfo}>
+                Merged aisles: {Array.from(mergedAisles).sort((a, b) => a - b).map(r => `After row ${r}`).join(", ")}
+              </Text>
             )}
           </View>
-          {mergedAisles.size > 0 && (
-            <Text style={styles.mergedInfo}>
-              Merged aisles: {Array.from(mergedAisles).sort((a, b) => a - b).map(r => `After row ${r}`).join(", ")}
-            </Text>
-          )}
-        </View>
-        <ScrollView horizontal style={styles.canvas}>
-          <View style={{ width: lotWidth * scale, height: lotHeight * scale }}>
-            <Svg
-              viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-              width={lotWidth * scale}
-              height={lotHeight * scale}
-            >
-              {/* Background */}
-              <Rect
-                x={0}
-                y={0}
-                width={lotWidth}
-                height={lotHeight}
-                fill="#e9f0f7"
-                stroke="#64748b"
-                strokeWidth={0.05}
-              />
-              {/* Spaces */}
-              {spaces.map((s) => (
-                <React.Fragment key={s.id}>
-                  <Rect
-                    x={s.col * spaceWidth}
-                    y={getRowYPosition(s.row)}
-                    width={spaceWidth}
-                    height={spaceDepth}
-                    fill={getSpaceColor(s.type)}
-                    stroke="#0b486b"
-                    strokeWidth={0.05}
-                    onPress={() => setEditingSpace(s)}
-                  />
-                  <SvgText
-                    x={s.col * spaceWidth + spaceWidth / 2}
-                    y={getRowYPosition(s.row) + spaceDepth / 2}
-                    fill="#0b486b"
-                    fontSize={0.5}
-                    textAnchor="middle"
-                    alignmentBaseline="middle"
-                    onPress={() => setEditingSpace(s)}
-                  >
-                    {`P${s.id}`}
-                  </SvgText>
-                </React.Fragment>
-              ))}
-            </Svg>
-          </View>
-        </ScrollView>
-        <Legend />
-        <View style={styles.buttonContainer}>
-          <Button title="Save Parking Lot" onPress={handleSave} />
-        </View>
-
-        {/* Modal for editing space type */}
-        {editingSpace && (
-          <View style={styles.modalOverlay}>
-            <View style={styles.modal}>
-              <Text style={{ fontWeight: "bold", marginBottom: 10 }}>
-                Change type for space {editingSpace.id}
-              </Text>
-              {(["regular", "visitor", "handicapped", "authorized personnel"] as SpaceType[]).map(
-                (type) => (
-                  <Pressable
-                    key={type}
-                    style={styles.modalButton}
-                    onPress={() => {
-                      updateSpaceType(editingSpace.id, type);
-                      setEditingSpace(null);
-                    }}
-                  >
-                    <Text style={{ color: "#fff" }}>{type}</Text>
-                  </Pressable>
-                )
-              )}
-              <Pressable
-                style={[styles.modalButton, { backgroundColor: "#aaa" }]}
-                onPress={() => setEditingSpace(null)}
-              >
-                <Text style={{ color: "#fff" }}>Cancel</Text>
-              </Pressable>
+          <View style={styles.controls}>
+            <Text style={styles.sectionTitle}>Zoom Controls</Text>
+            <Text style={styles.zoomLevel}>Pinch to zoom in/out</Text>
+            <View style={styles.buttonWrapper}>
+              <Button title="Reset Zoom" onPress={handleResetZoom} color="#0369a1" />
             </View>
           </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+          <ScrollView horizontal style={styles.canvas}>
+            <GestureDetector gesture={pinchGesture}>
+              <Animated.View
+                style={[
+                  {
+                    width: lotWidth * baseScaleValue,
+                    height: lotHeight * baseScaleValue,
+                  },
+                  animatedStyle
+                ]}
+              >
+                <Svg
+                  viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+                  width={lotWidth * baseScaleValue}
+                  height={lotHeight * baseScaleValue}
+                >
+                  {/* Background */}
+                  <Rect
+                    x={0}
+                    y={0}
+                    width={lotWidth}
+                    height={lotHeight}
+                    fill="#e9f0f7"
+                    stroke="#64748b"
+                    strokeWidth={0.05}
+                  />
+                  {/* Spaces */}
+                  {spaces.map((s) => (
+                    <React.Fragment key={s.id}>
+                      <Rect
+                        x={s.col * spaceWidth}
+                        y={getRowYPosition(s.row)}
+                        width={spaceWidth}
+                        height={spaceDepth}
+                        fill={getSpaceColor(s.type)}
+                        stroke="#0b486b"
+                        strokeWidth={0.05}
+                        onPress={() => setEditingSpace(s)}
+                      />
+                      <SvgText
+                        x={s.col * spaceWidth + spaceWidth / 2}
+                        y={getRowYPosition(s.row) + spaceDepth / 2}
+                        fill="#0b486b"
+                        fontSize={0.5}
+                        textAnchor="middle"
+                        alignmentBaseline="middle"
+                        onPress={() => setEditingSpace(s)}
+                      >
+                        {`P${s.id}`}
+                      </SvgText>
+                    </React.Fragment>
+                  ))}
+                </Svg>
+              </Animated.View>
+            </GestureDetector>
+          </ScrollView>
+          <Legend />
+          <View style={styles.buttonContainer}>
+            <Button title="Save Parking Lot" onPress={handleSave} />
+          </View>
+
+          {/* Modal for editing space type */}
+          {editingSpace && (
+            <View style={styles.modalOverlay}>
+              <View style={styles.modal}>
+                <Text style={{ fontWeight: "bold", marginBottom: 10 }}>
+                  Change type for space {editingSpace.id}
+                </Text>
+                {(["regular", "visitor", "handicapped", "authorized personnel"] as SpaceType[]).map(
+                  (type) => (
+                    <Pressable
+                      key={type}
+                      style={styles.modalButton}
+                      onPress={() => {
+                        updateSpaceType(editingSpace.id, type);
+                        setEditingSpace(null);
+                      }}
+                    >
+                      <Text style={{ color: "#fff" }}>{type}</Text>
+                    </Pressable>
+                  )
+                )}
+                <Pressable
+                  style={[styles.modalButton, { backgroundColor: "#aaa" }]}
+                  onPress={() => setEditingSpace(null)}
+                >
+                  <Text style={{ color: "#fff" }}>Cancel</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 
@@ -424,5 +465,10 @@ const styles = StyleSheet.create({
   legendLabel: {
     fontSize: 13,
     color: "#0f172a",
+  },
+  zoomLevel: {
+    fontSize: 14,
+    color: "#475569",
+    marginBottom: 8,
   },
 });
