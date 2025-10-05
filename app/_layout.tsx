@@ -5,6 +5,7 @@ export default function Layout() {
     <Tabs>
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="create-lot" options={{ title: "Create Lot" }} />
+      <Tabs.Screen name="client-home" options={{ title: "Client Home" }} />
     </Tabs>
   );
 }
