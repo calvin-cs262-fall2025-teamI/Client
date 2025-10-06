@@ -1,26 +1,37 @@
-import { Text, View, StyleSheet, Pressable } from "react-native";
+import { useRouter } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
+import { Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useRouter } from "expo-router";
 
 export default function HomeScreen() {
   const router = useRouter();
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ title: "Parking Lot Scheduler" }} />
-
       <View style={styles.container}>
-        <Text style={styles.title}>Parking Lot Scheduler</Text>
+        <Text style={styles.title}>Parkmaster</Text>
         <Text style={styles.subtitle}>
           Manage and schedule parking with ease
         </Text>
 
-        <Pressable
+        <Button
+          mode="contained"
+          onPress={() => router.push("/signin")}
           style={styles.button}
-          onPress={() => router.push("/create-lot")} // navigate to new screen
+          buttonColor="#388E3C"
+          labelStyle={{ fontSize: 16, fontWeight: "600" }}
         >
-          <Text style={styles.buttonText}>Create Parking Lot</Text>
-        </Pressable>
+          Get Started
+        </Button>
+
+        <Button
+          mode="outlined"
+          onPress={() => router.push("/create-lot")}
+          style={[styles.button, { marginTop: 12 }]}
+          labelStyle={{ color: "#388E3C", fontSize: 16, fontWeight: "600" }}
+        >
+          Create Parking Lot
+        </Button>
       </View>
     </SafeAreaView>
   );
@@ -28,15 +39,27 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f9f9f9" },
-  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  title: { fontSize: 32, fontWeight: "700", color: "#333", marginBottom: 10 },
-  subtitle: { fontSize: 16, color: "#666", marginBottom: 30, textAlign: "center" },
-  button: {
-    backgroundColor: "#2563eb",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    elevation: 2,
+  container: { 
+    flex: 1, 
+    justifyContent: "center", 
+    alignItems: "center", 
+    padding: 20 
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  title: { 
+    fontSize: 40, 
+    fontWeight: "700", 
+    color: "#388E3C", 
+    marginBottom: 10 
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: "#666", 
+    marginBottom: 40, 
+    textAlign: "center" 
+  },
+  button: {
+    width: 250,
+    borderRadius: 10,
+    paddingVertical: 4,
+  },
 });
