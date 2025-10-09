@@ -16,7 +16,7 @@ export default function HomeScreen() {
 
         <Button
           mode="contained"
-          onPress={() => router.push("/signin")}
+          onPress={() => router.push("./screens/auth/signInScreen")}
           style={styles.button}
           buttonColor="#388E3C"
           labelStyle={{ fontSize: 16, fontWeight: "600" }}
@@ -24,14 +24,6 @@ export default function HomeScreen() {
           Get Started
         </Button>
 
-        <Button
-          mode="outlined"
-          onPress={() => router.push("/create-lot")}
-          style={[styles.button, { marginTop: 12 }]}
-          labelStyle={{ color: "#388E3C", fontSize: 16, fontWeight: "600" }}
-        >
-          Create Parking Lot
-        </Button>
       </View>
     </SafeAreaView>
   );

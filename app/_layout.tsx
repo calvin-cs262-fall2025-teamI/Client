@@ -47,9 +47,7 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ title: "Home" }} />
-          <Stack.Screen name="signin" options={{ title: "Sign In" }} />
-          <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
-          <Stack.Screen name="create-lot" options={{ title: "Create Lot" }} />
+         
         </Stack>
       </PaperProvider>
     </GestureHandlerRootView>

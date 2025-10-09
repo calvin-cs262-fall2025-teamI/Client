@@ -23,7 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ClientHomeScreen() {
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a7f5a" />
       
       {/* Header */}
@@ -134,26 +134,8 @@ export default function ClientHomeScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Home color="#1a7f5a" size={24} />
-          <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Calendar color="#64748b" size={24} />
-          <Text style={styles.navText}>Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <MapPin color="#64748b" size={24} />
-          <Text style={styles.navText}>Find Parking</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <User color="#64748b" size={24} />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    
+    </View>
   );
 }
 
@@ -202,7 +184,6 @@ const styles = StyleSheet.create({
   assignedCard: {
     backgroundColor: "#1a7f5a",
     margin: 16,
-    marginTop: -8,
     padding: 20,
     borderRadius: 16,
     shadowColor: "#000",
