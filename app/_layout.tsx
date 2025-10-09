@@ -25,6 +25,7 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
+        console.log("App loading...");
         await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e) {
         console.warn(e);
@@ -49,6 +50,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ title: "Home" }} />
           <Stack.Screen name="signin" options={{ title: "Sign In" }} />
           <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
+          <Stack.Screen name="client-home" options={{ title: "Client Home" }} />
           <Stack.Screen name="create-lot" options={{ title: "Create Lot" }} />
         </Stack>
       </PaperProvider>

@@ -1,23 +1,23 @@
 import {
-    Bell,
-    Calendar,
-    Clock,
-    Eye,
-    Home,
-    MapPin,
-    MessageSquare,
-    Navigation,
-    Search,
-    User,
+  Bell,
+  Calendar,
+  Clock,
+  Eye,
+  Home,
+  MapPin,
+  MessageSquare,
+  Navigation,
+  Search,
+  User,
 } from "lucide-react-native";
 import React from "react";
 import {
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -30,7 +30,7 @@ export default function ClientHomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Parkmaster</Text>
-          <Text style={styles.headerSubtitle}>Welcome back, John</Text>
+          <Text style={styles.headerSubtitle}>Welcome back, Genny</Text>
         </View>
         <View style={styles.headerIcons}>
           <TouchableOpacity style={styles.iconButton}>
@@ -47,7 +47,7 @@ export default function ClientHomeScreen() {
         {/* Assigned Spot Card */}
         <View style={styles.assignedCard}>
           <View style={styles.assignedHeader}>
-            <Text style={styles.assignedLabel}>Your Assigned Spot</Text>
+            <Text style={styles.assignedLabel}>Assigned Spot</Text>
             <View style={styles.activeTag}>
               <Text style={styles.activeTagText}>Active</Text>
             </View>
