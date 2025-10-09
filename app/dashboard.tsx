@@ -24,6 +24,7 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.safeArea}>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
         <Appbar.Content title="Parkmaster" titleStyle={{ color: "#fff", fontWeight: "700" }} />
+        <Appbar.Action icon="account" color="#fff" onPress={() => router.push("/client-home")} />
         <Appbar.Action icon="logout" color="#fff" onPress={() => router.push("/signin")} />
       </Appbar.Header>
 
@@ -48,6 +49,14 @@ export default function DashboardScreen() {
             buttonColor="#388E3C"
           >
             Create New Parking Lot
+          </Button>
+          <Button
+            mode="outlined"
+            onPress={() => router.push("/client-home")}
+            style={styles.profileButton}
+            labelStyle={{ fontSize: 16, fontWeight: "600", color: "#388E3C" }}
+          >
+            View Profile
           </Button>
         </View>
 
@@ -135,9 +144,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   createButton: {
-    borderRadius: 10,
-    paddingVertical: 4,
-  },
+  borderRadius: 10,
+  paddingVertical: 4,
+  marginBottom: 12,
+},
+profileButton: {
+  borderRadius: 10,
+  paddingVertical: 4,
+  borderColor: "#388E3C",
+  borderWidth: 2,
+},
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
