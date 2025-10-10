@@ -1,24 +1,25 @@
-import { useRouter } from "expo-router";
-import React from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { Appbar, Button, Card, Text } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+"use client"
+
+import { useRouter } from "expo-router"
+import { ScrollView, StyleSheet, View } from "react-native"
+import { Appbar, Button, Card, Text } from "react-native-paper"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 export default function DashboardScreen() {
-  const router = useRouter();
+  const router = useRouter()
 
   const stats = [
     { title: "Total Spots", value: "250", color: "#388E3C" },
     { title: "Occupied", value: "180", color: "#FBC02D" },
     { title: "Available", value: "70", color: "#4CAF50" },
     { title: "Issues", value: "2", color: "#F44336" },
-  ];
+  ]
 
   const lots = [
     { id: 1, name: "North Lot", total: 100, occupied: 75, available: 25 },
     { id: 2, name: "South Lot", total: 80, occupied: 60, available: 20 },
     { id: 3, name: "East Lot", total: 70, occupied: 45, available: 25 },
-  ];
+  ]
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -110,7 +111,7 @@ export default function DashboardScreen() {
         ))}
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -144,16 +145,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   createButton: {
-  borderRadius: 10,
-  paddingVertical: 4,
-  marginBottom: 12,
-},
-profileButton: {
-  borderRadius: 10,
-  paddingVertical: 4,
-  borderColor: "#388E3C",
-  borderWidth: 2,
-},
+    borderRadius: 10,
+    paddingVertical: 4,
+    marginBottom: 12,
+  },
+  profileButton: {
+    borderRadius: 10,
+    paddingVertical: 4,
+    borderColor: "#388E3C",
+    borderWidth: 2,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
@@ -225,4 +226,4 @@ profileButton: {
     borderColor: "#388E3C",
     borderRadius: 8,
   },
-});
+})

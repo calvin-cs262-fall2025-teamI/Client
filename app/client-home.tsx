@@ -1,31 +1,12 @@
-import {
-  Bell,
-  Calendar,
-  Clock,
-  Eye,
-  Home,
-  MapPin,
-  MessageSquare,
-  Navigation,
-  Search,
-  User,
-} from "lucide-react-native";
-import React from "react";
-import {
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Bell, Calendar, Clock, Eye, Home, MapPin, MessageSquare, Navigation, Search, User } from "lucide-react-native"
+import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 export default function ClientHomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a7f5a" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -55,9 +36,7 @@ export default function ClientHomeScreen() {
           <Text style={styles.spotNumber}>A-24</Text>
           <View style={styles.spotDetail}>
             <MapPin color="#fff" size={18} />
-            <Text style={styles.spotDetailText}>
-              Building A - Level 2, Section North
-            </Text>
+            <Text style={styles.spotDetailText}>Building A - Level 2, Section North</Text>
           </View>
           <View style={styles.spotDetail}>
             <Clock color="#fff" size={18} />
@@ -154,7 +133,7 @@ export default function ClientHomeScreen() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -419,4 +398,4 @@ const styles = StyleSheet.create({
     color: "#1a7f5a",
     fontWeight: "600",
   },
-});
+})

@@ -1,18 +1,20 @@
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { Button, Text, TextInput } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+"use client"
+
+import { useRouter } from "expo-router"
+import { useState } from "react"
+import { StyleSheet, TouchableOpacity, View } from "react-native"
+import { Button, Text, TextInput } from "react-native-paper"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 export default function SignInScreen() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
 
   const handleSignIn = () => {
     // For now, just navigate to the dashboard
-    router.push("/dashboard");
-  };
+    router.push("/dashboard")
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,9 +54,16 @@ export default function SignInScreen() {
         >
           Sign In
         </Button>
+
+        <View style={styles.signupContainer}>
+          <Text style={styles.signupText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => router.push("/signup")}>
+            <Text style={styles.signupLink}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -89,4 +98,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
   },
-});
+  signupContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 24,
+  },
+  signupText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  signupLink: {
+    fontSize: 14,
+    color: "#388E3C",
+    fontWeight: "600",
+  },
+})
