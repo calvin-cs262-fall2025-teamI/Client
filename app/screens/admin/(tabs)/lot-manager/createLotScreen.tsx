@@ -175,7 +175,7 @@ export default function CreateLotScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
         <Appbar.Content title="Create Parking Lot" color="#fff" />
@@ -318,7 +318,7 @@ export default function CreateLotScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -11,7 +11,7 @@ export default function SignInScreen() {
 
   const handleSignIn = () => {
     // For now, just navigate to the dashboard
-    router.push("/dashboard");
+    // router.push("/dashboard");
   };
 
   return (
@@ -52,6 +52,24 @@ export default function SignInScreen() {
         >
           Sign In
         </Button>
+
+   <View style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" , gap: 20, marginTop: 40}}>
+       <Button
+        mode="contained"
+        onPress={() => router.push("/screens/admin" as any)}
+        style={{ alignSelf: "center", marginBottom: 20 }}
+      >
+        Admin
+      </Button>
+            <Button
+        mode="contained"
+        onPress={() => router.push("/screens/user" as any)}
+        style={{ alignSelf: "center", marginBottom: 20 }}
+      >
+        User
+      </Button>
+
+   </View>
       </View>
     </SafeAreaView>
   );

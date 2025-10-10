@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Appbar, Button, Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function DashboardScreen() {
+export default function LotManagerScreen() {
   const router = useRouter();
 
   const stats = [
@@ -21,11 +21,10 @@ export default function DashboardScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
         <Appbar.Content title="Parkmaster" titleStyle={{ color: "#fff", fontWeight: "700" }} />
-        <Appbar.Action icon="account" color="#fff" onPress={() => router.push("/client-home")} />
-        <Appbar.Action icon="logout" color="#fff" onPress={() => router.push("/signin")} />
+        <Appbar.Action icon="logout" color="#fff"  /> 
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -43,16 +42,25 @@ export default function DashboardScreen() {
         <View style={styles.actionContainer}>
           <Button
             mode="contained"
-            onPress={() => router.push("/create-lot")}
+            onPress={() => router.push("/screens/admin/(tabs)/lot-manager/createLotScreen" )}
             style={styles.createButton}
             labelStyle={{ fontSize: 16, fontWeight: "600" }}
             buttonColor="#388E3C"
           >
             Create New Parking Lot
           </Button>
+              <Button
+            mode="contained"
+            onPress={() => router.push("/screens/admin/schedule/create_schedule")}
+            style={styles.createButton}
+            labelStyle={{ fontSize: 16, fontWeight: "600" }}
+            buttonColor="#388E3C"
+          >
+            Create Schedule
+          </Button>
           <Button
             mode="outlined"
-            onPress={() => router.push("/client-home")}
+            // onPress={() => router.push("/client-home")}
             style={styles.profileButton}
             labelStyle={{ fontSize: 16, fontWeight: "600", color: "#388E3C" }}
           >
@@ -109,7 +117,7 @@ export default function DashboardScreen() {
           </Card>
         ))}
       </ScrollView>
-    </SafeAreaView>
+      </View>
   );
 }
 
