@@ -16,6 +16,7 @@ import React, { useState } from "react";
 import {
   Alert,
   Modal,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -25,6 +26,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 
 interface Vehicle {
   id: number;
@@ -63,11 +65,11 @@ export default function ClientHomeScreen() {
     year: "",
     color: "",
   });
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const handleOpenModal = (vehicle: Vehicle | null = null) => {
+  const handleOpenModal = (vehicle?: Vehicle | null) => {
     if (vehicle) {
       setFormData(vehicle);
       setEditingId(vehicle.id);
@@ -130,23 +132,42 @@ export default function ClientHomeScreen() {
     handleCloseModal();
   };
 
-  const handleDeleteVehicle = (id: number) => {
-    Alert.alert("Delete Vehicle", "Are you sure you want to delete this vehicle?", [
-      {
-        text: "Cancel",
-        onPress: () => { },
-        style: "cancel",
-      },
-      {
-        text: "Delete",
-        onPress: () => {
-          setVehicles((prev) => prev.filter((v) => v.id !== id));
-          Alert.alert("Success", "Vehicle deleted");
-        },
-        style: "destructive",
-      },
-    ]);
+ const handleDeleteVehicle = (id: number) => {
+  const confirmDeletion = () => {
+    setVehicles((prev) => prev.filter((v) => v.id !== id));
+    if (Platform.OS === 'web') {
+      alert("Vehicle deleted");
+    } else {
+      Alert.alert("Success", "Vehicle deleted");
+    }
   };
+
+  if (Platform.OS === 'web') {
+    const confirmed = window.confirm("Are you sure you want to delete this vehicle?");
+    if (confirmed) {
+      confirmDeletion();
+    }
+  } else {
+    Alert.alert(
+      "Delete Vehicle",
+      "Are you sure you want to delete this vehicle?",
+      [
+        {
+          text: "Cancel",
+          onPress: () => {},
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          onPress: () => {
+            confirmDeletion();
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
