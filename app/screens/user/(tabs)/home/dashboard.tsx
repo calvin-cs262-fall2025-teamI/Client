@@ -1,31 +1,157 @@
 import {
-    Bell,
-    Calendar,
-    Clock,
-    Eye,
-    Home,
-    MapPin,
-    MessageSquare,
-    Navigation,
-    Search,
-    User,
+  Bell,
+  Calendar,
+  Car,
+  Clock,
+  Eye,
+  Home,
+  MapPin,
+  MessageSquare,
+  Navigation,
+  Search,
+  User,
+  X,
 } from "lucide-react-native";
-import React from "react";
+import React, { useState } from "react";
 import {
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+interface Vehicle {
+  id: number;
+  licensePlate: string;
+  make: string;
+  model: string;
+  year: string;
+  color: string;
+}
+
+interface FormData {
+  licensePlate: string;
+  make: string;
+  model: string;
+  year: string;
+  color: string;
+}
+
 export default function ClientHomeScreen() {
+  const [isVehicleModalVisible, setIsVehicleModalVisible] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([
+    {
+      id: 1,
+      licensePlate: "ABC-123",
+      make: "Toyota",
+      model: "Camry",
+      year: "2022",
+      color: "Silver",
+    },
+  ]);
+
+  const [formData, setFormData] = useState<FormData>({
+    licensePlate: "",
+    make: "",
+    model: "",
+    year: "",
+    color: "",
+  });
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  const handleOpenModal = (vehicle: Vehicle | null = null) => {
+    if (vehicle) {
+      setFormData(vehicle);
+      setEditingId(vehicle.id);
+      setIsEditing(true);
+    } else {
+      setFormData({
+        licensePlate: "",
+        make: "",
+        model: "",
+        year: "",
+        color: "",
+      });
+      setIsEditing(false);
+      setEditingId(null);
+    }
+    setIsVehicleModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsVehicleModalVisible(false);
+    setFormData({
+      licensePlate: "",
+      make: "",
+      model: "",
+      year: "",
+      color: "",
+    });
+    setIsEditing(false);
+    setEditingId(null);
+  };
+
+  const handleSaveVehicle = () => {
+    if (
+      !formData.licensePlate.trim() ||
+      !formData.make.trim() ||
+      !formData.model.trim() ||
+      !formData.year.trim() ||
+      !formData.color.trim()
+    ) {
+      Alert.alert("Error", "Please fill in all vehicle information");
+      return;
+    }
+
+    if (isEditing && editingId) {
+      // Update existing vehicle
+      setVehicles((prev) =>
+        prev.map((v) => (v.id === editingId ? { ...formData, id: editingId } : v))
+      );
+      Alert.alert("Success", "Vehicle updated successfully");
+    } else {
+      // Add new vehicle
+      const newVehicle = {
+        ...formData,
+        id: Math.random(),
+      };
+      setVehicles((prev) => [...prev, newVehicle]);
+      Alert.alert("Success", "Vehicle added successfully");
+    }
+
+    handleCloseModal();
+  };
+
+  const handleDeleteVehicle = (id: number) => {
+    Alert.alert("Delete Vehicle", "Are you sure you want to delete this vehicle?", [
+      {
+        text: "Cancel",
+        onPress: () => { },
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        onPress: () => {
+          setVehicles((prev) => prev.filter((v) => v.id !== id));
+          Alert.alert("Success", "Vehicle deleted");
+        },
+        style: "destructive",
+      },
+    ]);
+  };
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a7f5a" />
-      
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
+
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -64,9 +190,70 @@ export default function ClientHomeScreen() {
             <Text style={styles.spotDetailText}>Valid until 6:00 PM today</Text>
           </View>
           <TouchableOpacity style={styles.directionsButton}>
-            <Navigation color="#1a7f5a" size={20} />
+            <Navigation color="#4CAF50" size={20} />
             <Text style={styles.directionsButtonText}>Get Directions</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Vehicle Information Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Vehicles</Text>
+            <TouchableOpacity onPress={() => handleOpenModal()}>
+              <Text style={styles.addButtonText}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          {vehicles.length > 0 ? (
+            vehicles.map((vehicle) => (
+              <View key={vehicle.id} style={styles.vehicleCard}>
+                <View style={styles.vehicleCardHeader}>
+                  <View style={styles.vehicleIconContainer}>
+                    <Car color="#4CAF50" size={24} />
+                  </View>
+                  <View style={styles.vehicleInfo}>
+                    <Text style={styles.vehicleTitle}>
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </Text>
+                    <Text style={styles.vehicleSubtitle}>
+                      {vehicle.licensePlate}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.vehicleDetails}>
+                  <View style={styles.vehicleDetailItem}>
+                    <Text style={styles.vehicleDetailLabel}>Color</Text>
+                    <Text style={styles.vehicleDetailValue}>{vehicle.color}</Text>
+                  </View>
+                </View>
+                <View style={styles.vehicleActions}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => handleOpenModal(vehicle)}
+                  >
+                    <Text style={styles.editButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteVehicle(vehicle.id)}
+                  >
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Car color="#cbd5e1" size={40} />
+              <Text style={styles.emptyStateText}>No vehicles added yet</Text>
+              <TouchableOpacity
+                style={styles.addVehicleButton}
+                onPress={() => handleOpenModal()}
+              >
+                <Text style={styles.addVehicleButtonText}>Add Your First Vehicle</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Your Schedule Section */}
@@ -114,28 +301,153 @@ export default function ClientHomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
-            <TouchableOpacity style={[styles.actionButton, styles.actionButtonPrimary]}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.actionButtonPrimary]}
+            >
               <Calendar color="#fff" size={24} />
               <Text style={styles.actionButtonTextPrimary}>Request Spot</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton}>
-              <Eye color="#1a7f5a" size={24} />
+              <Eye color="#4CAF50" size={24} />
               <Text style={styles.actionButtonText}>See Spot</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton}>
-              <MapPin color="#1a7f5a" size={24} />
+              <MapPin color="#4CAF50" size={24} />
               <Text style={styles.actionButtonText}>Find Parking</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton}>
-              <MessageSquare color="#1a7f5a" size={24} />
+              <MessageSquare color="#4CAF50" size={24} />
               <Text style={styles.actionButtonText}>Report Issue</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
 
-    
-    </View>
+      {/* Vehicle Modal */}
+      <Modal
+        visible={isVehicleModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {isEditing ? "Edit Vehicle" : "Add Vehicle"}
+              </Text>
+              <TouchableOpacity
+                onPress={handleCloseModal}
+                style={styles.closeButton}
+              >
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>License Plate *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., ABC-123"
+                  placeholderTextColor="#94a3b8"
+                  value={formData.licensePlate}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, licensePlate: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Make *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Toyota"
+                  placeholderTextColor="#94a3b8"
+                  value={formData.make}
+                  onChangeText={(text) => setFormData({ ...formData, make: text })}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Model *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Camry"
+                  placeholderTextColor="#94a3b8"
+                  value={formData.model}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, model: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Year *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., 2022"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="numeric"
+                  value={formData.year}
+                  onChangeText={(text) => setFormData({ ...formData, year: text })}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Color *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Silver"
+                  placeholderTextColor="#94a3b8"
+                  value={formData.color}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, color: text })
+                  }
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCloseModal}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleSaveVehicle}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isEditing ? "Update Vehicle" : "Add Vehicle"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem}>
+          <Home color="#4CAF50" size={24} />
+          <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <Calendar color="#64748b" size={24} />
+          <Text style={styles.navText}>Schedule</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <MapPin color="#64748b" size={24} />
+          <Text style={styles.navText}>Find Parking</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <User color="#64748b" size={24} />
+          <Text style={styles.navText}>Profile</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -145,7 +457,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    backgroundColor: "#1a7f5a",
+    backgroundColor: "#4CAF50",
     padding: 20,
     paddingBottom: 24,
     flexDirection: "row",
@@ -182,8 +494,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   assignedCard: {
-    backgroundColor: "#1a7f5a",
+    backgroundColor: "#4CAF50",
     margin: 16,
+    marginTop: -8,
     padding: 20,
     borderRadius: 16,
     shadowColor: "#000",
@@ -240,7 +553,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   directionsButtonText: {
-    color: "#1a7f5a",
+    color: "#4CAF50",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -259,8 +572,124 @@ const styles = StyleSheet.create({
     color: "#0f172a",
   },
   viewAllText: {
-    color: "#1a7f5a",
+    color: "#4CAF50",
     fontSize: 14,
+    fontWeight: "600",
+  },
+  addButtonText: {
+    color: "#4CAF50",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  vehicleCard: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  vehicleCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  vehicleIconContainer: {
+    backgroundColor: "#f0fdf4",
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  vehicleInfo: {
+    flex: 1,
+  },
+  vehicleTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  vehicleSubtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  vehicleDetails: {
+    flexDirection: "row",
+    marginBottom: 12,
+    paddingVertical: 8,
+    backgroundColor: "#f9fafb",
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  vehicleDetailItem: {
+    flex: 1,
+  },
+  vehicleDetailLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    marginBottom: 4,
+  },
+  vehicleDetailValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  vehicleActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  editButton: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: "#4CAF50",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  editButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  deleteButton: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: "#f3f4f6",
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  deleteButtonText: {
+    color: "#ef4444",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 32,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#64748b",
+    marginTop: 8,
+  },
+  addVehicleButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: "#4CAF50",
+    borderRadius: 8,
+  },
+  addVehicleButtonText: {
+    color: "#fff",
     fontWeight: "600",
   },
   scheduleCard: {
@@ -271,7 +700,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#1a7f5a",
+    borderColor: "#4CAF50",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -282,7 +711,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
   },
   scheduleIcon: {
-    backgroundColor: "#1a7f5a",
+    backgroundColor: "#4CAF50",
     width: 48,
     height: 48,
     borderRadius: 8,
@@ -355,11 +784,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   actionButtonPrimary: {
-    backgroundColor: "#1a7f5a",
-    borderColor: "#1a7f5a",
+    backgroundColor: "#4CAF50",
+    borderColor: "#4CAF50",
   },
   actionButtonText: {
-    color: "#1a7f5a",
+    color: "#4CAF50",
     fontSize: 14,
     fontWeight: "600",
     marginTop: 8,
@@ -397,7 +826,93 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   navTextActive: {
-    color: "#1a7f5a",
+    color: "#4CAF50",
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+    color: "#0f172a",
+    backgroundColor: "#f9fafb",
+  },
+  modalFooter: {
+    flexDirection: "row",
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  submitButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: "#4CAF50",
+    alignItems: "center",
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
   },
 });
