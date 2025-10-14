@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import {
   Bell,
   Calendar,
@@ -10,7 +11,7 @@ import {
   Navigation,
   Search,
   User,
-  X,
+  X
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -26,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 
 interface Vehicle {
   id: number;
@@ -53,6 +55,7 @@ interface Issue {
 }
 
 export default function ClientHomeScreen() {
+  const router = useRouter();
   const [isVehicleModalVisible, setIsVehicleModalVisible] = useState(false);
   const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
   const [issueMessage, setIssueMessage] = useState("");
@@ -87,6 +90,33 @@ export default function ClientHomeScreen() {
 
     return () => clearInterval(timer);
   }, []);
+
+  const handleSignOut = () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm("Are you sure you want to sign out?");
+      if (confirmed) {
+        router.push("/screens/auth/signInScreen");
+      }
+    } else {
+      Alert.alert(
+        "Sign Out",
+        "Are you sure you want to sign out?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Sign Out",
+            onPress: () => {
+              router.push("/screens/auth/signInScreen");
+            },
+            style: "destructive",
+          },
+        ]
+      );
+    }
+  };
 
   const handleOpenModal = (vehicle?: Vehicle | null) => {
     if (vehicle) {
@@ -137,18 +167,18 @@ export default function ClientHomeScreen() {
     }
 
     // Create issue object with current timestamp
-    const currentTime = new Date();
+    const currentTimeStamp = new Date();
     const newIssue: Issue = {
       id: Date.now(),
       message: issueMessage,
-      timestamp: currentTime.toISOString(),
+      timestamp: currentTimeStamp.toISOString(),
       userName: "John",
       spotNumber: "A-24",
     };
 
     // In a real app, you would send this to your backend/database
     // For demonstration, log the issue with formatted time
-    const formattedTime = currentTime.toLocaleString('en-US', {
+    const formattedTime = currentTimeStamp.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -156,7 +186,7 @@ export default function ClientHomeScreen() {
       minute: '2-digit',
       hour12: true
     });
-    
+
     console.log("Issue submitted at:", formattedTime);
     console.log("Issue details:", newIssue);
 
@@ -215,7 +245,7 @@ export default function ClientHomeScreen() {
         [
           {
             text: "Cancel",
-            onPress: () => {},
+            onPress: () => { },
             style: "cancel",
           },
           {
@@ -247,6 +277,9 @@ export default function ClientHomeScreen() {
           <TouchableOpacity style={styles.iconButton}>
             <Bell color="#fff" size={24} />
             <View style={styles.badge} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+            <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -397,7 +430,7 @@ export default function ClientHomeScreen() {
               <MapPin color="#4CAF50" size={24} />
               <Text style={styles.actionButtonText}>Find Parking</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={handleOpenIssueModal}
             >
@@ -643,6 +676,14 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     position: "relative",
+  },
+   logoutButton: {
+    padding: 8,
+  },
+  logoutText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   badge: {
     position: "absolute",

@@ -1,6 +1,9 @@
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +21,7 @@ interface Issue {
 }
 
 export default function LotManagerScreen() {
+  const router = useRouter();
   const [isNotificationModalVisible, setIsNotificationModalVisible] = useState(false);
   
   // Sample issues - in a real app, this would come from your backend
@@ -87,6 +91,33 @@ export default function LotManagerScreen() {
     setIssues(prev => prev.filter(issue => issue.id !== id));
   };
 
+  const handleSignOut = () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm("Are you sure you want to sign out?");
+      if (confirmed) {
+        router.push("/screens/auth/signInScreen");
+      }
+    } else {
+      Alert.alert(
+        "Sign Out",
+        "Are you sure you want to sign out?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Sign Out",
+            onPress: () => {
+              router.push("/screens/auth/signInScreen");
+            },
+            style: "destructive",
+          },
+        ]
+      );
+    }
+  };
+
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -123,8 +154,8 @@ export default function LotManagerScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Logout</Text>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+            <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       </View>
