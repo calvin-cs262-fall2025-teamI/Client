@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import {
   Bell,
   Calendar,
@@ -10,7 +11,7 @@ import {
   Navigation,
   Search,
   User,
-  X,
+  X
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -45,8 +46,20 @@ interface FormData {
   color: string;
 }
 
+interface Issue {
+  id: number;
+  message: string;
+  timestamp: string;
+  userName: string;
+  spotNumber?: string;
+}
+
 export default function ClientHomeScreen() {
+  const router = useRouter();
   const [isVehicleModalVisible, setIsVehicleModalVisible] = useState(false);
+  const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
+  const [issueMessage, setIssueMessage] = useState("");
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [vehicles, setVehicles] = useState<Vehicle[]>([
     {
       id: 1,
@@ -68,6 +81,42 @@ export default function ClientHomeScreen() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Update current time every second
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleSignOut = () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm("Are you sure you want to sign out?");
+      if (confirmed) {
+        router.push("/screens/auth/signInScreen");
+      }
+    } else {
+      Alert.alert(
+        "Sign Out",
+        "Are you sure you want to sign out?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Sign Out",
+            onPress: () => {
+              router.push("/screens/auth/signInScreen");
+            },
+            style: "destructive",
+          },
+        ]
+      );
+    }
+  };
 
   const handleOpenModal = (vehicle?: Vehicle | null) => {
     if (vehicle) {
@@ -101,6 +150,50 @@ export default function ClientHomeScreen() {
     setEditingId(null);
   };
 
+  const handleOpenIssueModal = () => {
+    setIsIssueModalVisible(true);
+    setIssueMessage("");
+  };
+
+  const handleCloseIssueModal = () => {
+    setIsIssueModalVisible(false);
+    setIssueMessage("");
+  };
+
+  const handleSubmitIssue = () => {
+    if (!issueMessage.trim()) {
+      Alert.alert("Error", "Please describe the issue");
+      return;
+    }
+
+    // Create issue object with current timestamp
+    const currentTimeStamp = new Date();
+    const newIssue: Issue = {
+      id: Date.now(),
+      message: issueMessage,
+      timestamp: currentTimeStamp.toISOString(),
+      userName: "John",
+      spotNumber: "A-24",
+    };
+
+    // In a real app, you would send this to your backend/database
+    // For demonstration, log the issue with formatted time
+    const formattedTime = currentTimeStamp.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    console.log("Issue submitted at:", formattedTime);
+    console.log("Issue details:", newIssue);
+
+    Alert.alert("Success", `Your issue has been reported at ${formattedTime}`);
+    handleCloseIssueModal();
+  };
+
   const handleSaveVehicle = () => {
     if (
       !formData.licensePlate.trim() ||
@@ -114,13 +207,11 @@ export default function ClientHomeScreen() {
     }
 
     if (isEditing && editingId) {
-      // Update existing vehicle
       setVehicles((prev) =>
         prev.map((v) => (v.id === editingId ? { ...formData, id: editingId } : v))
       );
       Alert.alert("Success", "Vehicle updated successfully");
     } else {
-      // Add new vehicle
       const newVehicle = {
         ...formData,
         id: Math.random(),
@@ -132,42 +223,42 @@ export default function ClientHomeScreen() {
     handleCloseModal();
   };
 
- const handleDeleteVehicle = (id: number) => {
-  const confirmDeletion = () => {
-    setVehicles((prev) => prev.filter((v) => v.id !== id));
+  const handleDeleteVehicle = (id: number) => {
+    const confirmDeletion = () => {
+      setVehicles((prev) => prev.filter((v) => v.id !== id));
+      if (Platform.OS === 'web') {
+        alert("Vehicle deleted");
+      } else {
+        Alert.alert("Success", "Vehicle deleted");
+      }
+    };
+
     if (Platform.OS === 'web') {
-      alert("Vehicle deleted");
+      const confirmed = window.confirm("Are you sure you want to delete this vehicle?");
+      if (confirmed) {
+        confirmDeletion();
+      }
     } else {
-      Alert.alert("Success", "Vehicle deleted");
+      Alert.alert(
+        "Delete Vehicle",
+        "Are you sure you want to delete this vehicle?",
+        [
+          {
+            text: "Cancel",
+            onPress: () => { },
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            onPress: () => {
+              confirmDeletion();
+            },
+            style: "destructive",
+          },
+        ]
+      );
     }
   };
-
-  if (Platform.OS === 'web') {
-    const confirmed = window.confirm("Are you sure you want to delete this vehicle?");
-    if (confirmed) {
-      confirmDeletion();
-    }
-  } else {
-    Alert.alert(
-      "Delete Vehicle",
-      "Are you sure you want to delete this vehicle?",
-      [
-        {
-          text: "Cancel",
-          onPress: () => {},
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          onPress: () => {
-            confirmDeletion();
-          },
-          style: "destructive",
-        },
-      ]
-    );
-  }
-};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -186,6 +277,9 @@ export default function ClientHomeScreen() {
           <TouchableOpacity style={styles.iconButton}>
             <Bell color="#fff" size={24} />
             <View style={styles.badge} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+            <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -336,7 +430,10 @@ export default function ClientHomeScreen() {
               <MapPin color="#4CAF50" size={24} />
               <Text style={styles.actionButtonText}>Find Parking</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleOpenIssueModal}
+            >
               <MessageSquare color="#4CAF50" size={24} />
               <Text style={styles.actionButtonText}>Report Issue</Text>
             </TouchableOpacity>
@@ -449,6 +546,84 @@ export default function ClientHomeScreen() {
         </View>
       </Modal>
 
+      {/* Report Issue Modal */}
+      <Modal
+        visible={isIssueModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCloseIssueModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Report an Issue</Text>
+              <TouchableOpacity
+                onPress={handleCloseIssueModal}
+                style={styles.closeButton}
+              >
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              {/* Current Time Display */}
+              <View style={styles.timeDisplay}>
+                <Clock color="#4CAF50" size={16} />
+                <Text style={styles.timeText}>
+                  {currentTime.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                  })}
+                </Text>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Describe the Issue *</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Please describe the problem you're experiencing..."
+                  placeholderTextColor="#94a3b8"
+                  value={issueMessage}
+                  onChangeText={setIssueMessage}
+                  multiline
+                  numberOfLines={6}
+                  textAlignVertical="top"
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                  onSubmitEditing={handleSubmitIssue}
+                />
+              </View>
+
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>
+                  Your report will be sent to the parking lot manager for immediate attention.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCloseIssueModal}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleSubmitIssue}
+              >
+                <Text style={styles.submitButtonText}>Submit Report</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
@@ -501,6 +676,14 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     position: "relative",
+  },
+   logoutButton: {
+    padding: 8,
+  },
+  logoutText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   badge: {
     position: "absolute",
@@ -903,6 +1086,38 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0f172a",
     backgroundColor: "#f9fafb",
+  },
+  textArea: {
+    minHeight: 120,
+    paddingTop: 12,
+  },
+  timeDisplay: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#f0fdf4",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  timeText: {
+    fontSize: 14,
+    color: "#15803d",
+    fontWeight: "600",
+  },
+  infoBox: {
+    backgroundColor: "#f0f9ff",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+  },
+  infoText: {
+    fontSize: 13,
+    color: "#1e40af",
+    lineHeight: 18,
   },
   modalFooter: {
     flexDirection: "row",
