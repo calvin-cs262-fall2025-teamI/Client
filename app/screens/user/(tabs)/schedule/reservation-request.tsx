@@ -1,19 +1,23 @@
 import { useRouter } from "expo-router";
 import {
-    ArrowLeft,
-    Calendar,
-    Clock,
-    MapPin,
-    Plus,
+  ArrowLeft,
+  Calendar,
+  Clock,
+  MapPin,
+  Plus,
+  X,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -26,10 +30,29 @@ interface Schedule {
   isActive: boolean;
 }
 
+interface ReservationForm {
+  startTime: string;
+  endTime: string;
+  parkingLot: string;
+  date: string;
+  isRecurring: boolean;
+  recurringDays: string[];
+}
+
 export default function ReservationRequestScreen() {
   const router = useRouter();
+  const [isModalVisible, setIsModalVisible] = useState(false);
   
-  const [schedules, setSchedules] = useState<Schedule[]>([
+  const [formData, setFormData] = useState<ReservationForm>({
+    startTime: "",
+    endTime: "",
+    parkingLot: "",
+    date: "",
+    isRecurring: false,
+    recurringDays: [],
+  });
+
+  const [schedules] = useState<Schedule[]>([
     {
       id: 1,
       spotNumber: "A-24",
@@ -56,18 +79,86 @@ export default function ReservationRequestScreen() {
     },
   ]);
 
+  const parkingLots = [
+    "Lot A - Building A",
+    "Lot B - Building B",
+    "Lot C - Building C",
+    "Lot D - Main Entrance",
+  ];
+
+  const daysOfWeek = [
+    { id: "mon", label: "Mon" },
+    { id: "tue", label: "Tue" },
+    { id: "wed", label: "Wed" },
+    { id: "thu", label: "Thu" },
+    { id: "fri", label: "Fri" },
+    { id: "sat", label: "Sat" },
+    { id: "sun", label: "Sun" },
+  ];
+
   const handleRequestSpot = () => {
-    // Navigate to a form or handle request spot logic
-    console.log("Request new spot");
-    // You can add navigation to a request form here
-    // router.push("/request-form");
+    setIsModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setFormData({
+      startTime: "",
+      endTime: "",
+      parkingLot: "",
+      date: "",
+      isRecurring: false,
+      recurringDays: [],
+    });
+  };
+
+  const toggleDay = (dayId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      recurringDays: prev.recurringDays.includes(dayId)
+        ? prev.recurringDays.filter(d => d !== dayId)
+        : [...prev.recurringDays, dayId]
+    }));
+  };
+
+  const handleSubmitRequest = () => {
+    if (!formData.startTime.trim()) {
+      Alert.alert("Error", "Please enter a start time");
+      return;
+    }
+    if (!formData.endTime.trim()) {
+      Alert.alert("Error", "Please enter an end time");
+      return;
+    }
+    if (!formData.parkingLot) {
+      Alert.alert("Error", "Please select a parking lot");
+      return;
+    }
+    if (!formData.date.trim()) {
+      Alert.alert("Error", "Please select a date");
+      return;
+    }
+    if (formData.isRecurring && formData.recurringDays.length === 0) {
+      Alert.alert("Error", "Please select at least one day for recurring reservation");
+      return;
+    }
+
+    console.log("Reservation request:", formData);
+    
+    Alert.alert(
+      "Success", 
+      formData.isRecurring 
+        ? `Recurring reservation requested for ${formData.recurringDays.join(", ")}`
+        : "Reservation requested successfully"
+    );
+    
+    handleCloseModal();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -80,7 +171,6 @@ export default function ReservationRequestScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Request Spot Button */}
         <View style={styles.requestSection}>
           <TouchableOpacity
             style={styles.requestButton}
@@ -94,7 +184,6 @@ export default function ReservationRequestScreen() {
           </Text>
         </View>
 
-        {/* Your Reservations Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Reservations</Text>
           <Text style={styles.sectionSubtitle}>
@@ -168,7 +257,6 @@ export default function ReservationRequestScreen() {
           )}
         </View>
 
-        {/* Info Card */}
         <View style={styles.infoCard}>
           <View style={styles.infoHeader}>
             <MapPin color="#4CAF50" size={20} />
@@ -182,6 +270,182 @@ export default function ReservationRequestScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Request Parking Spot</Text>
+              <TouchableOpacity
+                onPress={handleCloseModal}
+                style={styles.closeButton}
+              >
+                <X color="#64748b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              style={styles.modalBody}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Date *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="MM/DD/YYYY"
+                  placeholderTextColor="#94a3b8"
+                  value={formData.date}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, date: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.timeRow}>
+                <View style={styles.timeInputGroup}>
+                  <Text style={styles.label}>Start Time *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="9:00 AM"
+                    placeholderTextColor="#94a3b8"
+                    value={formData.startTime}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, startTime: text })
+                    }
+                  />
+                </View>
+                <View style={styles.timeInputGroup}>
+                  <Text style={styles.label}>End Time *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="5:00 PM"
+                    placeholderTextColor="#94a3b8"
+                    value={formData.endTime}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, endTime: text })
+                    }
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Parking Lot *</Text>
+                <View style={styles.pickerContainer}>
+                  {parkingLots.map((lot) => (
+                    <TouchableOpacity
+                      key={lot}
+                      style={[
+                        styles.lotOption,
+                        formData.parkingLot === lot && styles.lotOptionSelected
+                      ]}
+                      onPress={() => setFormData({ ...formData, parkingLot: lot })}
+                    >
+                      <View style={[
+                        styles.radioButton,
+                        formData.parkingLot === lot && styles.radioButtonSelected
+                      ]}>
+                        {formData.parkingLot === lot && (
+                          <View style={styles.radioButtonInner} />
+                        )}
+                      </View>
+                      <Text style={[
+                        styles.lotOptionText,
+                        formData.parkingLot === lot && styles.lotOptionTextSelected
+                      ]}>
+                        {lot}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.recurringSection}>
+                <TouchableOpacity
+                  style={styles.recurringToggle}
+                  onPress={() =>
+                    setFormData({ ...formData, isRecurring: !formData.isRecurring })
+                  }
+                >
+                  <View style={styles.recurringToggleLeft}>
+                    <Text style={styles.recurringLabel}>Recurring Weekly</Text>
+                    <Text style={styles.recurringSubtext}>
+                      Repeat this reservation every week
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.switch,
+                      formData.isRecurring && styles.switchActive
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.switchThumb,
+                        formData.isRecurring && styles.switchThumbActive
+                      ]}
+                    />
+                  </View>
+                </TouchableOpacity>
+
+                {formData.isRecurring && (
+                  <View style={styles.daysContainer}>
+                    <Text style={styles.daysLabel}>Select Days *</Text>
+                    <View style={styles.daysGrid}>
+                      {daysOfWeek.map((day) => (
+                        <TouchableOpacity
+                          key={day.id}
+                          style={[
+                            styles.dayButton,
+                            formData.recurringDays.includes(day.id) && styles.dayButtonSelected
+                          ]}
+                          onPress={() => toggleDay(day.id)}
+                        >
+                          <Text
+                            style={[
+                              styles.dayButtonText,
+                              formData.recurringDays.includes(day.id) && styles.dayButtonTextSelected
+                            ]}
+                          >
+                            {day.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.modalInfoBox}>
+                <Text style={styles.modalInfoText}>
+                  {formData.isRecurring
+                    ? "Your reservation will repeat weekly on the selected days until cancelled."
+                    : "Reservations can be made up to 30 days in advance."}
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCloseModal}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleSubmitRequest}
+              >
+                <Text style={styles.submitButtonText}>Submit Request</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -383,5 +647,241 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#15803d",
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 500,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+    color: "#0f172a",
+    backgroundColor: "#f9fafb",
+  },
+  timeRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  timeInputGroup: {
+    flex: 1,
+  },
+  pickerContainer: {
+    gap: 8,
+  },
+  lotOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  lotOptionSelected: {
+    borderColor: "#4CAF50",
+    backgroundColor: "#f0fdf4",
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#cbd5e1",
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  radioButtonSelected: {
+    borderColor: "#4CAF50",
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#4CAF50",
+  },
+  lotOptionText: {
+    fontSize: 15,
+    color: "#475569",
+  },
+  lotOptionTextSelected: {
+    color: "#0f172a",
+    fontWeight: "600",
+  },
+  recurringSection: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  recurringToggle: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#f9fafb",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  recurringToggleLeft: {
+    flex: 1,
+  },
+  recurringLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 2,
+  },
+  recurringSubtext: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  switch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#cbd5e1",
+    padding: 2,
+    justifyContent: "center",
+  },
+  switchActive: {
+    backgroundColor: "#4CAF50",
+  },
+  switchThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  switchThumbActive: {
+    transform: [{ translateX: 22 }],
+  },
+  daysContainer: {
+    marginTop: 16,
+  },
+  daysLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 8,
+  },
+  daysGrid: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  dayButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#fff",
+  },
+  dayButtonSelected: {
+    backgroundColor: "#4CAF50",
+    borderColor: "#4CAF50",
+  },
+  dayButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  dayButtonTextSelected: {
+    color: "#fff",
+  },
+  modalInfoBox: {
+    backgroundColor: "#f0f9ff",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    marginTop: 8,
+  },
+  modalInfoText: {
+    fontSize: 13,
+    color: "#1e40af",
+    lineHeight: 18,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  submitButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: "#4CAF50",
+    alignItems: "center",
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
   },
 });
