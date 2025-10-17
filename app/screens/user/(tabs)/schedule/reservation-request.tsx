@@ -11,6 +11,7 @@ import React, { useState } from "react";
 import {
   Alert,
   Modal,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -97,7 +98,9 @@ export default function ReservationRequestScreen() {
   ];
 
   const handleRequestSpot = () => {
+    console.log("Request spot button pressed");
     setIsModalVisible(true);
+    console.log("Modal visibility set to:", true);
   };
 
   const handleCloseModal = () => {
@@ -122,35 +125,136 @@ export default function ReservationRequestScreen() {
   };
 
   const handleSubmitRequest = () => {
+    console.log("Submit button pressed");
+    console.log("Form data:", formData);
+
+    // Validate date format (MM/DD/YYYY)
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const dateMatch = formData.date.match(dateRegex);
+    
+    if (!formData.date.trim()) {
+      console.log("Date is empty");
+      Alert.alert("Error", "Please enter a date");
+      return;
+    }
+    
+    if (!dateMatch) {
+      console.log("Date format invalid:", formData.date);
+      Alert.alert("Error", "Please enter date in MM/DD/YYYY format");
+      return;
+    }
+
+    // Parse and validate date (MM/DD/YYYY)
+    const month = parseInt(dateMatch[1], 10);
+    const day = parseInt(dateMatch[2], 10);
+    const year = parseInt(dateMatch[3], 10);
+
+    console.log("Parsed date:", { month, day, year });
+
+    // Check if date is valid
+    if (month < 1 || month > 12) {
+      console.log("Invalid month:", month);
+      Alert.alert("Error", "Month must be between 01 and 12");
+      return;
+    }
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    if (day < 1 || day > daysInMonth) {
+      console.log("Invalid day:", day, "for month:", month);
+      Alert.alert("Error", `Day must be between 01 and ${daysInMonth} for the selected month`);
+      return;
+    }
+
+    // Create date object (months are 0-indexed in JS)
+    const selectedDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    console.log("Selected date:", selectedDate);
+    console.log("Today:", today);
+
+    if (selectedDate < today) {
+      console.log("Date is in the past");
+      Alert.alert("Error", "Date cannot be in the past");
+      return;
+    }
+
+    // Validate time format (24-hour: HH:MM)
+    const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
+    
     if (!formData.startTime.trim()) {
+      console.log("Start time is empty");
       Alert.alert("Error", "Please enter a start time");
       return;
     }
+    
+    const startTimeMatch = formData.startTime.match(timeRegex);
+    if (!startTimeMatch) {
+      console.log("Start time format invalid:", formData.startTime);
+      Alert.alert("Error", "Start time must be in 24-hour format (HH:MM)\nExample: 09:00 or 14:30");
+      return;
+    }
+
     if (!formData.endTime.trim()) {
+      console.log("End time is empty");
       Alert.alert("Error", "Please enter an end time");
       return;
     }
+
+    const endTimeMatch = formData.endTime.match(timeRegex);
+    if (!endTimeMatch) {
+      console.log("End time format invalid:", formData.endTime);
+      Alert.alert("Error", "End time must be in 24-hour format (HH:MM)\nExample: 17:00 or 18:30");
+      return;
+    }
+
+    // Compare start and end times
+    const startHour = parseInt(startTimeMatch[1], 10);
+    const startMinute = parseInt(startTimeMatch[2], 10);
+    const endHour = parseInt(endTimeMatch[1], 10);
+    const endMinute = parseInt(endTimeMatch[2], 10);
+
+    const startTimeInMinutes = startHour * 60 + startMinute;
+    const endTimeInMinutes = endHour * 60 + endMinute;
+
+    console.log("Start time in minutes:", startTimeInMinutes);
+    console.log("End time in minutes:", endTimeInMinutes);
+
+    if (endTimeInMinutes <= startTimeInMinutes) {
+      console.log("End time is not after start time");
+      Alert.alert("Error", "End time must be after start time");
+      return;
+    }
+
+    // Validate parking lot
     if (!formData.parkingLot) {
+      console.log("No parking lot selected");
       Alert.alert("Error", "Please select a parking lot");
       return;
     }
-    if (!formData.date.trim()) {
-      Alert.alert("Error", "Please select a date");
-      return;
-    }
+
+    // Validate recurring days if recurring is enabled
     if (formData.isRecurring && formData.recurringDays.length === 0) {
+      console.log("Recurring enabled but no days selected");
       Alert.alert("Error", "Please select at least one day for recurring reservation");
       return;
     }
 
-    console.log("Reservation request:", formData);
+    // All validations passed
+    console.log("All validations passed! Reservation request:", formData);
     
-    Alert.alert(
-      "Success", 
-      formData.isRecurring 
+    if (Platform.OS === 'web') {
+      alert(formData.isRecurring 
         ? `Recurring reservation requested for ${formData.recurringDays.join(", ")}`
-        : "Reservation requested successfully"
-    );
+        : "Reservation requested successfully");
+    } else {
+      Alert.alert(
+        "Success", 
+        formData.isRecurring 
+          ? `Recurring reservation requested for ${formData.recurringDays.join(", ")}`
+          : "Reservation requested successfully"
+      );
+    }
     
     handleCloseModal();
   };
@@ -277,8 +381,17 @@ export default function ReservationRequestScreen() {
         transparent={true}
         onRequestClose={handleCloseModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <TouchableOpacity 
+          activeOpacity={1} 
+          style={styles.modalOverlay}
+          onPress={handleCloseModal}
+        >
+          <TouchableOpacity 
+            activeOpacity={1} 
+            style={styles.modalContentWrapper}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Request Parking Spot</Text>
               <TouchableOpacity
@@ -297,13 +410,16 @@ export default function ReservationRequestScreen() {
                 <Text style={styles.label}>Date *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="MM/DD/YYYY"
+                  placeholder="DD/MM/YYYY"
                   placeholderTextColor="#94a3b8"
                   value={formData.date}
                   onChangeText={(text) =>
                     setFormData({ ...formData, date: text })
                   }
+                  maxLength={10}
+                  keyboardType="numeric"
                 />
+                <Text style={styles.inputHint}>Format: MM/DD/YYYY (e.g., 12/25/2025)</Text>
               </View>
 
               <View style={styles.timeRow}>
@@ -311,25 +427,31 @@ export default function ReservationRequestScreen() {
                   <Text style={styles.label}>Start Time *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="9:00 AM"
+                    placeholder="HH:MM"
                     placeholderTextColor="#94a3b8"
                     value={formData.startTime}
                     onChangeText={(text) =>
                       setFormData({ ...formData, startTime: text })
                     }
+                    maxLength={5}
+                    keyboardType="numeric"
                   />
+                  <Text style={styles.inputHint}>24-hour (09:00)</Text>
                 </View>
                 <View style={styles.timeInputGroup}>
                   <Text style={styles.label}>End Time *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="5:00 PM"
+                    placeholder="HH:MM"
                     placeholderTextColor="#94a3b8"
                     value={formData.endTime}
                     onChangeText={(text) =>
                       setFormData({ ...formData, endTime: text })
                     }
+                    maxLength={5}
+                    keyboardType="numeric"
                   />
+                  <Text style={styles.inputHint}>24-hour (17:00)</Text>
                 </View>
               </View>
 
@@ -444,7 +566,8 @@ export default function ReservationRequestScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -653,6 +776,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
   },
+  modalContentWrapper: {
+    justifyContent: "flex-end",
+  },
   modalContent: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
@@ -709,6 +835,11 @@ const styles = StyleSheet.create({
   },
   timeInputGroup: {
     flex: 1,
+  },
+  inputHint: {
+    fontSize: 11,
+    color: "#64748b",
+    marginTop: 4,
   },
   pickerContainer: {
     gap: 8,
