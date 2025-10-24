@@ -17,6 +17,7 @@ import React, { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -54,6 +55,22 @@ interface Issue {
   userName: string;
   spotNumber?: string;
 }
+
+
+
+const openMaps = () => {
+  const address = 'Calvin University, Grand Rapids, MI'; // Replace with your office address
+
+  const url = Platform.select({
+    ios: `maps:0,0?q=${address}`,
+    android: `geo:0,0?q=${address}`,
+  });
+
+  Linking.openURL(url as string).catch(() => {
+    const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    Linking.openURL(browserUrl);
+  });
+};
 
 export default function ClientHomeScreen() {
   const router = useRouter();
@@ -336,7 +353,7 @@ export default function ClientHomeScreen() {
             <Clock color="#fff" size={18} />
             <Text style={styles.spotDetailText}>Valid until 6:00 PM today</Text>
           </View>
-          <TouchableOpacity style={styles.directionsButton}>
+          <TouchableOpacity style={styles.directionsButton} onPress={openMaps}>
             <Navigation color="#4CAF50" size={20} />
             <Text style={styles.directionsButtonText}>Get Directions</Text>
           </TouchableOpacity>
