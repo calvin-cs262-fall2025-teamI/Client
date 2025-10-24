@@ -5,11 +5,9 @@ import { Appbar, Button, Card } from "react-native-paper";
 
 export default function UsersLayout() {
   return (
-      <View>
-          <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-                <Appbar.Content title="Users" titleStyle={{ color: "#fff", fontWeight: "700" }} />
-              
-              </Appbar.Header>
-        </View>
+     <Stack>
+      <Stack.Screen name="user_list" options={{ headerShown: false }} />
+      <Stack.Screen name="edit_user" options={{ headerShown: false }} />
+    </Stack>
   );
 }

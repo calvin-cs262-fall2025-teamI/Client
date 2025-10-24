@@ -1,15 +1,12 @@
-import React from "react";
-import { Stack } from "expo-router";
-import { View, Text } from "react-native";
-import { Appbar, Button, Card } from "react-native-paper";
+import { Stack } from 'expo-router';
+import { View } from 'lucide-react-native';
+import { Text } from 'react-native';
 
-export default function UsersLayout() {
+export default function RootLayout() {
   return (
-    <View>
-          <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-                <Appbar.Content title="Profile" titleStyle={{ color: "#fff", fontWeight: "700" }} />
-              
-              </Appbar.Header>
-        </View>
+    <Stack>
+      <Stack.Screen name="view_profile" options={{ headerShown: false }} />
+      <Stack.Screen name="edit_profile" options={{ headerShown: false }} />
+    </Stack>
   );
 }
