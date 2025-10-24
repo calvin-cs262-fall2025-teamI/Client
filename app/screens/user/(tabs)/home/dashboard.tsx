@@ -4,8 +4,8 @@ import {
   Calendar,
   Car,
   Clock,
-  Eye,
   Home,
+  LogOut,
   MapPin,
   MessageSquare,
   Navigation,
@@ -16,6 +16,7 @@ import {
 import React, { useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
@@ -176,8 +177,29 @@ export default function ClientHomeScreen() {
       spotNumber: "A-24",
     };
 
-    // In a real app, you would send this to your backend/database
-    // For demonstration, log the issue with formatted time
+    // Store the issue in a way that can be accessed by the admin
+    // Using a simple in-memory approach - in a real app, this would go to a backend
+    try {
+      // Get existing issues from global storage or initialize empty array
+      const existingIssuesJson = (global as any).parkingIssues || '[]';
+      const existingIssues = JSON.parse(existingIssuesJson);
+      
+      // Add new issue with isRead: false for admin
+      const issueForAdmin = {
+        ...newIssue,
+        isRead: false
+      };
+      existingIssues.push(issueForAdmin);
+      
+      // Store back to global
+      (global as any).parkingIssues = JSON.stringify(existingIssues);
+      
+      console.log("Issue submitted successfully:", issueForAdmin);
+      console.log("Total issues now:", existingIssues.length);
+    } catch (error) {
+      console.error("Error storing issue:", error);
+    }
+    
     const formattedTime = currentTimeStamp.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -186,9 +208,6 @@ export default function ClientHomeScreen() {
       minute: '2-digit',
       hour12: true
     });
-
-    console.log("Issue submitted at:", formattedTime);
-    console.log("Issue details:", newIssue);
 
     Alert.alert("Success", `Your issue has been reported at ${formattedTime}`);
     handleCloseIssueModal();
@@ -245,7 +264,7 @@ export default function ClientHomeScreen() {
         [
           {
             text: "Cancel",
-            onPress: () => { },
+            onPress: () => {},
             style: "cancel",
           },
           {
@@ -278,8 +297,8 @@ export default function ClientHomeScreen() {
             <Bell color="#fff" size={24} />
             <View style={styles.badge} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-            <Text style={styles.logoutText}>Sign Out</Text>
+          <TouchableOpacity style={styles.iconButton} onPress={handleSignOut}>
+            <LogOut color="#fff" size={24} />
           </TouchableOpacity>
         </View>
       </View>
@@ -414,24 +433,10 @@ export default function ClientHomeScreen() {
 
         {/* Quick Actions Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>Support and Feedback</Text>
           <View style={styles.quickActionsGrid}>
             <TouchableOpacity
-              style={[styles.actionButton, styles.actionButtonPrimary]}
-            >
-              <Calendar color="#fff" size={24} />
-              <Text style={styles.actionButtonTextPrimary}>Request Spot</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <Eye color="#4CAF50" size={24} />
-              <Text style={styles.actionButtonText}>See Spot</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <MapPin color="#4CAF50" size={24} />
-              <Text style={styles.actionButtonText}>Find Parking</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
+              style={[styles.actionButton, styles.actionButtonFullWidth]}
               onPress={handleOpenIssueModal}
             >
               <MessageSquare color="#4CAF50" size={24} />
@@ -553,75 +558,90 @@ export default function ClientHomeScreen() {
         transparent={true}
         onRequestClose={handleCloseIssueModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Report an Issue</Text>
-              <TouchableOpacity
-                onPress={handleCloseIssueModal}
-                style={styles.closeButton}
-              >
-                <X color="#64748b" size={24} />
-              </TouchableOpacity>
-            </View>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity 
+            activeOpacity={1} 
+            onPress={handleCloseIssueModal}
+            style={styles.modalOverlay}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Report an Issue</Text>
+                  <TouchableOpacity
+                    onPress={handleCloseIssueModal}
+                    style={styles.closeButton}
+                  >
+                    <X color="#64748b" size={24} />
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.modalBody}>
-              {/* Current Time Display */}
-              <View style={styles.timeDisplay}>
-                <Clock color="#4CAF50" size={16} />
-                <Text style={styles.timeText}>
-                  {currentTime.toLocaleString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: true
-                  })}
-                </Text>
+                <ScrollView 
+                  style={styles.modalBody}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Current Time Display */}
+                  <View style={styles.timeDisplay}>
+                    <Clock color="#4CAF50" size={16} />
+                    <Text style={styles.timeText}>
+                      {currentTime.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                      })}
+                    </Text>
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Describe the Issue *</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder="Please describe the problem you're experiencing..."
+                      placeholderTextColor="#94a3b8"
+                      value={issueMessage}
+                      onChangeText={setIssueMessage}
+                      multiline
+                      numberOfLines={6}
+                      textAlignVertical="top"
+                      returnKeyType="done"
+                      blurOnSubmit={true}
+                      onSubmitEditing={handleSubmitIssue}
+                    />
+                  </View>
+
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoText}>
+                      Your report will be sent to the parking lot manager for immediate attention.
+                    </Text>
+                  </View>
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={handleCloseIssueModal}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.submitButton}
+                    onPress={handleSubmitIssue}
+                  >
+                    <Text style={styles.submitButtonText}>Submit Report</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Describe the Issue *</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Please describe the problem you're experiencing..."
-                  placeholderTextColor="#94a3b8"
-                  value={issueMessage}
-                  onChangeText={setIssueMessage}
-                  multiline
-                  numberOfLines={6}
-                  textAlignVertical="top"
-                  returnKeyType="done"
-                  blurOnSubmit={true}
-                  onSubmitEditing={handleSubmitIssue}
-                />
-              </View>
-
-              <View style={styles.infoBox}>
-                <Text style={styles.infoText}>
-                  Your report will be sent to the parking lot manager for immediate attention.
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={handleCloseIssueModal}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleSubmitIssue}
-              >
-                <Text style={styles.submitButtonText}>Submit Report</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Bottom Navigation */}
@@ -676,14 +696,6 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     position: "relative",
-  },
-   logoutButton: {
-    padding: 8,
-  },
-  logoutText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
   },
   badge: {
     position: "absolute",
@@ -987,6 +999,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  actionButtonFullWidth: {
+    minWidth: "100%",
+  },
   actionButtonPrimary: {
     backgroundColor: "#4CAF50",
     borderColor: "#4CAF50",
@@ -1042,7 +1057,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "85%",
+    maxHeight: "90%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -1067,7 +1082,7 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: 20,
-    maxHeight: 400,
+    maxHeight: 500,
   },
   formGroup: {
     marginBottom: 16,
