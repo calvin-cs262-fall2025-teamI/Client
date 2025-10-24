@@ -9,7 +9,7 @@ const theme = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
-    primary: "rgb(56, 142, 60)", // Green
+    primary: "rgb(56, 142, 60)", // Green #388E3C
     primaryContainer: "rgb(200, 230, 201)",
     secondary: "rgb(251, 192, 45)", // Yellow
     secondaryContainer: "rgb(255, 243, 224)",
