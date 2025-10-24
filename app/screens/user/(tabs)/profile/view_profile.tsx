@@ -1,28 +1,28 @@
 import { useRouter } from "expo-router";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Platform,
-  StyleSheet,
-  Modal,
-  TextInput,
-} from "react-native";
-import {
-  User,
-  Phone,
-  Mail,
   Briefcase,
-  IdCard,
-  Edit3,
-  LogOut,
   Car,
+  Edit3,
+  IdCard,
+  LogOut,
+  Mail,
+  Phone,
+  User,
   X,
 } from "lucide-react-native";
-import { Appbar } from "react-native-paper";
 import { useState } from "react";
+import {
+  Alert,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Appbar } from "react-native-paper";
 
 interface Vehicle {
   id: number;
@@ -221,7 +221,7 @@ export default function ProfileScreen() {
         {/* Profile Card */}
         <View style={styles.card}>
           <View style={styles.avatarPlaceholder}>
-            <User size={48} color="#4CAF50" />
+            <User size={48} color="#388E3C" />
           </View>
           <View style={styles.profileHeader}>
             <Text style={styles.name}>Sarah Johnson</Text>
@@ -270,7 +270,7 @@ export default function ProfileScreen() {
               <View key={vehicle.id} style={styles.vehicleCard}>
                 <View style={styles.vehicleCardHeader}>
                   <View style={styles.vehicleIconContainer}>
-                    <Car color="#4CAF50" size={24} />
+                    <Car color="#388E3C" size={24} />
                   </View>
                   <View style={styles.vehicleInfo}>
                     <Text style={styles.vehicleTitle}>
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     marginTop: 12,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     flexDirection: "row",
     gap: 6,
     padding: 12,
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     color: "#0f172a",
   },
   addButtonText: {
-    color: "#4CAF50",
+    color: "#388E3C",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   editButton: {
     flex: 1,
     paddingVertical: 10,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     borderRadius: 8,
     alignItems: "center",
   },
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     borderRadius: 8,
   },
   addVehicleButtonText: {
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     alignItems: "center",
   },
   submitButtonText: {
