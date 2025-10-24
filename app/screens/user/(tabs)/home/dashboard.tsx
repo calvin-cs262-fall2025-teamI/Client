@@ -167,7 +167,6 @@ export default function ClientHomeScreen() {
       return;
     }
 
-    // Create issue object with current timestamp
     const currentTimeStamp = new Date();
     const newIssue: Issue = {
       id: Date.now(),
@@ -177,21 +176,16 @@ export default function ClientHomeScreen() {
       spotNumber: "A-24",
     };
 
-    // Store the issue in a way that can be accessed by the admin
-    // Using a simple in-memory approach - in a real app, this would go to a backend
     try {
-      // Get existing issues from global storage or initialize empty array
       const existingIssuesJson = (global as any).parkingIssues || '[]';
       const existingIssues = JSON.parse(existingIssuesJson);
       
-      // Add new issue with isRead: false for admin
       const issueForAdmin = {
         ...newIssue,
         isRead: false
       };
       existingIssues.push(issueForAdmin);
       
-      // Store back to global
       (global as any).parkingIssues = JSON.stringify(existingIssues);
       
       console.log("Issue submitted successfully:", issueForAdmin);
@@ -277,6 +271,25 @@ export default function ClientHomeScreen() {
         ]
       );
     }
+  };
+
+  
+  const handleNavigateHome = () => {
+    
+    console.log("Already on home");
+  };
+
+  const handleNavigateSchedule = () => {
+    router.push("/screens/user/(tabs)/schedule");
+  };
+
+  const handleNavigateFindParking = () => {
+    
+    Alert.alert("Coming Soon", "Find Parking feature is coming soon!");
+  };
+
+  const handleNavigateProfile = () => {
+    router.push("/screens/user/(tabs)/profile" as any);
   };
 
   return (
@@ -394,7 +407,7 @@ export default function ClientHomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Your Schedule</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={handleNavigateSchedule}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -643,26 +656,6 @@ export default function ClientHomeScreen() {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Home color="#4CAF50" size={24} />
-          <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Calendar color="#64748b" size={24} />
-          <Text style={styles.navText}>Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <MapPin color="#64748b" size={24} />
-          <Text style={styles.navText}>Find Parking</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <User color="#64748b" size={24} />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
