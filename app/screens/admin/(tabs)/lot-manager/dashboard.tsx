@@ -176,12 +176,7 @@ export default function LotManagerScreen() {
           <TouchableOpacity style={styles.createButton}>
             <Text style={styles.createButtonText}>Create New Parking Lot</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.createButton}>
-            <Text style={styles.createButtonText}>Create Schedule</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.profileButton}>
-            <Text style={styles.profileButtonText}>View Profile</Text>
-          </TouchableOpacity>
+         
         </View>
 
         <Text style={styles.sectionTitle}>Parking Lots</Text>
