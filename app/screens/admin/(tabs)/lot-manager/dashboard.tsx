@@ -24,7 +24,7 @@ interface Issue {
 export default function LotManagerScreen() {
   const router = useRouter();
   const [isNotificationModalVisible, setIsNotificationModalVisible] = useState(false);
-  
+
   // Sample issues - in a real app, this would come from your backend
   const [issues, setIssues] = useState<Issue[]>([
     {
@@ -55,25 +55,76 @@ export default function LotManagerScreen() {
 
   const unreadCount = issues.filter(issue => !issue.isRead).length;
 
-  // Determine a color for the Issues stat based on unread count.
-  const getIssueColor = (count: number) => {
-    if (count === 0) return "#4CAF50"; // green when no issues
-    if (count < 5) return "#FBC02D"; // yellow for a few
-    return "#F44336"; // red for many
+  // Default values and parking lots for testing/until data implemented
+  const defaultStats = {
+    totalSpots: 250,
+    occupiedSpots: 180,
+    availableSpots: 70,
   };
 
-  const stats = [
-    { title: "Total Spots", value: "250", color: "#388E3C" },
-    { title: "Occupied", value: "180", color: "#FBC02D" },
-    { title: "Available", value: "70", color: "#4CAF50" },
-    { title: "Issues", value: unreadCount.toString(), color: getIssueColor(unreadCount) },
+  const lots = [
+    { id: 1, name: "North Lot", total: 100, occupied: 75 },
+    { id: 2, name: "South Lot", total: 80, occupied: 60 },
+    { id: 3, name: "East Lot", total: 70, occupied: 45 },
   ];
 
-  const lots = [
-    { id: 1, name: "North Lot", total: 100, occupied: 75, available: 25 },
-    { id: 2, name: "South Lot", total: 80, occupied: 60, available: 20 },
-    { id: 3, name: "East Lot", total: 70, occupied: 45, available: 25 },
+
+  //Color of numbers on admin dashboard based on value
+  const getIssueColor = (count: number) => {
+    if (count === 0) return "#4CAF50";
+    if (count < 3) return "#FBC02D";
+    return "#F44336";
+  };
+
+  const getOccupiedSpotsColor = (occupied: number, total: number) => {
+    const ratio = occupied / total;
+    if (ratio < 0.5) return "#4CAF50";
+    if (ratio < 0.8) return "#FBC02D";
+    return "#F44336"; // Red
+  };
+
+  const getAvailableSpotsColor = (available: number, total: number) => {
+    const ratio = available / total;
+    if (ratio > 0.5) return "#4CAF50";
+    if (ratio > 0.2) return "#FBC02D";
+    return "#F44336";
+  };
+
+  const getTotalSpotsColor = () => {
+    return "#4CAF50";
+  }
+
+
+  const stats = [
+    {
+      title: "Total Spots",
+      value: defaultStats.totalSpots.toString(),
+      color: getTotalSpotsColor(defaultStats.totalSpots),
+    },
+    {
+      title: "Occupied",
+      value: defaultStats.occupiedSpots.toString(),
+      color: getOccupiedSpotsColor(defaultStats.occupiedSpots, defaultStats.totalSpots),
+    },
+    {
+      title: "Available",
+      value: defaultStats.availableSpots.toString(),
+      color: getAvailableSpotsColor(defaultStats.availableSpots, defaultStats.totalSpots),
+    },
+    {
+      title: "Unread Issues",
+      value: unreadCount.toString(),
+      color: getIssueColor(unreadCount),
+    },
   ];
+
+  /*
+    const oldLots = [
+      { id: 1, name: "North Lot", total: 100, occupied: 75, available: 25 },
+      { id: 2, name: "South Lot", total: 80, occupied: 60, available: 20 },
+      { id: 3, name: "East Lot", total: 70, occupied: 45, available: 25 },
+    ];
+  */
 
   const handleOpenNotifications = () => {
     setIsNotificationModalVisible(true);
@@ -84,8 +135,8 @@ export default function LotManagerScreen() {
   };
 
   const handleMarkAsRead = (id: number) => {
-    setIssues(prev => 
-      prev.map(issue => 
+    setIssues(prev =>
+      prev.map(issue =>
         issue.id === id ? { ...issue, isRead: true } : issue
       )
     );
@@ -180,7 +231,7 @@ export default function LotManagerScreen() {
           <TouchableOpacity style={styles.createButton}>
             <Text style={styles.createButtonText}>Create New Parking Lot</Text>
           </TouchableOpacity>
-         
+
         </View>
 
         <Text style={styles.sectionTitle}>Parking Lots</Text>
@@ -265,8 +316,8 @@ export default function LotManagerScreen() {
                 </View>
               ) : (
                 issues.map((issue) => (
-                  <View 
-                    key={issue.id} 
+                  <View
+                    key={issue.id}
                     style={[
                       styles.issueCard,
                       !issue.isRead && styles.issueCardUnread
@@ -286,10 +337,10 @@ export default function LotManagerScreen() {
                       </Text>
                     </View>
 
-                      <Text style={[
-                        styles.issueMessage,
-                        !issue.isRead && { color: "#0f172a", fontWeight: "700" }
-                      ]}>{issue.message}</Text>
+                    <Text style={[
+                      styles.issueMessage,
+                      !issue.isRead && { color: "#0f172a", fontWeight: "700" }
+                    ]}>{issue.message}</Text>
 
                     <View style={styles.issueActions}>
                       {!issue.isRead && (
@@ -360,8 +411,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  container: { 
-    padding: 16 
+  container: {
+    padding: 16
   },
   statsContainer: {
     flexDirection: "row",
