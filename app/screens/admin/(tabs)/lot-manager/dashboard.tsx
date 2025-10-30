@@ -62,13 +62,6 @@ export default function LotManagerScreen() {
     availableSpots: 70,
   };
 
-  const lots = [
-    { id: 1, name: "North Lot", total: 100, occupied: 75 },
-    { id: 2, name: "South Lot", total: 80, occupied: 60 },
-    { id: 3, name: "East Lot", total: 70, occupied: 45 },
-  ];
-
-
   //Color of numbers on admin dashboard based on value
   const getIssueColor = (count: number) => {
     if (count === 0) return "#4CAF50";
@@ -80,7 +73,7 @@ export default function LotManagerScreen() {
     const ratio = occupied / total;
     if (ratio < 0.5) return "#4CAF50";
     if (ratio < 0.8) return "#FBC02D";
-    return "#F44336"; // Red
+    return "#F44336";
   };
 
   const getAvailableSpotsColor = (available: number, total: number) => {
@@ -93,6 +86,28 @@ export default function LotManagerScreen() {
   const getTotalSpotsColor = () => {
     return "#4CAF50";
   }
+
+  const baseLots = [
+    { id: 1, name: "North Lot", total: 100, occupied: 25 },
+    { id: 2, name: "South Lot", total: 80, occupied: 60 },
+    { id: 3, name: "East Lot", total: 70, occupied: 60 },
+  ];
+
+  const lots = baseLots.map(lot => {
+    let available = lot.total - lot.occupied
+    if (available < 0) {
+      available = 0;
+    } else if (available > lot.total) {
+      available = lot.total;
+    }
+
+    return {
+      ...lot,
+      available,
+      occupiedColor: getOccupiedSpotsColor(lot.occupied, lot.total),
+      availableColor: getAvailableSpotsColor(available, lot.total),
+    };
+  });
 
 
   const stats = [
@@ -260,16 +275,18 @@ export default function LotManagerScreen() {
               </View>
             </View>
 
+            {/* Individual Parking Lot Details*/}
             <View style={styles.lotDetails}>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Available</Text>
-                <Text style={[styles.detailValue, { color: "#4CAF50" }]}>{lot.available}</Text>
+                <Text style={[styles.detailValue, { color: lot.availableColor }]}>{lot.available}</Text>
               </View>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Occupied</Text>
-                <Text style={[styles.detailValue, { color: "#FBC02D" }]}>{lot.occupied}</Text>
+                <Text style={[styles.detailValue, { color: lot.occupiedColor }]}>{lot.occupied}</Text>
               </View>
             </View>
+
 
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.actionButton}>
