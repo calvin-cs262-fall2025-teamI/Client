@@ -55,11 +55,18 @@ export default function LotManagerScreen() {
 
   const unreadCount = issues.filter(issue => !issue.isRead).length;
 
+  // Determine a color for the Issues stat based on unread count.
+  const getIssueColor = (count: number) => {
+    if (count === 0) return "#4CAF50"; // green when no issues
+    if (count < 5) return "#FBC02D"; // yellow for a few
+    return "#F44336"; // red for many
+  };
+
   const stats = [
     { title: "Total Spots", value: "250", color: "#388E3C" },
     { title: "Occupied", value: "180", color: "#FBC02D" },
     { title: "Available", value: "70", color: "#4CAF50" },
-    { title: "Issues", value: unreadCount.toString(), color: "#F44336" },
+    { title: "Issues", value: unreadCount.toString(), color: getIssueColor(unreadCount) },
   ];
 
   const lots = [
@@ -279,7 +286,10 @@ export default function LotManagerScreen() {
                       </Text>
                     </View>
 
-                    <Text style={styles.issueMessage}>{issue.message}</Text>
+                      <Text style={[
+                        styles.issueMessage,
+                        !issue.isRead && { color: "#0f172a", fontWeight: "700" }
+                      ]}>{issue.message}</Text>
 
                     <View style={styles.issueActions}>
                       {!issue.isRead && (
