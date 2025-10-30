@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { Bell } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Alert,
@@ -143,16 +144,12 @@ export default function LotManagerScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Parkmaster</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleOpenNotifications}
-            style={styles.bellButton}
+            style={styles.simpleBellButton}
           >
-            <Text style={styles.bellIcon}>🔔</Text>
-            {unreadCount > 0 && (
-              <View style={styles.badgeContainer}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
-              </View>
-            )}
+            <Bell color="#fff" size={20} />
+            {unreadCount > 0 && <View style={styles.unreadDot} />}
           </TouchableOpacity>
           <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
             <Text style={styles.logoutText}>Sign Out</Text>
@@ -330,29 +327,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  bellButton: {
+  simpleBellButton: {
     position: "relative",
     padding: 8,
-  },
-  bellIcon: {
-    fontSize: 24,
-  },
-  badgeContainer: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: "#F44336",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 4,
+    justifyContent: "center",
   },
-  badgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
+  unreadDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#F44336",
   },
   logoutButton: {
     padding: 8,
