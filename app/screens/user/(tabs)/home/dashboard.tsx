@@ -1,16 +1,12 @@
 import { useRouter } from "expo-router";
 import {
   Bell,
-  Calendar,
-  Car,
   Clock,
-  Home,
   LogOut,
   MapPin,
   MessageSquare,
   Navigation,
   Search,
-  User,
   X
 } from "lucide-react-native";
 import React, { useState } from "react";
@@ -49,62 +45,62 @@ export default function ClientHomeScreen() {
 
 
 
-const openMaps = async () => {
-  const address = 'Calvin University, Grand Rapids, MI'; // Replace with your office address
-  
-  try {
-    // For mobile platforms (iOS/Android)
-    if (Platform.OS === 'ios' || Platform.OS === 'android') {
-      const url = Platform.select({
-        ios: `maps:0,0?q=${encodeURIComponent(address)}`,
-        android: `geo:0,0?q=${encodeURIComponent(address)}`,
-      });
+  const openMaps = async () => {
+    const address = 'Calvin University, Grand Rapids, MI'; // Replace with your office address
 
-      if (url) {
-        const supported = await Linking.canOpenURL(url);
-        
+    try {
+      // For mobile platforms (iOS/Android)
+      if (Platform.OS === 'ios' || Platform.OS === 'android') {
+        const url = Platform.select({
+          ios: `maps:0,0?q=${encodeURIComponent(address)}`,
+          android: `geo:0,0?q=${encodeURIComponent(address)}`,
+        });
+
+        if (url) {
+          const supported = await Linking.canOpenURL(url);
+
+          if (supported) {
+            await Linking.openURL(url);
+          } else {
+            // Fallback to browser maps
+            const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+            await Linking.openURL(browserUrl);
+          }
+        }
+      } else {
+        // For web/desktop platforms
+        const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+        const supported = await Linking.canOpenURL(browserUrl);
+
         if (supported) {
-          await Linking.openURL(url);
-        } else {
-          // Fallback to browser maps
-          const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
           await Linking.openURL(browserUrl);
+        } else {
+          Alert.alert(
+            'Unable to Open Maps',
+            'Please manually navigate to:\nCalvin University, Grand Rapids, MI',
+            [{ text: 'OK' }]
+          );
         }
       }
-    } else {
-      // For web/desktop platforms
-      const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-      const supported = await Linking.canOpenURL(browserUrl);
-      
-      if (supported) {
-        await Linking.openURL(browserUrl);
-      } else {
-        Alert.alert(
-          'Unable to Open Maps',
-          'Please manually navigate to:\nCalvin University, Grand Rapids, MI',
-          [{ text: 'OK' }]
-        );
-      }
+    } catch (error) {
+      // Handle any errors that occur
+      console.error('Error opening maps:', error);
+      Alert.alert(
+        'Error Opening Maps',
+        `Unable to open maps application. Please navigate manually to: ${address}`,
+        [
+          {
+            text: 'Copy Address',
+            onPress: () => {
+              // Optional: Copy address to clipboard if Clipboard API is available
+              Alert.alert('Address', address);
+            }
+          },
+          { text: 'OK' }
+        ]
+      );
     }
-  } catch (error) {
-    // Handle any errors that occur
-    console.error('Error opening maps:', error);
-    Alert.alert(
-      'Error Opening Maps',
-      `Unable to open maps application. Please navigate manually to: ${address}`,
-      [
-        { 
-          text: 'Copy Address', 
-          onPress: () => {
-            // Optional: Copy address to clipboard if Clipboard API is available
-            Alert.alert('Address', address);
-          }
-        },
-        { text: 'OK' }
-      ]
-    );
-  }
-};
+  };
   // Update current time every second
   React.useEffect(() => {
     const timer = setInterval(() => {
@@ -172,21 +168,21 @@ const openMaps = async () => {
     try {
       const existingIssuesJson = (global as any).parkingIssues || '[]';
       const existingIssues = JSON.parse(existingIssuesJson);
-      
+
       const issueForAdmin = {
         ...newIssue,
         isRead: false
       };
       existingIssues.push(issueForAdmin);
-      
+
       (global as any).parkingIssues = JSON.stringify(existingIssues);
-      
+
       console.log("Issue submitted successfully:", issueForAdmin);
       console.log("Total issues now:", existingIssues.length);
     } catch (error) {
       console.error("Error storing issue:", error);
     }
-    
+
     const formattedTime = currentTimeStamp.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -200,7 +196,7 @@ const openMaps = async () => {
     handleCloseIssueModal();
   };
 
- 
+
 
 
   const handleNavigateSchedule = () => {
@@ -258,7 +254,7 @@ const openMaps = async () => {
           </TouchableOpacity>
         </View>
 
-      
+
 
         {/* Your Schedule Section */}
         <View style={styles.section}>
@@ -302,6 +298,13 @@ const openMaps = async () => {
         </View>
 
         {/* Quick Actions Section */}
+        <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonFullWidth]}
+          onPress={() => router.push("/screens/user/(tabs)/home/view-parking-lots" as any)}
+        >
+          <MapPin color="#4CAF50" size={24} />
+          <Text style={styles.actionButtonText}>View Parking Lots</Text>
+        </TouchableOpacity>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support and Feedback</Text>
           <View style={styles.quickActionsGrid}>
@@ -316,7 +319,7 @@ const openMaps = async () => {
         </View>
       </ScrollView>
 
-    
+
       {/* Report Issue Modal */}
       <Modal
         visible={isIssueModalVisible}
@@ -324,12 +327,12 @@ const openMaps = async () => {
         transparent={true}
         onRequestClose={handleCloseIssueModal}
       >
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <TouchableOpacity 
-            activeOpacity={1} 
+          <TouchableOpacity
+            activeOpacity={1}
             onPress={handleCloseIssueModal}
             style={styles.modalOverlay}
           >
@@ -345,7 +348,7 @@ const openMaps = async () => {
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView 
+                <ScrollView
                   style={styles.modalBody}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
