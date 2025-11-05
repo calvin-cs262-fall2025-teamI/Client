@@ -89,7 +89,7 @@ export default function LotManagerScreen() {
 
   const baseLots = [
     { id: 1, name: "North Lot", total: 100, occupied: 25 },
-    { id: 2, name: "South Lot", total: 80, occupied: 60 },
+    { id: 2, name: "South Lot", total: 100, occupied: 60 },
     { id: 3, name: "East Lot", total: 70, occupied: 60 },
   ];
 
@@ -133,6 +133,7 @@ export default function LotManagerScreen() {
     },
   ];
 
+  /* Previous hard-coded data */
   /*
     const oldLots = [
       { id: 1, name: "North Lot", total: 100, occupied: 75, available: 25 },
@@ -261,6 +262,7 @@ export default function LotManagerScreen() {
               </Text>
             </View>
 
+
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
                 <View
@@ -268,7 +270,13 @@ export default function LotManagerScreen() {
                     styles.progressFill,
                     {
                       width: `${(lot.occupied / lot.total) * 100}%`,
-                      backgroundColor: lot.occupied / lot.total > 0.8 ? "#F44336" : "#388E3C",
+                      backgroundColor:
+                        ((lot.total - lot.occupied) / lot.total) > 0.5
+                          ? "#4CAF50"
+                          : ((lot.total - lot.occupied) / lot.total) > 0.2
+                            ? "#FBC02D"
+                            : "#F44336",
+
                     },
                   ]}
                 />
