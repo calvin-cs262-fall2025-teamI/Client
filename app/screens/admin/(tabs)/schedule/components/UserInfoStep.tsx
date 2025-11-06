@@ -1,6 +1,8 @@
+// CLIENT/app/screens/admin/(tabs)/schedule/components/UserInfoStep.tsx
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { TextInput, Button, Menu, Text } from 'react-native-paper';
+import { validateName } from '../../../../../utils/validationUtils';
 
 type UserRole = 'employee' | 'admin';
 
@@ -18,6 +20,8 @@ interface UserInfoStepProps {
 
 export default function UserInfoStep({ userData, setUserData, onNext }: UserInfoStepProps) {
   const [visible, setVisible] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [touched, setTouched] = useState(false);
 
   const employees = [
     'John Smith',
@@ -33,30 +37,67 @@ export default function UserInfoStep({ userData, setUserData, onNext }: UserInfo
 
   const selectEmployee = (name: string) => {
     setUserData({ ...userData, name });
+    setTouched(true);
+    
+    // Validate selected name
+    const validation = validateName(name);
+    if (!validation.isValid) {
+      setNameError(validation.error || '');
+    } else {
+      setNameError('');
+    }
+    
     closeMenu();
+  };
+
+  const handleNext = () => {
+    setTouched(true);
+    
+    // Validate name before proceeding
+    const validation = validateName(userData.name);
+    if (!validation.isValid) {
+      setNameError(validation.error || '');
+      Alert.alert('Validation Error', validation.error || 'Please select a valid employee');
+      return;
+    }
+
+    // Check if role is selected
+    if (!userData.role) {
+      Alert.alert('Validation Error', 'Please select a user role');
+      return;
+    }
+
+    // Clear error and proceed
+    setNameError('');
+    onNext();
   };
 
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>User Information</Text>
-      <Text style={styles.cardSubtitle}>Enter your name and select your role</Text>
-
+      <Text style={styles.cardSubtitle}>Select employee and role to continue</Text>
 
       <Menu
         visible={visible}
         onDismiss={closeMenu}
         anchor={
-          <TextInput
-            label="Select Employee"
-            mode="outlined"
-            value={userData.name}
-            onPressIn={openMenu}
-            editable={false}
-            right={<TextInput.Icon icon="menu-down" />}
-            style={styles.input}
-            outlineColor="#ddd"
-            activeOutlineColor="#1b5e20"
-          />
+          <View>
+            <TextInput
+              label="Select Employee *"
+              mode="outlined"
+              value={userData.name}
+              onPressIn={openMenu}
+              editable={false}
+              right={<TextInput.Icon icon="menu-down" />}
+              style={styles.input}
+              outlineColor={touched && nameError ? "#F44336" : "#ddd"}
+              activeOutlineColor={touched && nameError ? "#F44336" : "#1b5e20"}
+              error={touched && !!nameError}
+            />
+            {touched && nameError && (
+              <Text style={styles.errorText}>{nameError}</Text>
+            )}
+          </View>
         }
         contentStyle={styles.menuContent}
       >
@@ -77,7 +118,7 @@ export default function UserInfoStep({ userData, setUserData, onNext }: UserInfo
         ))}
       </Menu>
 
-      <Text style={styles.label}>User Role</Text>
+      <Text style={styles.label}>User Role *</Text>
       <View style={styles.roleContainer}>
         {['employee', 'admin'].map((role) => (
           <Button
@@ -93,11 +134,21 @@ export default function UserInfoStep({ userData, setUserData, onNext }: UserInfo
         ))}
       </View>
 
+      {userData.name && userData.role && (
+        <View style={styles.summaryBox}>
+          <Text style={styles.summaryText}>
+            ✓ Selected: <Text style={styles.summaryBold}>{userData.name}</Text> as{' '}
+            <Text style={styles.summaryBold}>{userData.role}</Text>
+          </Text>
+        </View>
+      )}
+
       <Button
         mode="contained"
-        onPress={onNext}
+        onPress={handleNext}
         style={styles.nextButton}
         buttonColor="#1b5e20"
+        disabled={!userData.name || !userData.role}
       >
         Next
       </Button>
@@ -136,7 +187,15 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: '#fff',
-    marginBottom: 24,
+    marginBottom: 4,
+  },
+  errorText: {
+    color: '#F44336',
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 16,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   menuContent: {
     backgroundColor: '#fff',
@@ -159,6 +218,23 @@ const styles = StyleSheet.create({
   roleButton: {
     flex: 1,
     borderRadius: 6,
+  },
+  summaryBox: {
+    backgroundColor: '#f0fdf4',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#86efac',
+    marginBottom: 16,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: '#166534',
+    textAlign: 'center',
+  },
+  summaryBold: {
+    fontWeight: '700',
+    color: '#15803d',
   },
   nextButton: {
     marginTop: 8,

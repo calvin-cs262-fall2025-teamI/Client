@@ -1,11 +1,11 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, View, Text, StyleSheet } from 'react-native';
-import { Appbar, Provider as PaperProvider } from 'react-native-paper';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Appbar } from 'react-native-paper';
 import ProgressIndicator from './components/ProgressIndicator';
-import UserInfoStep from './components/UserInfoStep';
 import ReservationParkingStep from './components/ReservationParkingStep';
 import ReviewSubmitStep from './components/ReviewSubmitStep';
-import { router } from 'expo-router';
+import UserInfoStep from './components/UserInfoStep';
 
 interface UserData {
   name: string;
