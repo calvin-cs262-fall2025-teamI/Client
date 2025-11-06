@@ -1,26 +1,26 @@
 // CLIENT/app/screens/admin/(tabs)/users/user_list.tsx
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
+  Alert,
   FlatList,
   Image,
   Modal,
   Pressable,
-  StyleSheet,
   ScrollView,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Plus, Search, User, Mail, Phone, X } from "lucide-react-native";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import { Appbar } from "react-native-paper";
 import {
   validateEmail,
-  validatePhoneNumber,
   validateName,
+  validatePhoneNumber,
   ValidationErrors,
 } from '../../../../utils/validationUtils';
 
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   addButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   scheduleIcon: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     width: 48,
     height: 48,
     borderRadius: 8,
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   roleTag: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
   },
   roleTagText: {
     color: "#fff",
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
   },
   avatarPlaceholder: {
     width: 100,
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
   },
   uploadText: {
-    color: "#4CAF50",
+    color: "#388E3C",
     fontWeight: "600",
     marginTop: 12,
     fontSize: 14,
@@ -767,8 +767,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   roleButtonActive: {
-    backgroundColor: "#4CAF50",
-    borderColor: "#4CAF50",
+    backgroundColor: "#388E3C",
+    borderColor: "#388E3C",
   },
   roleButtonText: {
     fontSize: 14,
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     alignItems: "center",
   },
   submitButtonText: {
