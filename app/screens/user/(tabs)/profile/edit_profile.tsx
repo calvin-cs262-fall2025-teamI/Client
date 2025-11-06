@@ -1,14 +1,13 @@
 // screens/user/EditProfile.tsx
 import { useRouter } from "expo-router";
 import {
-  View,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
+  View,
 } from "react-native";
-import { ArrowLeft } from "lucide-react-native";
 import { Appbar } from "react-native-paper";
 
 export default function EditProfile() {
@@ -110,7 +109,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     alignItems: "center",
   },
   saveText: { color: "#fff", fontWeight: "600", fontSize: 16 },

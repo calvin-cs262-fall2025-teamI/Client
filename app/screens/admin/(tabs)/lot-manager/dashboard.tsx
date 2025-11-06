@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { Bell } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Alert,
@@ -23,7 +24,7 @@ interface Issue {
 export default function LotManagerScreen() {
   const router = useRouter();
   const [isNotificationModalVisible, setIsNotificationModalVisible] = useState(false);
-  
+
   // Sample issues - in a real app, this would come from your backend
   const [issues, setIssues] = useState<Issue[]>([
     {
@@ -54,18 +55,92 @@ export default function LotManagerScreen() {
 
   const unreadCount = issues.filter(issue => !issue.isRead).length;
 
-  const stats = [
-    { title: "Total Spots", value: "250", color: "#388E3C" },
-    { title: "Occupied", value: "180", color: "#FBC02D" },
-    { title: "Available", value: "70", color: "#4CAF50" },
-    { title: "Issues", value: unreadCount.toString(), color: "#F44336" },
+  // Default values and parking lots for testing/until data implemented
+  const defaultStats = {
+    totalSpots: 250,
+    occupiedSpots: 180,
+    availableSpots: 70,
+  };
+
+  //Color of numbers on admin dashboard based on value
+  const getIssueColor = (count: number) => {
+    if (count === 0) return "#4CAF50";
+    if (count < 3) return "#FBC02D";
+    return "#F44336";
+  };
+
+  const getOccupiedSpotsColor = (occupied: number, total: number) => {
+    const ratio = occupied / total;
+    if (ratio < 0.5) return "#4CAF50";
+    if (ratio < 0.8) return "#FBC02D";
+    return "#F44336";
+  };
+
+  const getAvailableSpotsColor = (available: number, total: number) => {
+    const ratio = available / total;
+    if (ratio > 0.5) return "#4CAF50";
+    if (ratio > 0.2) return "#FBC02D";
+    return "#F44336";
+  };
+
+  const getTotalSpotsColor = () => {
+    return "#4CAF50";
+  }
+
+  const baseLots = [
+    { id: 1, name: "North Lot", total: 100, occupied: 25 },
+    { id: 2, name: "South Lot", total: 100, occupied: 60 },
+    { id: 3, name: "East Lot", total: 70, occupied: 60 },
   ];
 
-  const lots = [
-    { id: 1, name: "North Lot", total: 100, occupied: 75, available: 25 },
-    { id: 2, name: "South Lot", total: 80, occupied: 60, available: 20 },
-    { id: 3, name: "East Lot", total: 70, occupied: 45, available: 25 },
+  const lots = baseLots.map(lot => {
+    let available = lot.total - lot.occupied
+    if (available < 0) {
+      available = 0;
+    } else if (available > lot.total) {
+      available = lot.total;
+    }
+
+    return {
+      ...lot,
+      available,
+      occupiedColor: getOccupiedSpotsColor(lot.occupied, lot.total),
+      availableColor: getAvailableSpotsColor(available, lot.total),
+    };
+  });
+
+
+  const stats = [
+    {
+      title: "Total Spots",
+      value: defaultStats.totalSpots.toString(),
+      color: getTotalSpotsColor(defaultStats.totalSpots),
+    },
+    {
+      title: "Occupied",
+      value: defaultStats.occupiedSpots.toString(),
+      color: getOccupiedSpotsColor(defaultStats.occupiedSpots, defaultStats.totalSpots),
+    },
+    {
+      title: "Available",
+      value: defaultStats.availableSpots.toString(),
+      color: getAvailableSpotsColor(defaultStats.availableSpots, defaultStats.totalSpots),
+    },
+    {
+      title: "Unread Issues",
+      value: unreadCount.toString(),
+      color: getIssueColor(unreadCount),
+    },
   ];
+
+  /* Previous hard-coded data */
+  /*
+    const oldLots = [
+      { id: 1, name: "North Lot", total: 100, occupied: 75, available: 25 },
+      { id: 2, name: "South Lot", total: 80, occupied: 60, available: 20 },
+      { id: 3, name: "East Lot", total: 70, occupied: 45, available: 25 },
+    ];
+  */
 
   const handleOpenNotifications = () => {
     setIsNotificationModalVisible(true);
@@ -76,8 +151,8 @@ export default function LotManagerScreen() {
   };
 
   const handleMarkAsRead = (id: number) => {
-    setIssues(prev => 
-      prev.map(issue => 
+    setIssues(prev =>
+      prev.map(issue =>
         issue.id === id ? { ...issue, isRead: true } : issue
       )
     );
@@ -143,16 +218,12 @@ export default function LotManagerScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Parkmaster</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleOpenNotifications}
-            style={styles.bellButton}
+            style={styles.simpleBellButton}
           >
-            <Text style={styles.bellIcon}>🔔</Text>
-            {unreadCount > 0 && (
-              <View style={styles.badgeContainer}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
-              </View>
-            )}
+            <Bell color="#fff" size={20} />
+            {unreadCount > 0 && <View style={styles.unreadDot} />}
           </TouchableOpacity>
           <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
             <Text style={styles.logoutText}>Sign Out</Text>
@@ -176,7 +247,7 @@ export default function LotManagerScreen() {
           <TouchableOpacity style={styles.createButton}>
             <Text style={styles.createButtonText}>Create New Parking Lot</Text>
           </TouchableOpacity>
-         
+
         </View>
 
         <Text style={styles.sectionTitle}>Parking Lots</Text>
@@ -191,6 +262,7 @@ export default function LotManagerScreen() {
               </Text>
             </View>
 
+
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
                 <View
@@ -198,23 +270,31 @@ export default function LotManagerScreen() {
                     styles.progressFill,
                     {
                       width: `${(lot.occupied / lot.total) * 100}%`,
-                      backgroundColor: lot.occupied / lot.total > 0.8 ? "#F44336" : "#388E3C",
+                      backgroundColor:
+                        ((lot.total - lot.occupied) / lot.total) > 0.5
+                          ? "#4CAF50"
+                          : ((lot.total - lot.occupied) / lot.total) > 0.2
+                            ? "#FBC02D"
+                            : "#F44336",
+
                     },
                   ]}
                 />
               </View>
             </View>
 
+            {/* Individual Parking Lot Details*/}
             <View style={styles.lotDetails}>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Available</Text>
-                <Text style={[styles.detailValue, { color: "#4CAF50" }]}>{lot.available}</Text>
+                <Text style={[styles.detailValue, { color: lot.availableColor }]}>{lot.available}</Text>
               </View>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Occupied</Text>
-                <Text style={[styles.detailValue, { color: "#FBC02D" }]}>{lot.occupied}</Text>
+                <Text style={[styles.detailValue, { color: lot.occupiedColor }]}>{lot.occupied}</Text>
               </View>
             </View>
+
 
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.actionButton}>
@@ -261,8 +341,8 @@ export default function LotManagerScreen() {
                 </View>
               ) : (
                 issues.map((issue) => (
-                  <View 
-                    key={issue.id} 
+                  <View
+                    key={issue.id}
                     style={[
                       styles.issueCard,
                       !issue.isRead && styles.issueCardUnread
@@ -282,7 +362,10 @@ export default function LotManagerScreen() {
                       </Text>
                     </View>
 
-                    <Text style={styles.issueMessage}>{issue.message}</Text>
+                    <Text style={[
+                      styles.issueMessage,
+                      !issue.isRead && { color: "#0f172a", fontWeight: "700" }
+                    ]}>{issue.message}</Text>
 
                     <View style={styles.issueActions}>
                       {!issue.isRead && (
@@ -330,29 +413,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  bellButton: {
+  simpleBellButton: {
     position: "relative",
     padding: 8,
-  },
-  bellIcon: {
-    fontSize: 24,
-  },
-  badgeContainer: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: "#F44336",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 4,
+    justifyContent: "center",
   },
-  badgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
+  unreadDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#F44336",
   },
   logoutButton: {
     padding: 8,
@@ -362,8 +436,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  container: { 
-    padding: 16 
+  container: {
+    padding: 16
   },
   statsContainer: {
     flexDirection: "row",

@@ -91,7 +91,7 @@ export default function LoadingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a7f5a",
+    backgroundColor: "#388E3C",
   },
   content: {
     flex: 1,
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderWidth: 6,
-    borderColor: "#1a7f5a",
+    borderColor: "#388E3C",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 64,
     fontWeight: "700",
-    color: "#1a7f5a",
+    color: "#388E3C",
   },
   appName: {
     fontSize: 36,

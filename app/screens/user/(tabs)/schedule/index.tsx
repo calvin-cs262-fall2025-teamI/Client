@@ -16,7 +16,7 @@ export default function ScheduleIndexScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
+      <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Schedule</Text>
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     padding: 20,
     paddingBottom: 24,
   },
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   requestButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
