@@ -1,20 +1,20 @@
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
+  Alert,
   FlatList,
   Image,
   Modal,
   Pressable,
-  StyleSheet,
   ScrollView,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Plus, Search, User, Mail, Phone, X } from "lucide-react-native";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import { Appbar } from "react-native-paper";
 
 // Define User interface
