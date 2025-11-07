@@ -1,42 +1,41 @@
 // CLIENT/app/screens/admin/(tabs)/users/edit_user.tsx
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Car,
+  Edit2,
+  Mail,
+  Phone,
+  Plus,
+  Save,
+  Trash2,
+  User,
+  X
+} from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
+  Alert,
   Image,
   Modal,
   Pressable,
-  StyleSheet,
   ScrollView,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  Car,
-  Plus,
-  Edit2,
-  Trash2,
-  X,
-  Save,
-} from "lucide-react-native";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter, useLocalSearchParams } from "expo-router";
 import { Appbar } from "react-native-paper";
 import {
+  formatLicensePlate,
   validateEmail,
-  validatePhoneNumber,
-  validateName,
   validateLicensePlate,
+  validateName,
+  validatePhoneNumber,
   validateVehicleColor,
   validateVehicleMake,
   validateVehicleModel,
   validateVehicleYear,
-  formatLicensePlate,
   ValidationErrors,
 } from '../../../../utils/validationUtils';
 
@@ -386,7 +385,7 @@ export default function EditUser() {
                 onPress={() => setEditingProfile(true)}
                 style={styles.editButton}
               >
-                <Edit2 color="#4CAF50" size={18} />
+                <Edit2 color="#388E3C" size={18} />
                 <Text style={styles.editButtonText}>Edit</Text>
               </TouchableOpacity>
             ) : (
@@ -605,7 +604,7 @@ export default function EditUser() {
                       onPress={() => handleEditVehicle(vehicle)}
                       style={styles.iconButton}
                     >
-                      <Edit2 color="#4CAF50" size={18} />
+                      <Edit2 color="#388E3C" size={18} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleDeleteVehicle(vehicle.id)}
@@ -821,10 +820,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
   },
   editButtonText: {
-    color: "#4CAF50",
+    color: "#388E3C",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -851,7 +850,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
   },
   saveSmallButtonText: {
     color: "#fff",
@@ -875,7 +874,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
   },
   avatarPlaceholderLarge: {
     width: 120,
@@ -891,7 +890,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: "35%",
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -991,7 +990,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   roleTagDisplay: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
@@ -1006,7 +1005,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1045,7 +1044,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1053,7 +1052,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   vehicleIcon: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     width: 48,
     height: 48,
     borderRadius: 8,
@@ -1156,7 +1155,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     alignItems: "center",
   },
   submitButtonText: {

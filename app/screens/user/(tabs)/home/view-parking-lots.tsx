@@ -2,13 +2,13 @@ import { useRouter } from "expo-router";
 import { ArrowLeft, MapPin, X } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-    Modal,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
@@ -182,7 +182,7 @@ export default function ViewParkingLotsScreen() {
       case "authorized personnel":
         return "#FF4500"; // Orange
       default:
-        return "#4CAF50"; // Green for available regular
+        return "#388E3C"; // Green for available regular
     }
   };
 
@@ -193,7 +193,7 @@ export default function ViewParkingLotsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
+      <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -231,7 +231,7 @@ export default function ViewParkingLotsScreen() {
             <View key={lot.id} style={styles.lotCard}>
               <View style={styles.lotHeader}>
                 <View style={styles.lotHeaderLeft}>
-                  <MapPin color="#4CAF50" size={20} />
+                  <MapPin color="#388E3C" size={20} />
                   <Text style={styles.lotName}>{lot.name}</Text>
                 </View>
                 <View style={styles.lotStats}>
@@ -248,7 +248,7 @@ export default function ViewParkingLotsScreen() {
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Available</Text>
-                  <Text style={[styles.statValue, { color: "#4CAF50" }]}>
+                  <Text style={[styles.statValue, { color: "#388E3C" }]}>
                     {lot.availableSpots}
                   </Text>
                 </View>
@@ -295,7 +295,7 @@ export default function ViewParkingLotsScreen() {
           <Text style={styles.legendTitle}>Legend</Text>
           <View style={styles.legendGrid}>
             <View style={styles.legendItem}>
-              <View style={[styles.legendBox, { backgroundColor: "#4CAF50" }]} />
+              <View style={[styles.legendBox, { backgroundColor: "#388E3C" }]} />
               <Text style={styles.legendText}>Available</Text>
             </View>
             <View style={styles.legendItem}>
@@ -427,7 +427,7 @@ export default function ViewParkingLotsScreen() {
                   <Text style={styles.modalLegendTitle}>Parking Space Legend</Text>
                   <View style={styles.legendGrid}>
                     <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#4CAF50" }]} />
+                      <View style={[styles.legendBox, { backgroundColor: "#388E3C" }]} />
                       <Text style={styles.legendText}>Available</Text>
                     </View>
                     <View style={styles.legendItem}>
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     padding: 20,
     paddingBottom: 24,
     flexDirection: "row",
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timeCard: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     margin: 16,
     marginBottom: 8,
     padding: 16,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   viewButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#e2e8f0",
   },
   closeModalButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     padding: 14,
     borderRadius: 8,
     alignItems: "center",
