@@ -1,10 +1,12 @@
 // CLIENT/app/screens/auth/signInScreen.tsx
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, View, Alert } from "react-native";
-import { Button, Text, TextInput, HelperText } from "react-native-paper";
+import { Alert, StyleSheet, View } from "react-native";
+import { Button, HelperText, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { validateEmail } from "../../utils/validationUtils";
+
+const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/";
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -13,6 +15,14 @@ export default function SignInScreen() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [touched, setTouched] = useState({ email: false, password: false });
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+
+  // Additional fields for account creation
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
   const handleEmailBlur = () => {
     setTouched({ ...touched, email: true });
@@ -60,7 +70,7 @@ export default function SignInScreen() {
     }
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     // Validate email
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
@@ -85,9 +95,140 @@ export default function SignInScreen() {
       return;
     }
 
-    // If validation passes, proceed with sign in
-    // TODO: Add actual authentication logic here
-    Alert.alert("Success", "Sign in successful!");
+    setIsLoading(true);
+
+    try {
+      // Check if user exists by email
+      const response = await fetch(`${API_URL}/api/users/email/${encodeURIComponent(email)}`);
+      
+      if (response.ok) {
+        const user = await response.json();
+        
+        // TODO: In production, password should be verified on the server
+        // For now, we'll just check if user exists and redirect based on role
+        console.log("User found:", user);
+        
+        // Navigate based on user role
+        if (user.role === "admin") {
+          router.push("/screens/admin" as any);
+        } else {
+          router.push("/screens/user" as any);
+        }
+        
+        Alert.alert("Success", `Welcome back, ${user.name}!`);
+      } else if (response.status === 404) {
+        Alert.alert(
+          "Account Not Found",
+          "No account found with this email. Would you like to create one?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { 
+              text: "Create Account", 
+              onPress: () => setShowCreateAccount(true)
+            }
+          ]
+        );
+      } else {
+        throw new Error("Failed to sign in");
+      }
+    } catch (error) {
+      console.error("Sign in error:", error);
+      Alert.alert(
+        "Error",
+        "Unable to sign in. Please check your connection and try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    // Validate all fields
+    if (!name.trim()) {
+      setNameError("Name is required");
+      Alert.alert("Validation Error", "Please enter your name");
+      return;
+    }
+
+    if (!phone.trim()) {
+      setPhoneError("Phone number is required");
+      Alert.alert("Validation Error", "Please enter your phone number");
+      return;
+    }
+
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.error || "");
+      Alert.alert("Validation Error", "Please enter a valid email address");
+      return;
+    }
+
+    if (password.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      Alert.alert("Validation Error", "Password must be at least 6 characters");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Create new user
+      const response = await fetch(`${API_URL}/api/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          role: "client", // Default to client role
+          department: "General",
+          status: "active",
+          avatar: null,
+        }),
+      });
+
+      if (response.ok) {
+        const newUser = await response.json();
+        console.log("User created:", newUser);
+        
+        Alert.alert(
+          "Success",
+          "Account created successfully!",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Navigate to user dashboard
+                router.push("/screens/user" as any);
+              }
+            }
+          ]
+        );
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to create account");
+      }
+    } catch (error) {
+      console.error("Account creation error:", error);
+      Alert.alert(
+        "Error",
+        "Unable to create account. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleCreateAccount = () => {
+    setShowCreateAccount(!showCreateAccount);
+    // Reset errors when toggling
+    setNameError("");
+    setPhoneError("");
+    setEmailError("");
+    setPasswordError("");
+    setTouched({ email: false, password: false });
   };
 
   return (
@@ -95,6 +236,51 @@ export default function SignInScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Parkmaster</Text>
         <Text style={styles.subtitle}>Parking Lot Management</Text>
+
+        {showCreateAccount && (
+          <>
+            <TextInput
+              label="Full Name"
+              value={name}
+              onChangeText={(text) => {
+                setName(text);
+                setNameError("");
+              }}
+              style={styles.input}
+              mode="outlined"
+              outlineColor={nameError ? "#F44336" : "#388E3C"}
+              activeOutlineColor={nameError ? "#F44336" : "#388E3C"}
+              error={!!nameError}
+              disabled={isLoading}
+            />
+            {nameError && (
+              <HelperText type="error" visible={true} style={styles.errorText}>
+                {nameError}
+              </HelperText>
+            )}
+
+            <TextInput
+              label="Phone Number"
+              value={phone}
+              onChangeText={(text) => {
+                setPhone(text);
+                setPhoneError("");
+              }}
+              style={styles.input}
+              mode="outlined"
+              outlineColor={phoneError ? "#F44336" : "#388E3C"}
+              activeOutlineColor={phoneError ? "#F44336" : "#388E3C"}
+              keyboardType="phone-pad"
+              error={!!phoneError}
+              disabled={isLoading}
+            />
+            {phoneError && (
+              <HelperText type="error" visible={true} style={styles.errorText}>
+                {phoneError}
+              </HelperText>
+            )}
+          </>
+        )}
 
         <TextInput
           label="Email"
@@ -108,6 +294,7 @@ export default function SignInScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           error={touched.email && !!emailError}
+          disabled={isLoading}
         />
         {touched.email && emailError && (
           <HelperText type="error" visible={true} style={styles.errorText}>
@@ -126,6 +313,7 @@ export default function SignInScreen() {
           activeOutlineColor={touched.password && passwordError ? "#F44336" : "#388E3C"}
           secureTextEntry
           error={touched.password && !!passwordError}
+          disabled={isLoading}
         />
         {touched.password && passwordError && (
           <HelperText type="error" visible={true} style={styles.errorText}>
@@ -135,30 +323,48 @@ export default function SignInScreen() {
 
         <Button
           mode="contained"
-          onPress={handleSignIn}
+          onPress={showCreateAccount ? handleCreateAccount : handleSignIn}
           style={styles.button}
           buttonColor="#388E3C"
           labelStyle={{ fontSize: 16, fontWeight: "600" }}
-          disabled={!!emailError || !!passwordError}
+          disabled={isLoading || !!emailError || !!passwordError}
+          loading={isLoading}
         >
-          Sign In
+          {showCreateAccount ? "Create Account" : "Sign In"}
+        </Button>
+
+        <Button
+          mode="text"
+          onPress={toggleCreateAccount}
+          style={styles.toggleButton}
+          textColor="#388E3C"
+          disabled={isLoading}
+        >
+          {showCreateAccount
+            ? "Already have an account? Sign In"
+            : "Don't have an account? Create One"}
         </Button>
 
         <View style={styles.devButtonsContainer}>
-          <Button
-            mode="contained"
-            onPress={() => router.push("/screens/admin" as any)}
-            style={styles.devButton}
-          >
-            Admin
-          </Button>
-          <Button
-            mode="contained"
-            onPress={() => router.push("/screens/user" as any)}
-            style={styles.devButton}
-          >
-            User
-          </Button>
+          <Text style={styles.devLabel}>Quick Access (Testing)</Text>
+          <View style={styles.devButtonsRow}>
+            <Button
+              mode="outlined"
+              onPress={() => router.push("/screens/admin" as any)}
+              style={styles.devButton}
+              textColor="#388E3C"
+            >
+              Admin
+            </Button>
+            <Button
+              mode="outlined"
+              onPress={() => router.push("/screens/user" as any)}
+              style={styles.devButton}
+              textColor="#388E3C"
+            >
+              User
+            </Button>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -200,16 +406,28 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
   },
+  toggleButton: {
+    marginTop: 12,
+  },
   devButtonsContainer: {
-    display: "flex",
+    marginTop: 40,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+  },
+  devLabel: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  devButtonsRow: {
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
-    gap: 20,
-    marginTop: 40,
+    gap: 12,
   },
   devButton: {
-    alignSelf: "center",
-    marginBottom: 20,
+    flex: 1,
+    maxWidth: 120,
   },
 });
