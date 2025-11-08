@@ -1,12 +1,12 @@
 // CLIENT/app/screens/auth/signInScreen.tsx
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { Button, HelperText, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { validateEmail } from "../../utils/validationUtils";
 
-const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/";
+const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -172,26 +172,45 @@ export default function SignInScreen() {
     setIsLoading(true);
 
     try {
+      // Prepare user data - make sure all required fields are present
+      const userData = {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        role: "client", // Default to client role
+        department: "General",
+        status: "active",
+        avatar: null
+      };
+
+      console.log("Creating user with data:", userData);
+
       // Create new user
       const response = await fetch(`${API_URL}/api/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
         },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-          role: "client", // Default to client role
-          department: "General",
-          status: "active",
-          avatar: null,
-        }),
+        body: JSON.stringify(userData),
       });
 
+      console.log("Response status:", response.status);
+      
+      // Try to get response body regardless of status
+      const responseText = await response.text();
+      console.log("Response body:", responseText);
+
       if (response.ok) {
-        const newUser = await response.json();
-        console.log("User created:", newUser);
+        let newUser;
+        try {
+          newUser = JSON.parse(responseText);
+        } catch (e) {
+          console.error("Failed to parse response:", e);
+          throw new Error("Invalid server response");
+        }
+        
+        console.log("User created successfully:", newUser);
         
         Alert.alert(
           "Success",
@@ -207,14 +226,32 @@ export default function SignInScreen() {
           ]
         );
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to create account");
+        // Try to parse error message
+        let errorMessage = "Failed to create account";
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // If we can't parse, use the text as is
+          if (responseText) {
+            errorMessage = responseText;
+          }
+        }
+        
+        console.error("Server error:", errorMessage);
+        
+        // Check if it's a duplicate email error
+        if (responseText.includes("unique") || responseText.includes("duplicate") || responseText.includes("already exists")) {
+          throw new Error("This email is already registered. Please sign in instead.");
+        }
+        
+        throw new Error(errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Account creation error:", error);
       Alert.alert(
         "Error",
-        "Unable to create account. Please try again."
+        error.message || "Unable to create account. Please try again."
       );
     } finally {
       setIsLoading(false);
@@ -233,140 +270,142 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Parkmaster</Text>
-        <Text style={styles.subtitle}>Parking Lot Management</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Parkmaster</Text>
+          <Text style={styles.subtitle}>Parking Lot Management</Text>
 
-        {showCreateAccount && (
-          <>
-            <TextInput
-              label="Full Name"
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                setNameError("");
-              }}
-              style={styles.input}
-              mode="outlined"
-              outlineColor={nameError ? "#F44336" : "#388E3C"}
-              activeOutlineColor={nameError ? "#F44336" : "#388E3C"}
-              error={!!nameError}
-              disabled={isLoading}
-            />
-            {nameError && (
-              <HelperText type="error" visible={true} style={styles.errorText}>
-                {nameError}
-              </HelperText>
-            )}
+          {showCreateAccount && (
+            <>
+              <TextInput
+                label="Full Name"
+                value={name}
+                onChangeText={(text) => {
+                  setName(text);
+                  setNameError("");
+                }}
+                style={styles.input}
+                mode="outlined"
+                outlineColor={nameError ? "#F44336" : "#388E3C"}
+                activeOutlineColor={nameError ? "#F44336" : "#388E3C"}
+                error={!!nameError}
+                disabled={isLoading}
+              />
+              {nameError && (
+                <HelperText type="error" visible={true} style={styles.errorText}>
+                  {nameError}
+                </HelperText>
+              )}
 
-            <TextInput
-              label="Phone Number"
-              value={phone}
-              onChangeText={(text) => {
-                setPhone(text);
-                setPhoneError("");
-              }}
-              style={styles.input}
-              mode="outlined"
-              outlineColor={phoneError ? "#F44336" : "#388E3C"}
-              activeOutlineColor={phoneError ? "#F44336" : "#388E3C"}
-              keyboardType="phone-pad"
-              error={!!phoneError}
-              disabled={isLoading}
-            />
-            {phoneError && (
-              <HelperText type="error" visible={true} style={styles.errorText}>
-                {phoneError}
-              </HelperText>
-            )}
-          </>
-        )}
+              <TextInput
+                label="Phone Number"
+                value={phone}
+                onChangeText={(text) => {
+                  setPhone(text);
+                  setPhoneError("");
+                }}
+                style={styles.input}
+                mode="outlined"
+                outlineColor={phoneError ? "#F44336" : "#388E3C"}
+                activeOutlineColor={phoneError ? "#F44336" : "#388E3C"}
+                keyboardType="phone-pad"
+                error={!!phoneError}
+                disabled={isLoading}
+              />
+              {phoneError && (
+                <HelperText type="error" visible={true} style={styles.errorText}>
+                  {phoneError}
+                </HelperText>
+              )}
+            </>
+          )}
 
-        <TextInput
-          label="Email"
-          value={email}
-          onChangeText={handleEmailChange}
-          onBlur={handleEmailBlur}
-          style={styles.input}
-          mode="outlined"
-          outlineColor={touched.email && emailError ? "#F44336" : "#388E3C"}
-          activeOutlineColor={touched.email && emailError ? "#F44336" : "#388E3C"}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          error={touched.email && !!emailError}
-          disabled={isLoading}
-        />
-        {touched.email && emailError && (
-          <HelperText type="error" visible={true} style={styles.errorText}>
-            {emailError}
-          </HelperText>
-        )}
+          <TextInput
+            label="Email"
+            value={email}
+            onChangeText={handleEmailChange}
+            onBlur={handleEmailBlur}
+            style={styles.input}
+            mode="outlined"
+            outlineColor={touched.email && emailError ? "#F44336" : "#388E3C"}
+            activeOutlineColor={touched.email && emailError ? "#F44336" : "#388E3C"}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            error={touched.email && !!emailError}
+            disabled={isLoading}
+          />
+          {touched.email && emailError && (
+            <HelperText type="error" visible={true} style={styles.errorText}>
+              {emailError}
+            </HelperText>
+          )}
 
-        <TextInput
-          label="Password"
-          value={password}
-          onChangeText={handlePasswordChange}
-          onBlur={handlePasswordBlur}
-          style={styles.input}
-          mode="outlined"
-          outlineColor={touched.password && passwordError ? "#F44336" : "#388E3C"}
-          activeOutlineColor={touched.password && passwordError ? "#F44336" : "#388E3C"}
-          secureTextEntry
-          error={touched.password && !!passwordError}
-          disabled={isLoading}
-        />
-        {touched.password && passwordError && (
-          <HelperText type="error" visible={true} style={styles.errorText}>
-            {passwordError}
-          </HelperText>
-        )}
+          <TextInput
+            label="Password"
+            value={password}
+            onChangeText={handlePasswordChange}
+            onBlur={handlePasswordBlur}
+            style={styles.input}
+            mode="outlined"
+            outlineColor={touched.password && passwordError ? "#F44336" : "#388E3C"}
+            activeOutlineColor={touched.password && passwordError ? "#F44336" : "#388E3C"}
+            secureTextEntry
+            error={touched.password && !!passwordError}
+            disabled={isLoading}
+          />
+          {touched.password && passwordError && (
+            <HelperText type="error" visible={true} style={styles.errorText}>
+              {passwordError}
+            </HelperText>
+          )}
 
-        <Button
-          mode="contained"
-          onPress={showCreateAccount ? handleCreateAccount : handleSignIn}
-          style={styles.button}
-          buttonColor="#388E3C"
-          labelStyle={{ fontSize: 16, fontWeight: "600" }}
-          disabled={isLoading || !!emailError || !!passwordError}
-          loading={isLoading}
-        >
-          {showCreateAccount ? "Create Account" : "Sign In"}
-        </Button>
+          <Button
+            mode="contained"
+            onPress={showCreateAccount ? handleCreateAccount : handleSignIn}
+            style={styles.button}
+            buttonColor="#388E3C"
+            labelStyle={{ fontSize: 16, fontWeight: "600" }}
+            disabled={isLoading || !!emailError || !!passwordError}
+            loading={isLoading}
+          >
+            {showCreateAccount ? "Create Account" : "Sign In"}
+          </Button>
 
-        <Button
-          mode="text"
-          onPress={toggleCreateAccount}
-          style={styles.toggleButton}
-          textColor="#388E3C"
-          disabled={isLoading}
-        >
-          {showCreateAccount
-            ? "Already have an account? Sign In"
-            : "Don't have an account? Create One"}
-        </Button>
+          <Button
+            mode="text"
+            onPress={toggleCreateAccount}
+            style={styles.toggleButton}
+            textColor="#388E3C"
+            disabled={isLoading}
+          >
+            {showCreateAccount
+              ? "Already have an account? Sign In"
+              : "Don't have an account? Create One"}
+          </Button>
 
-        <View style={styles.devButtonsContainer}>
-          <Text style={styles.devLabel}>Quick Access (Testing)</Text>
-          <View style={styles.devButtonsRow}>
-            <Button
-              mode="outlined"
-              onPress={() => router.push("/screens/admin" as any)}
-              style={styles.devButton}
-              textColor="#388E3C"
-            >
-              Admin
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={() => router.push("/screens/user" as any)}
-              style={styles.devButton}
-              textColor="#388E3C"
-            >
-              User
-            </Button>
+          <View style={styles.devButtonsContainer}>
+            <Text style={styles.devLabel}>Quick Access (Testing)</Text>
+            <View style={styles.devButtonsRow}>
+              <Button
+                mode="outlined"
+                onPress={() => router.push("/screens/admin" as any)}
+                style={styles.devButton}
+                textColor="#388E3C"
+              >
+                Admin
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => router.push("/screens/user" as any)}
+                style={styles.devButton}
+                textColor="#388E3C"
+              >
+                User
+              </Button>
+            </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -376,10 +415,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f5f5f5",
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   content: {
     flex: 1,
     justifyContent: "center",
     padding: 24,
+    minHeight: 600, // Ensures content doesn't get cut off
   },
   title: {
     fontSize: 36,
@@ -392,7 +435,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     textAlign: "center",
-    marginBottom: 48,
+    marginBottom: 32,
   },
   input: {
     marginBottom: 4,
@@ -408,6 +451,7 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     marginTop: 12,
+    marginBottom: 8,
   },
   devButtonsContainer: {
     marginTop: 40,

@@ -271,3 +271,20 @@ export interface ValidationResult {
     
     return phone;
   };
+
+  // Default export to prevent routing warnings
+  const ValidationUtils = {
+    validateEmail,
+    validateLicensePlate,
+    validateVehicleColor,
+    validateVehicleMake,
+    validateVehicleModel,
+    validatePhoneNumber,
+    validateName,
+    validateVehicleYear,
+    validateUserInformation,
+    formatLicensePlate,
+    formatPhoneNumber,
+  };
+
+  export default ValidationUtils;
