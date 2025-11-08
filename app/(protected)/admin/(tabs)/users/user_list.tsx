@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -50,38 +50,24 @@ export default function UserList() {
 
   const router = useRouter();
 
-  const [users, setUsers] = useState<UserType[]>([
-    {
-      id: "1",
-      name: "John Smith",
-      email: "john.smith@parkmaster.com",
-      phone: "+1 (555) 123-4567",
-      role: "admin",
-      status: "active",
-      department: "IT",
-      avatar: null,
-    },
-    {
-      id: "2",
-      name: "Sarah Johnson",
-      email: "sarah.j@parkmaster.com",
-      phone: "+1 (555) 234-5678",
-      role: "client",
-      status: "active",
-      department: "Finance",
-      avatar: null,
-    },
-    {
-      id: "3",
-      name: "Mike Davis",
-      email: "mike.davis@parkmaster.com",
-      phone: "+1 (555) 345-6789",
-      role: "client",
-      status: "active",
-      department: "Operations",
-      avatar: null,
-    },
-  ]);
+
+  const [users, setUsers] = useState<UserType[]>([]);
+
+  // Get Users from API
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch("https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users");
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -263,7 +249,7 @@ export default function UserList() {
             style={styles.scheduleCard}
             onPress={() =>
               router.push(
-                `/screens/admin/(tabs)/users/edit_user?id=${item.id}`
+                `../screens/admin/(tabs)/users/edit_user?id=${item.id}`
               )
             }
           >
