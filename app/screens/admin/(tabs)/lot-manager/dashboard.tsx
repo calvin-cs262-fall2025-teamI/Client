@@ -244,10 +244,12 @@ export default function LotManagerScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionContainer}>
-          <TouchableOpacity style={styles.createButton}>
-            <Text style={styles.createButtonText}>Create New Parking Lot</Text>
-          </TouchableOpacity>
-
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => router.push("/screens/admin/(tabs)/lot-manager/createLotScreen")}
+           >
+          <Text style={styles.createButtonText}>Create New Parking Lot</Text>
+        </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Parking Lots</Text>

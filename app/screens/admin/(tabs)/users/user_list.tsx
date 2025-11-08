@@ -1,4 +1,3 @@
-// CLIENT/app/screens/admin/(tabs)/users/user_list.tsx
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
