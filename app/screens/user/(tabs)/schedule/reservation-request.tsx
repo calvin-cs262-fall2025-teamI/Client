@@ -261,7 +261,7 @@ export default function ReservationRequestScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
+      <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
 
       <View style={styles.header}>
         <TouchableOpacity 
@@ -363,7 +363,7 @@ export default function ReservationRequestScreen() {
 
         <View style={styles.infoCard}>
           <View style={styles.infoHeader}>
-            <MapPin color="#4CAF50" size={20} />
+            <MapPin color="#388E3C" size={20} />
             <Text style={styles.infoTitle}>Reservation Tips</Text>
           </View>
           <Text style={styles.infoText}>
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     padding: 20,
     paddingBottom: 24,
     flexDirection: "row",
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   requestButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 2,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scheduleIcon: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     width: 56,
     height: 56,
     borderRadius: 12,
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   emptyStateButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   lotOptionSelected: {
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
     backgroundColor: "#f0fdf4",
   },
   radioButton: {
@@ -868,13 +868,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   radioButtonSelected: {
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
   },
   radioButtonInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
   },
   lotOptionText: {
     fontSize: 15,
@@ -920,7 +920,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   switchActive: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
   },
   switchThumb: {
     width: 24,
@@ -959,8 +959,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   dayButtonSelected: {
-    backgroundColor: "#4CAF50",
-    borderColor: "#4CAF50",
+    backgroundColor: "#388E3C",
+    borderColor: "#388E3C",
   },
   dayButtonText: {
     fontSize: 14,
@@ -1007,7 +1007,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     alignItems: "center",
   },
   submitButtonText: {

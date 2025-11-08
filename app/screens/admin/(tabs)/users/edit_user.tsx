@@ -1,34 +1,44 @@
+// CLIENT/app/screens/admin/(tabs)/users/edit_user.tsx
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Car,
+  Edit2,
+  Mail,
+  Phone,
+  Plus,
+  Save,
+  Trash2,
+  User,
+  X
+} from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  FlatList,
+  Alert,
   Image,
   Modal,
   Pressable,
-  StyleSheet,
   ScrollView,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  Car,
-  Plus,
-  Edit2,
-  Trash2,
-  X,
-  Save,
-} from "lucide-react-native";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter, useLocalSearchParams } from "expo-router";
 import { Appbar } from "react-native-paper";
+import {
+  formatLicensePlate,
+  validateEmail,
+  validateLicensePlate,
+  validateName,
+  validatePhoneNumber,
+  validateVehicleColor,
+  validateVehicleMake,
+  validateVehicleModel,
+  validateVehicleYear,
+  ValidationErrors,
+} from '../../../../utils/validationUtils';
 
-// Define interfaces
 interface VehicleType {
   id: string;
   make: string;
@@ -55,7 +65,6 @@ export default function EditUser() {
   const params = useLocalSearchParams();
   const userId = (params?.id as string) || "1";
 
-  // Mock user data - in real app, fetch based on userId
   const [user, setUser] = useState<UserType>({
     id: userId,
     name: "John Smith",
@@ -87,9 +96,8 @@ export default function EditUser() {
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<VehicleType | null>(
-    null
-  );
+  const [editingVehicle, setEditingVehicle] = useState<VehicleType | null>(null);
+  
   const [vehicleForm, setVehicleForm] = useState({
     make: "",
     model: "",
@@ -105,6 +113,12 @@ export default function EditUser() {
     department: user.department,
   });
 
+  const [profileErrors, setProfileErrors] = useState<ValidationErrors>({});
+  const [profileTouched, setProfileTouched] = useState<{ [key: string]: boolean }>({});
+  
+  const [vehicleErrors, setVehicleErrors] = useState<ValidationErrors>({});
+  const [vehicleTouched, setVehicleTouched] = useState<{ [key: string]: boolean }>({});
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -117,17 +131,56 @@ export default function EditUser() {
     }
   };
 
+  // Profile validation handlers
+  const handleProfileFieldChange = (field: string, value: string) => {
+    setProfileForm({ ...profileForm, [field]: value });
+    if (profileErrors[field]) {
+      const newErrors = { ...profileErrors };
+      delete newErrors[field];
+      setProfileErrors(newErrors);
+    }
+  };
+
+  const handleProfileFieldBlur = (field: string) => {
+    setProfileTouched({ ...profileTouched, [field]: true });
+    
+    let validation;
+    switch (field) {
+      case "name":
+        validation = validateName(profileForm.name);
+        break;
+      case "email":
+        validation = validateEmail(profileForm.email);
+        break;
+      case "phone":
+        validation = validatePhoneNumber(profileForm.phone);
+        break;
+      default:
+        return;
+    }
+    
+    if (!validation.isValid) {
+      setProfileErrors({ ...profileErrors, [field]: validation.error || "" });
+    }
+  };
+
   const handleSaveProfile = () => {
-    if (!profileForm.name.trim()) {
-      Alert.alert("Error", "Please enter a name");
-      return;
-    }
-    if (!profileForm.email.trim()) {
-      Alert.alert("Error", "Please enter an email");
-      return;
-    }
-    if (!profileForm.phone.trim()) {
-      Alert.alert("Error", "Please enter a phone number");
+    // Validate all fields
+    const errors: ValidationErrors = {};
+    
+    const nameValidation = validateName(profileForm.name);
+    if (!nameValidation.isValid) errors.name = nameValidation.error!;
+    
+    const emailValidation = validateEmail(profileForm.email);
+    if (!emailValidation.isValid) errors.email = emailValidation.error!;
+    
+    const phoneValidation = validatePhoneNumber(profileForm.phone);
+    if (!phoneValidation.isValid) errors.phone = phoneValidation.error!;
+
+    if (Object.keys(errors).length > 0) {
+      setProfileErrors(errors);
+      setProfileTouched({ name: true, email: true, phone: true });
+      Alert.alert("Validation Error", "Please fix all errors before saving");
       return;
     }
 
@@ -139,6 +192,8 @@ export default function EditUser() {
       department: profileForm.department,
     });
     setEditingProfile(false);
+    setProfileErrors({});
+    setProfileTouched({});
     Alert.alert("Success", "Profile updated successfully!");
   };
 
@@ -150,6 +205,47 @@ export default function EditUser() {
       department: user.department,
     });
     setEditingProfile(false);
+    setProfileErrors({});
+    setProfileTouched({});
+  };
+
+  // Vehicle validation handlers
+  const handleVehicleFieldChange = (field: string, value: string) => {
+    setVehicleForm({ ...vehicleForm, [field]: value });
+    if (vehicleErrors[field]) {
+      const newErrors = { ...vehicleErrors };
+      delete newErrors[field];
+      setVehicleErrors(newErrors);
+    }
+  };
+
+  const handleVehicleFieldBlur = (field: string) => {
+    setVehicleTouched({ ...vehicleTouched, [field]: true });
+    
+    let validation;
+    switch (field) {
+      case "make":
+        validation = validateVehicleMake(vehicleForm.make);
+        break;
+      case "model":
+        validation = validateVehicleModel(vehicleForm.model);
+        break;
+      case "year":
+        validation = validateVehicleYear(vehicleForm.year);
+        break;
+      case "color":
+        validation = validateVehicleColor(vehicleForm.color);
+        break;
+      case "licensePlate":
+        validation = validateLicensePlate(vehicleForm.licensePlate);
+        break;
+      default:
+        return;
+    }
+    
+    if (!validation.isValid) {
+      setVehicleErrors({ ...vehicleErrors, [field]: validation.error || "" });
+    }
   };
 
   const handleAddVehicle = () => {
@@ -161,6 +257,8 @@ export default function EditUser() {
       color: "",
       licensePlate: "",
     });
+    setVehicleErrors({});
+    setVehicleTouched({});
     setModalVisible(true);
   };
 
@@ -173,6 +271,8 @@ export default function EditUser() {
       color: vehicle.color,
       licensePlate: vehicle.licensePlate,
     });
+    setVehicleErrors({});
+    setVehicleTouched({});
     setModalVisible(true);
   };
 
@@ -186,33 +286,60 @@ export default function EditUser() {
       licensePlate: "",
     });
     setEditingVehicle(null);
+    setVehicleErrors({});
+    setVehicleTouched({});
   };
 
   const handleSaveVehicle = () => {
-    if (
-      !vehicleForm.make.trim() ||
-      !vehicleForm.model.trim() ||
-      !vehicleForm.year.trim() ||
-      !vehicleForm.licensePlate.trim()
-    ) {
-      Alert.alert("Error", "Please fill in all required fields");
+    // Validate all vehicle fields
+    const errors: ValidationErrors = {};
+    
+    const makeValidation = validateVehicleMake(vehicleForm.make);
+    if (!makeValidation.isValid) errors.make = makeValidation.error!;
+    
+    const modelValidation = validateVehicleModel(vehicleForm.model);
+    if (!modelValidation.isValid) errors.model = modelValidation.error!;
+    
+    const yearValidation = validateVehicleYear(vehicleForm.year);
+    if (!yearValidation.isValid) errors.year = yearValidation.error!;
+    
+    const colorValidation = validateVehicleColor(vehicleForm.color);
+    if (!colorValidation.isValid) errors.color = colorValidation.error!;
+    
+    const plateValidation = validateLicensePlate(vehicleForm.licensePlate);
+    if (!plateValidation.isValid) errors.licensePlate = plateValidation.error!;
+
+    if (Object.keys(errors).length > 0) {
+      setVehicleErrors(errors);
+      setVehicleTouched({
+        make: true,
+        model: true,
+        year: true,
+        color: true,
+        licensePlate: true,
+      });
+      Alert.alert("Validation Error", "Please fix all errors before saving");
       return;
     }
 
+    // Format license plate
+    const formattedVehicle = {
+      ...vehicleForm,
+      licensePlate: formatLicensePlate(vehicleForm.licensePlate),
+    };
+
     if (editingVehicle) {
-      // Update existing vehicle
       const updatedVehicles = user.vehicles.map((v) =>
         v.id === editingVehicle.id
-          ? { ...editingVehicle, ...vehicleForm }
+          ? { ...editingVehicle, ...formattedVehicle }
           : v
       );
       setUser({ ...user, vehicles: updatedVehicles });
       Alert.alert("Success", "Vehicle updated successfully!");
     } else {
-      // Add new vehicle
       const newVehicle: VehicleType = {
         id: (user.vehicles.length + 1).toString(),
-        ...vehicleForm,
+        ...formattedVehicle,
       };
       setUser({ ...user, vehicles: [...user.vehicles, newVehicle] });
       Alert.alert("Success", "Vehicle added successfully!");
@@ -244,14 +371,9 @@ export default function EditUser() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-       <Appbar.Header style={styles.header}>
-        <Appbar.Content
-          title="User Details"
-          titleStyle={styles.headerTitle}
-        />
+      <Appbar.Header style={styles.header}>
+        <Appbar.Content title="User Details" titleStyle={styles.headerTitle} />
       </Appbar.Header>
-
 
       <ScrollView style={styles.content}>
         {/* Profile Section */}
@@ -263,7 +385,7 @@ export default function EditUser() {
                 onPress={() => setEditingProfile(true)}
                 style={styles.editButton}
               >
-                <Edit2 color="#4CAF50" size={18} />
+                <Edit2 color="#388E3C" size={18} />
                 <Text style={styles.editButtonText}>Edit</Text>
               </TouchableOpacity>
             ) : (
@@ -286,7 +408,6 @@ export default function EditUser() {
           </View>
 
           <View style={styles.profileCard}>
-            {/* Avatar */}
             <TouchableOpacity
               onPress={editingProfile ? pickImage : undefined}
               style={styles.avatarContainer}
@@ -305,17 +426,23 @@ export default function EditUser() {
               )}
             </TouchableOpacity>
 
-            {/* Profile Fields */}
             <View style={styles.formRow}>
               <View style={styles.formColumn}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>
+                  Full Name
+                  {profileTouched.name && profileErrors.name && (
+                    <Text style={styles.errorInline}> - {profileErrors.name}</Text>
+                  )}
+                </Text>
                 {editingProfile ? (
                   <TextInput
-                    style={styles.input}
+                    style={[
+                      styles.input,
+                      profileTouched.name && profileErrors.name && styles.inputError,
+                    ]}
                     value={profileForm.name}
-                    onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, name: text })
-                    }
+                    onChangeText={(text) => handleProfileFieldChange("name", text)}
+                    onBlur={() => handleProfileFieldBlur("name")}
                     placeholder="Enter full name"
                     placeholderTextColor="#94a3b8"
                   />
@@ -325,14 +452,21 @@ export default function EditUser() {
               </View>
 
               <View style={styles.formColumn}>
-                <Text style={styles.label}>Email Address</Text>
+                <Text style={styles.label}>
+                  Email Address
+                  {profileTouched.email && profileErrors.email && (
+                    <Text style={styles.errorInline}> - {profileErrors.email}</Text>
+                  )}
+                </Text>
                 {editingProfile ? (
                   <TextInput
-                    style={styles.input}
+                    style={[
+                      styles.input,
+                      profileTouched.email && profileErrors.email && styles.inputError,
+                    ]}
                     value={profileForm.email}
-                    onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, email: text })
-                    }
+                    onChangeText={(text) => handleProfileFieldChange("email", text)}
+                    onBlur={() => handleProfileFieldBlur("email")}
                     placeholder="user@gmail.com"
                     placeholderTextColor="#94a3b8"
                     keyboardType="email-address"
@@ -349,14 +483,21 @@ export default function EditUser() {
 
             <View style={styles.formRow}>
               <View style={styles.formColumn}>
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.label}>
+                  Phone Number
+                  {profileTouched.phone && profileErrors.phone && (
+                    <Text style={styles.errorInline}> - {profileErrors.phone}</Text>
+                  )}
+                </Text>
                 {editingProfile ? (
                   <TextInput
-                    style={styles.input}
+                    style={[
+                      styles.input,
+                      profileTouched.phone && profileErrors.phone && styles.inputError,
+                    ]}
                     value={profileForm.phone}
-                    onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, phone: text })
-                    }
+                    onChangeText={(text) => handleProfileFieldChange("phone", text)}
+                    onBlur={() => handleProfileFieldBlur("phone")}
                     placeholder="+1 (555) 123-4567"
                     placeholderTextColor="#94a3b8"
                     keyboardType="phone-pad"
@@ -372,8 +513,8 @@ export default function EditUser() {
               <View style={styles.formColumn}>
                 <Text style={styles.label}>Department</Text>
                 {editingProfile ? (
-                  <ScrollView 
-                    horizontal 
+                  <ScrollView
+                    horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.departmentScroll}
                   >
@@ -463,7 +604,7 @@ export default function EditUser() {
                       onPress={() => handleEditVehicle(vehicle)}
                       style={styles.iconButton}
                     >
-                      <Edit2 color="#4CAF50" size={18} />
+                      <Edit2 color="#388E3C" size={18} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleDeleteVehicle(vehicle.id)}
@@ -486,10 +627,7 @@ export default function EditUser() {
         visible={modalVisible}
         onRequestClose={handleCloseModal}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={handleCloseModal}
-        >
+        <Pressable style={styles.modalOverlay} onPress={handleCloseModal}>
           <Pressable
             style={styles.modalContent}
             onPress={(e) => e.stopPropagation()}
@@ -508,75 +646,116 @@ export default function EditUser() {
 
             <ScrollView style={styles.modalBody}>
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Make *</Text>
+                <Text style={styles.label}>
+                  Make *
+                  {vehicleTouched.make && vehicleErrors.make && (
+                    <Text style={styles.errorInline}> - {vehicleErrors.make}</Text>
+                  )}
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    vehicleTouched.make && vehicleErrors.make && styles.inputError,
+                  ]}
                   placeholder="e.g., Toyota, Honda"
                   placeholderTextColor="#94a3b8"
                   value={vehicleForm.make}
-                  onChangeText={(text) =>
-                    setVehicleForm({ ...vehicleForm, make: text })
-                  }
+                  onChangeText={(text) => handleVehicleFieldChange("make", text)}
+                  onBlur={() => handleVehicleFieldBlur("make")}
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Model *</Text>
+                <Text style={styles.label}>
+                  Model *
+                  {vehicleTouched.model && vehicleErrors.model && (
+                    <Text style={styles.errorInline}> - {vehicleErrors.model}</Text>
+                  )}
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    vehicleTouched.model && vehicleErrors.model && styles.inputError,
+                  ]}
                   placeholder="e.g., Camry, Civic"
                   placeholderTextColor="#94a3b8"
                   value={vehicleForm.model}
-                  onChangeText={(text) =>
-                    setVehicleForm({ ...vehicleForm, model: text })
-                  }
+                  onChangeText={(text) => handleVehicleFieldChange("model", text)}
+                  onBlur={() => handleVehicleFieldBlur("model")}
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Year *</Text>
+                <Text style={styles.label}>
+                  Year *
+                  {vehicleTouched.year && vehicleErrors.year && (
+                    <Text style={styles.errorInline}> - {vehicleErrors.year}</Text>
+                  )}
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    vehicleTouched.year && vehicleErrors.year && styles.inputError,
+                  ]}
                   placeholder="e.g., 2022"
                   placeholderTextColor="#94a3b8"
                   keyboardType="numeric"
                   value={vehicleForm.year}
-                  onChangeText={(text) =>
-                    setVehicleForm({ ...vehicleForm, year: text })
-                  }
+                  onChangeText={(text) => handleVehicleFieldChange("year", text)}
+                  onBlur={() => handleVehicleFieldBlur("year")}
+                  maxLength={4}
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Color</Text>
+                <Text style={styles.label}>
+                  Color *
+                  {vehicleTouched.color && vehicleErrors.color && (
+                    <Text style={styles.errorInline}> - {vehicleErrors.color}</Text>
+                  )}
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    vehicleTouched.color && vehicleErrors.color && styles.inputError,
+                  ]}
                   placeholder="e.g., Silver, Blue"
                   placeholderTextColor="#94a3b8"
                   value={vehicleForm.color}
-                  onChangeText={(text) =>
-                    setVehicleForm({ ...vehicleForm, color: text })
-                  }
+                  onChangeText={(text) => handleVehicleFieldChange("color", text)}
+                  onBlur={() => handleVehicleFieldBlur("color")}
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>License Plate *</Text>
+                <Text style={styles.label}>
+                  License Plate *
+                  {vehicleTouched.licensePlate && vehicleErrors.licensePlate && (
+                    <Text style={styles.errorInline}> - {vehicleErrors.licensePlate}</Text>
+                  )}
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    vehicleTouched.licensePlate &&
+                      vehicleErrors.licensePlate &&
+                      styles.inputError,
+                  ]}
                   placeholder="e.g., ABC-1234"
                   placeholderTextColor="#94a3b8"
                   autoCapitalize="characters"
                   value={vehicleForm.licensePlate}
                   onChangeText={(text) =>
-                    setVehicleForm({ ...vehicleForm, licensePlate: text })
+                    handleVehicleFieldChange("licensePlate", text)
                   }
+                  onBlur={() => handleVehicleFieldBlur("licensePlate")}
                 />
               </View>
 
               <View style={styles.infoBox}>
                 <Text style={styles.infoText}>
-                  Vehicle information is used for parking management and identification purposes.
+                  All fields marked with * are required. Vehicle information is
+                  used for parking management and identification purposes.
                 </Text>
               </View>
             </ScrollView>
@@ -609,18 +788,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8fafc",
   },
-
-  backButton: {
-    padding: 4,
-  },
-    header: {
+  header: {
     backgroundColor: "#388E3C",
   },
   headerTitle: {
     color: "#fff",
     fontWeight: "700",
   },
-
   content: {
     flex: 1,
   },
@@ -646,10 +820,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
   },
   editButtonText: {
-    color: "#4CAF50",
+    color: "#388E3C",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -676,7 +850,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
   },
   saveSmallButtonText: {
     color: "#fff",
@@ -700,7 +874,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
   },
   avatarPlaceholderLarge: {
     width: 120,
@@ -716,7 +890,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: "35%",
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -742,6 +916,11 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     marginBottom: 8,
   },
+  errorInline: {
+    color: "#F44336",
+    fontSize: 12,
+    fontWeight: "500",
+  },
   input: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -750,6 +929,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0f172a",
     backgroundColor: "#f9fafb",
+  },
+  inputError: {
+    borderColor: "#F44336",
+    borderWidth: 2,
+    backgroundColor: "#fef2f2",
   },
   valueText: {
     fontSize: 15,
@@ -765,27 +949,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  roleContainer: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-  },
   roleContainerRow: {
     flexDirection: "row",
     gap: 6,
   },
   departmentScroll: {
     flexGrow: 0,
-  },
-  departmentButton: {
-    minWidth: "30%",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#fff",
-    alignItems: "center",
   },
   departmentButtonSmall: {
     paddingVertical: 8,
@@ -821,7 +990,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   roleTagDisplay: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
@@ -836,7 +1005,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -875,7 +1044,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -883,7 +1052,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   vehicleIcon: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     width: 48,
     height: 48,
     borderRadius: 8,
@@ -986,7 +1155,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     alignItems: "center",
   },
   submitButtonText: {

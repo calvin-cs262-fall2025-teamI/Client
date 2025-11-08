@@ -1,16 +1,12 @@
 import { useRouter } from "expo-router";
 import {
   Bell,
-  Calendar,
-  Car,
   Clock,
-  Home,
   LogOut,
   MapPin,
   MessageSquare,
   Navigation,
   Search,
-  User,
   X
 } from "lucide-react-native";
 import React, { useState } from "react";
@@ -49,62 +45,62 @@ export default function ClientHomeScreen() {
 
 
 
-const openMaps = async () => {
-  const address = 'Calvin University, Grand Rapids, MI'; // Replace with your office address
-  
-  try {
-    // For mobile platforms (iOS/Android)
-    if (Platform.OS === 'ios' || Platform.OS === 'android') {
-      const url = Platform.select({
-        ios: `maps:0,0?q=${encodeURIComponent(address)}`,
-        android: `geo:0,0?q=${encodeURIComponent(address)}`,
-      });
+  const openMaps = async () => {
+    const address = 'Calvin University, Grand Rapids, MI'; // Replace with your office address
 
-      if (url) {
-        const supported = await Linking.canOpenURL(url);
-        
+    try {
+      // For mobile platforms (iOS/Android)
+      if (Platform.OS === 'ios' || Platform.OS === 'android') {
+        const url = Platform.select({
+          ios: `maps:0,0?q=${encodeURIComponent(address)}`,
+          android: `geo:0,0?q=${encodeURIComponent(address)}`,
+        });
+
+        if (url) {
+          const supported = await Linking.canOpenURL(url);
+
+          if (supported) {
+            await Linking.openURL(url);
+          } else {
+            // Fallback to browser maps
+            const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+            await Linking.openURL(browserUrl);
+          }
+        }
+      } else {
+        // For web/desktop platforms
+        const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+        const supported = await Linking.canOpenURL(browserUrl);
+
         if (supported) {
-          await Linking.openURL(url);
-        } else {
-          // Fallback to browser maps
-          const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
           await Linking.openURL(browserUrl);
+        } else {
+          Alert.alert(
+            'Unable to Open Maps',
+            'Please manually navigate to:\nCalvin University, Grand Rapids, MI',
+            [{ text: 'OK' }]
+          );
         }
       }
-    } else {
-      // For web/desktop platforms
-      const browserUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-      const supported = await Linking.canOpenURL(browserUrl);
-      
-      if (supported) {
-        await Linking.openURL(browserUrl);
-      } else {
-        Alert.alert(
-          'Unable to Open Maps',
-          'Please manually navigate to:\nCalvin University, Grand Rapids, MI',
-          [{ text: 'OK' }]
-        );
-      }
+    } catch (error) {
+      // Handle any errors that occur
+      console.error('Error opening maps:', error);
+      Alert.alert(
+        'Error Opening Maps',
+        `Unable to open maps application. Please navigate manually to: ${address}`,
+        [
+          {
+            text: 'Copy Address',
+            onPress: () => {
+              // Optional: Copy address to clipboard if Clipboard API is available
+              Alert.alert('Address', address);
+            }
+          },
+          { text: 'OK' }
+        ]
+      );
     }
-  } catch (error) {
-    // Handle any errors that occur
-    console.error('Error opening maps:', error);
-    Alert.alert(
-      'Error Opening Maps',
-      `Unable to open maps application. Please navigate manually to: ${address}`,
-      [
-        { 
-          text: 'Copy Address', 
-          onPress: () => {
-            // Optional: Copy address to clipboard if Clipboard API is available
-            Alert.alert('Address', address);
-          }
-        },
-        { text: 'OK' }
-      ]
-    );
-  }
-};
+  };
   // Update current time every second
   React.useEffect(() => {
     const timer = setInterval(() => {
@@ -172,21 +168,21 @@ const openMaps = async () => {
     try {
       const existingIssuesJson = (global as any).parkingIssues || '[]';
       const existingIssues = JSON.parse(existingIssuesJson);
-      
+
       const issueForAdmin = {
         ...newIssue,
         isRead: false
       };
       existingIssues.push(issueForAdmin);
-      
+
       (global as any).parkingIssues = JSON.stringify(existingIssues);
-      
+
       console.log("Issue submitted successfully:", issueForAdmin);
       console.log("Total issues now:", existingIssues.length);
     } catch (error) {
       console.error("Error storing issue:", error);
     }
-    
+
     const formattedTime = currentTimeStamp.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -200,7 +196,7 @@ const openMaps = async () => {
     handleCloseIssueModal();
   };
 
- 
+
 
 
   const handleNavigateSchedule = () => {
@@ -210,7 +206,7 @@ const openMaps = async () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
+      <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -253,12 +249,12 @@ const openMaps = async () => {
             <Text style={styles.spotDetailText}>Valid until 6:00 PM today</Text>
           </View>
           <TouchableOpacity style={styles.directionsButton} onPress={openMaps}>
-            <Navigation color="#4CAF50" size={20} />
+            <Navigation color="#388E3C" size={20} />
             <Text style={styles.directionsButtonText}>Get Directions</Text>
           </TouchableOpacity>
         </View>
 
-      
+
 
         {/* Your Schedule Section */}
         <View style={styles.section}>
@@ -302,6 +298,13 @@ const openMaps = async () => {
         </View>
 
         {/* Quick Actions Section */}
+        <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonFullWidth]}
+          onPress={() => router.push("/screens/user/(tabs)/home/view-parking-lots" as any)}
+        >
+          <MapPin color="#4CAF50" size={24} />
+          <Text style={styles.actionButtonText}>View Parking Lots</Text>
+        </TouchableOpacity>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support and Feedback</Text>
           <View style={styles.quickActionsGrid}>
@@ -309,14 +312,14 @@ const openMaps = async () => {
               style={[styles.actionButton, styles.actionButtonFullWidth]}
               onPress={handleOpenIssueModal}
             >
-              <MessageSquare color="#4CAF50" size={24} />
+              <MessageSquare color="#388E3C" size={24} />
               <Text style={styles.actionButtonText}>Report Issue</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
 
-    
+
       {/* Report Issue Modal */}
       <Modal
         visible={isIssueModalVisible}
@@ -324,12 +327,12 @@ const openMaps = async () => {
         transparent={true}
         onRequestClose={handleCloseIssueModal}
       >
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <TouchableOpacity 
-            activeOpacity={1} 
+          <TouchableOpacity
+            activeOpacity={1}
             onPress={handleCloseIssueModal}
             style={styles.modalOverlay}
           >
@@ -345,14 +348,14 @@ const openMaps = async () => {
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView 
+                <ScrollView
                   style={styles.modalBody}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
                 >
                   {/* Current Time Display */}
                   <View style={styles.timeDisplay}>
-                    <Clock color="#4CAF50" size={16} />
+                    <Clock color="#388E3C" size={16} />
                     <Text style={styles.timeText}>
                       {currentTime.toLocaleString('en-US', {
                         month: 'short',
@@ -419,7 +422,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     padding: 20,
     paddingBottom: 24,
     flexDirection: "row",
@@ -456,7 +459,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   assignedCard: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     margin: 16,
     padding: 20,
     borderRadius: 16,
@@ -514,7 +517,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   directionsButtonText: {
-    color: "#4CAF50",
+    color: "#388E3C",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -533,7 +536,7 @@ const styles = StyleSheet.create({
     color: "#0f172a",
   },
   viewAllText: {
-    color: "#4CAF50",
+    color: "#388E3C",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -547,7 +550,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#4CAF50",
+    borderColor: "#388E3C",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -558,7 +561,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
   },
   scheduleIcon: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     width: 48,
     height: 48,
     borderRadius: 8,
@@ -634,11 +637,11 @@ const styles = StyleSheet.create({
     minWidth: "100%",
   },
   actionButtonPrimary: {
-    backgroundColor: "#4CAF50",
-    borderColor: "#4CAF50",
+    backgroundColor: "#388E3C",
+    borderColor: "#388E3C",
   },
   actionButtonText: {
-    color: "#4CAF50",
+    color: "#388E3C",
     fontSize: 14,
     fontWeight: "600",
     marginTop: 8,
@@ -676,7 +679,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   navTextActive: {
-    color: "#4CAF50",
+    color: "#388E3C",
     fontWeight: "600",
   },
   modalOverlay: {
@@ -789,7 +792,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#388E3C",
     alignItems: "center",
   },
   submitButtonText: {
