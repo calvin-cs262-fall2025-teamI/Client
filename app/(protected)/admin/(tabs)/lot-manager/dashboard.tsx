@@ -12,6 +12,8 @@ import {
   View
 } from "react-native";
 
+import { useAuth } from "../../../../utils/authContext";
+
 interface Issue {
   id: number;
   message: string;
@@ -24,6 +26,7 @@ interface Issue {
 export default function LotManagerScreen() {
   const router = useRouter();
   const [isNotificationModalVisible, setIsNotificationModalVisible] = useState(false);
+  const { logout } = useAuth();
 
   // Sample issues - in a real app, this would come from your backend
   const [issues, setIssues] = useState<Issue[]>([
@@ -114,7 +117,7 @@ export default function LotManagerScreen() {
     {
       title: "Total Spots",
       value: defaultStats.totalSpots.toString(),
-      color: getTotalSpotsColor(defaultStats.totalSpots),
+      color: getTotalSpotsColor(),
     },
     {
       title: "Occupied",
@@ -170,7 +173,7 @@ export default function LotManagerScreen() {
     if (Platform.OS === 'web') {
       const confirmed = window.confirm("Are you sure you want to sign out?");
       if (confirmed) {
-        router.push("/screens/auth/signInScreen");
+        logout();
       }
     } else {
       Alert.alert(
@@ -184,7 +187,7 @@ export default function LotManagerScreen() {
           {
             text: "Sign Out",
             onPress: () => {
-              router.push("/screens/auth/signInScreen");
+              logout();
             },
             style: "destructive",
           },
@@ -246,7 +249,7 @@ export default function LotManagerScreen() {
         <View style={styles.actionContainer}>
         <TouchableOpacity
           style={styles.createButton}
-          onPress={() => router.push("/screens/admin/(tabs)/lot-manager/createLotScreen")}
+          onPress={() => router.push("../screens/admin/(tabs)/lot-manager/createLotScreen")}
            >
           <Text style={styles.createButtonText}>Create New Parking Lot</Text>
         </TouchableOpacity>

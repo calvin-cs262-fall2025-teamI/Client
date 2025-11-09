@@ -25,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "@/app/utils/authContext";
 
 
 
@@ -42,6 +43,7 @@ export default function ClientHomeScreen() {
   const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
   const [issueMessage, setIssueMessage] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { logout } = useAuth();
 
 
 
@@ -114,7 +116,7 @@ export default function ClientHomeScreen() {
     if (Platform.OS === 'web') {
       const confirmed = window.confirm("Are you sure you want to sign out?");
       if (confirmed) {
-        router.push("/screens/auth/signInScreen");
+        logout();
       }
     } else {
       Alert.alert(
@@ -128,7 +130,7 @@ export default function ClientHomeScreen() {
           {
             text: "Sign Out",
             onPress: () => {
-              router.push("/screens/auth/signInScreen");
+              logout();
             },
             style: "destructive",
           },
@@ -200,7 +202,7 @@ export default function ClientHomeScreen() {
 
 
   const handleNavigateSchedule = () => {
-    router.push("/screens/user/(tabs)/schedule");
+    router.push("../screens/user/(tabs)/schedule");
   };
 
 

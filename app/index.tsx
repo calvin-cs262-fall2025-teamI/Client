@@ -1,57 +1,18 @@
-import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
-import { Button } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Redirect } from "expo-router";
+import { useAuth } from "./utils/authContext";
+import React from "react";
 
-export default function HomeScreen() {
-  const router = useRouter();
+export default function Index() {
+    const { authState } = useAuth();
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Parkmaster</Text>
-        <Text style={styles.subtitle}>
-          Manage and schedule parking with ease
-        </Text>
+    if (!authState?.isLoggedIn) {
+        return <Redirect href="/signIn" />;
+    }
 
-        <Button
-          mode="contained"
-          onPress={() => router.push("./screens/auth/signInScreen")}
-          style={styles.button}
-          buttonColor="#388E3C"
-          labelStyle={{ fontSize: 16, fontWeight: "600" }}
-        >
-          Get Started
-        </Button>
+    // Role-aware redirect: send admins to admin area, everyone else to user area
+    if (authState.role === "admin") {
+        return <Redirect href={"/admin" as any} />;
+    }
 
-      </View>
-    </SafeAreaView>
-  );
+    return <Redirect href={"/user" as any} />;
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#f9f9f9" },
-  container: { 
-    flex: 1, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    padding: 20 
-  },
-  title: { 
-    fontSize: 40, 
-    fontWeight: "700", 
-    color: "#388E3C", 
-    marginBottom: 10 
-  },
-  subtitle: { 
-    fontSize: 16, 
-    color: "#666", 
-    marginBottom: 40, 
-    textAlign: "center" 
-  },
-  button: {
-    width: 250,
-    borderRadius: 10,
-    paddingVertical: 4,
-  },
-});

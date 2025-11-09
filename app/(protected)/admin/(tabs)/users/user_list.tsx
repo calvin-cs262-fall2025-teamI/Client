@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -44,44 +44,31 @@ export default function UserList() {
     phone: "",
     role: "",
     department: "",
+    password: "",
   });
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
 
   const router = useRouter();
 
-  const [users, setUsers] = useState<UserType[]>([
-    {
-      id: "1",
-      name: "John Smith",
-      email: "john.smith@parkmaster.com",
-      phone: "+1 (555) 123-4567",
-      role: "admin",
-      status: "active",
-      department: "IT",
-      avatar: null,
-    },
-    {
-      id: "2",
-      name: "Sarah Johnson",
-      email: "sarah.j@parkmaster.com",
-      phone: "+1 (555) 234-5678",
-      role: "client",
-      status: "active",
-      department: "Finance",
-      avatar: null,
-    },
-    {
-      id: "3",
-      name: "Mike Davis",
-      email: "mike.davis@parkmaster.com",
-      phone: "+1 (555) 345-6789",
-      role: "client",
-      status: "active",
-      department: "Operations",
-      avatar: null,
-    },
-  ]);
+
+  const [users, setUsers] = useState<UserType[]>([]);
+
+  // Get Users from API
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch("https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users");
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -130,62 +117,102 @@ export default function UserList() {
     }
   };
 
-  const handleAddUser = () => {
-    // Mark all fields as touched
-    const allTouched = {
-      name: true,
-      email: true,
-      phone: true,
-      role: true,
-      department: true,
-    };
-    setTouched(allTouched);
+const handleAddUser = async () => {
+  // Mark all fields as touched
+  const allTouched = {
+    name: true,
+    email: true,
+    phone: true,
+    role: true,
+    department: true,
+    password: true, // Don't forget password
+  };
+  setTouched(allTouched);
 
-    // Validate all fields
-    const validationErrors: ValidationErrors = {};
+  // Validate all fields
+  const validationErrors: ValidationErrors = {};
 
-    const nameValidation = validateName(formData.name);
-    if (!nameValidation.isValid) {
-      validationErrors.name = nameValidation.error!;
-    }
+  const nameValidation = validateName(formData.name);
+  if (!nameValidation.isValid) {
+    validationErrors.name = nameValidation.error!;
+  }
 
-    const emailValidation = validateEmail(formData.email);
-    if (!emailValidation.isValid) {
-      validationErrors.email = emailValidation.error!;
-    }
+  const emailValidation = validateEmail(formData.email);
+  if (!emailValidation.isValid) {
+    validationErrors.email = emailValidation.error!;
+  }
 
-    const phoneValidation = validatePhoneNumber(formData.phone);
-    if (!phoneValidation.isValid) {
-      validationErrors.phone = phoneValidation.error!;
-    }
+  const phoneValidation = validatePhoneNumber(formData.phone);
+  if (!phoneValidation.isValid) {
+    validationErrors.phone = phoneValidation.error!;
+  }
 
-    if (!formData.role) {
-      validationErrors.role = "Role is required";
-    }
+  if (!formData.role) {
+    validationErrors.role = "Role is required";
+  }
 
-    if (!formData.department) {
-      validationErrors.department = "Department is required";
-    }
+  if (!formData.department) {
+    validationErrors.department = "Department is required";
+  }
 
-    // If there are errors, set them and show alert
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      Alert.alert("Validation Error", "Please fix all errors before submitting");
+  if (!formData.password || formData.password.length < 8) {
+    validationErrors.password = "Password must be at least 8 characters";
+  }
+
+  // If there are errors, set them and show alert
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    Alert.alert("Validation Error", "Please fix all errors before submitting");
+    return;
+  }
+
+  try {
+    // Show loading state (optional)
+    // setIsLoading(true);
+
+    // Make POST request to your API
+    const response = await fetch('https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: formData.role,
+        department: formData.department,
+        status: 'active',
+        avatar: avatar,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Handle specific error cases
+      if (response.status === 409) {
+        Alert.alert("Error", "A user with this email already exists");
+      } else {
+        Alert.alert("Error", data.message || "Failed to create user");
+      }
       return;
     }
 
-    // Create new user object
+    // Create user object from server response
     const newUser: UserType = {
-      id: (users.length + 1).toString(),
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      role: formData.role,
-      status: "active",
-      department: formData.department,
-      avatar: avatar,
+      id: data.id.toString(),
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      role: data.role,
+      status: data.status,
+      department: data.department,
+      avatar: data.avatar,
     };
 
+    // Update local state
     setUsers([...users, newUser]);
 
     // Reset form and close modal
@@ -195,6 +222,7 @@ export default function UserList() {
       phone: "",
       role: "",
       department: "",
+      password: "",
     });
     setAvatar(null);
     setErrors({});
@@ -202,7 +230,13 @@ export default function UserList() {
     setModalVisible(false);
 
     Alert.alert("Success", `${newUser.name} has been added successfully!`);
-  };
+  } catch (error) {
+    console.error('Error adding user:', error);
+    Alert.alert("Error", "Network error. Please check your connection and try again.");
+  } finally {
+    // setIsLoading(false);
+  }
+};
 
   const handleCloseModal = () => {
     setFormData({
@@ -211,6 +245,7 @@ export default function UserList() {
       phone: "",
       role: "",
       department: "",
+      password: "",
     });
     setAvatar(null);
     setErrors({});
@@ -261,11 +296,7 @@ export default function UserList() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.scheduleCard}
-            onPress={() =>
-              router.push(
-                `/screens/admin/(tabs)/users/edit_user?id=${item.id}`
-              )
-            }
+            onPress={() => router.push(`/admin/users/edit_user?id=${item.id}`)}
           >
             <View style={styles.scheduleIcon}>
               {item.avatar ? (
@@ -390,6 +421,28 @@ export default function UserList() {
                 />
               </View>
 
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>
+                  Password *
+                  {touched.password && errors.password && (
+                    <Text style={styles.required}> - {errors.password}</Text>
+                  )}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    touched.password && errors.password && styles.inputError,
+                  ]}
+                  placeholder="Enter password"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry
+                  value={formData.password}
+                  onChangeText={(text) => handleFieldChange("password", text)}
+                  onBlur={() => handleFieldBlur("password")}
+                />
+              </View>
+
               <View style={styles.formGroup}>
                 <Text style={styles.label}>
                   Phone Number *
@@ -419,7 +472,7 @@ export default function UserList() {
                   )}
                 </Text>
                 <View style={styles.roleContainer}>
-                  {["client", "admin"].map((role) => (
+                  {["user", "admin"].map((role) => (  // Changed from 'client' to 'user'
                     <TouchableOpacity
                       key={role}
                       style={[
@@ -434,8 +487,7 @@ export default function UserList() {
                       <Text
                         style={[
                           styles.roleButtonText,
-                          formData.role === role &&
-                            styles.roleButtonTextActive,
+                          formData.role === role && styles.roleButtonTextActive,
                         ]}
                       >
                         {role.charAt(0).toUpperCase() + role.slice(1)}

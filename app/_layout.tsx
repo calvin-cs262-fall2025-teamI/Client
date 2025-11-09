@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MD3LightTheme, PaperProvider } from "react-native-paper";
 import LoadingScreen from '../components/LoadingScreen';
+import AuthProvider from "./utils/authContext";
 
 // Green and Yellow theme
 const theme = {
@@ -21,34 +22,37 @@ const theme = {
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
+  
 
-  useEffect(() => {
-    async function prepare() {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } catch (e) {
-        console.warn(e);
-      } finally {
-        setIsReady(true);
-      }
-    }
-    prepare();
-  }, []);
+  // useEffect(() => {
+  //   async function prepare() {
+  //     try {
+  //       await new Promise(resolve => setTimeout(resolve, 2000));
+  //     } catch (e) {
+  //       console.warn(e);
+  //     } finally {
+  //       setIsReady(true);
+  //     }
+  //   }
+  //   prepare();
+  // }, []);
 
-  if (!isReady) {
-    return <LoadingScreen />;
-  }
+  // if (!isReady) {
+  //   return <LoadingScreen />;
+  // }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PaperProvider theme={theme}>
+        <AuthProvider>
         <Stack
           screenOptions={{
             headerShown: false,
           }}
         >
-          <Stack.Screen name="index" options={{ title: "Home" }} />
-         
+          <Stack.Screen name="index" />
+
         </Stack>
+        </AuthProvider>
       </PaperProvider>
     </GestureHandlerRootView>
   );
