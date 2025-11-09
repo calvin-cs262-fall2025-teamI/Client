@@ -72,7 +72,6 @@ export default function AuthProvider({ children }: PropsWithChildren<{}>) {
     await storeAuthState(newState);
     // navigate to protected root (or role-aware route)
     router.replace("/");
-    console.log("Logged In, role:", role);
   };
 
   const logout = async () => {

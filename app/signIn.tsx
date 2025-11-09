@@ -67,35 +67,69 @@ export default function SignInScreen() {
     }
   };
 
-  const handleSignIn = async () => {
-    // Validate email
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      setEmailError(emailValidation.error || "");
-      setTouched({ ...touched, email: true });
-      Alert.alert("Validation Error", "Please enter a valid email address");
-      return;
+const handleSignIn = async () => {
+  // --- Step 1: Validate Inputs ---
+  const emailValidation = validateEmail(email);
+  if (!emailValidation.isValid) {
+    setEmailError(emailValidation.error || "");
+    setTouched((prev) => ({ ...prev, email: true }));
+    Alert.alert("Validation Error", "Please enter a valid email address");
+    return;
+  }
+
+  if (!password.trim()) {
+    setPasswordError("Password is required");
+    setTouched((prev) => ({ ...prev, password: true }));
+    Alert.alert("Validation Error", "Please enter your password");
+    return;
+  }
+
+  if (password.length < 6) {
+    setPasswordError("Password must be at least 6 characters");
+    setTouched((prev) => ({ ...prev, password: true }));
+    Alert.alert("Validation Error", "Password must be at least 6 characters");
+    return;
+  }
+
+  // --- Step 2: Begin Loading State ---
+  setIsLoading(true);
+
+  try {
+    // --- Step 3: Send Login Request ---
+    const response = await fetch(
+      "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      }
+    );
+
+    // --- Step 4: Handle Response Errors ---
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Login failed");
     }
 
-    // Validate password
-    if (!password.trim()) {
-      setPasswordError("Password is required");
-      setTouched({ ...touched, password: true });
-      Alert.alert("Validation Error", "Please enter your password");
-      return;
-    }
+    // --- Step 5: Parse Successful Response ---
+    const data = await response.json();
+    
 
-    if (password.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
-      setTouched({ ...touched, password: true });
-      Alert.alert("Validation Error", "Password must be at least 6 characters");
-      return;
-    }
+    // Save user session and redirect to appropriate screen
+    login({
+      role: data.user.role,
+      userId: data.user.id,
+    });
 
-    setIsLoading(true);
-    login({ role: "admin", userId: "temp-id" });
+  } catch (error: any) {
+    // --- Step 6: Catch and Log Errors ---
+    Alert.alert("Login Failed", error.message || "An unexpected error occurred");
+  } finally {
+    // --- Step 7: Always Reset Loading State ---
     setIsLoading(false);
-  };
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -156,27 +190,7 @@ export default function SignInScreen() {
           Sign In
         </Button>
 
-        <View style={styles.devButtonsContainer}>
-          <Text style={styles.devLabel}>Quick Access (Testing)</Text>
-          <View style={styles.devButtonsRow}>
-            <Button
-              mode="outlined"
-              onPress={() => router.push("/screens/admin" as any)}
-              style={styles.devButton}
-              textColor="#388E3C"
-            >
-              Admin
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={() => router.push("/screens/user" as any)}
-              style={styles.devButton}
-              textColor="#388E3C"
-            >
-              User
-            </Button>
-          </View>
-        </View>
+  
       </View>
     </SafeAreaView>
   );
