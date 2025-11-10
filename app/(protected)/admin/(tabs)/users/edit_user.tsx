@@ -1,70 +1,29 @@
 // CLIENT/app/screens/admin/(tabs)/users/edit_user.tsx
-import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  Car,
-  Edit2,
-  Mail,
-  Phone,
-  Plus,
-  Save,
-  Trash2,
-  User,
-  X
-} from "lucide-react-native";
+import { Trash2 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Alert,
-  Image,
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Appbar } from "react-native-paper";
-import {
-  formatLicensePlate,
-  validateEmail,
-  validateLicensePlate,
-  validateName,
-  validatePhoneNumber,
-  validateVehicleColor,
-  validateVehicleMake,
-  validateVehicleModel,
-  validateVehicleYear,
-  ValidationErrors,
-} from '../../../../utils/validationUtils';
+import DeleteUserModal from "./components/DeleteUserModal";
+import ProfileSection from "./components/ProfileSection";
+import VehicleModal from "./components/VehicleModal";
+import VehiclesSection from "./components/VehicleSection";
+import { UserType, VehicleType } from "../../../../types/admin.types";
 
-interface VehicleType {
-  id: string;
-  make: string;
-  model: string;
-  year: string;
-  color: string;
-  licensePlate: string;
-}
-
-interface UserType {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  status: string;
-  department: string;
-  avatar: string | null;
-  vehicles: VehicleType[];
-}
 
 export default function EditUser() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const userId = (params?.id as string) || "1";
 
+  // User state
   const [user, setUser] = useState<UserType>({
     id: userId,
     name: "John Smith",
@@ -94,280 +53,103 @@ export default function EditUser() {
     ],
   });
 
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  // Modal states
+  const [vehicleModalVisible, setVehicleModalVisible] = useState(false);
+  const [deleteUserModalVisible, setDeleteUserModalVisible] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<VehicleType | null>(null);
-  
-  const [vehicleForm, setVehicleForm] = useState({
-    make: "",
-    model: "",
-    year: "",
-    color: "",
-    licensePlate: "",
-  });
 
-  const [profileForm, setProfileForm] = useState({
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    department: user.department,
-  });
+  // ============================================================================
+  // PROFILE HANDLERS
+  // ============================================================================
 
-  const [profileErrors, setProfileErrors] = useState<ValidationErrors>({});
-  const [profileTouched, setProfileTouched] = useState<{ [key: string]: boolean }>({});
-  
-  const [vehicleErrors, setVehicleErrors] = useState<ValidationErrors>({});
-  const [vehicleTouched, setVehicleTouched] = useState<{ [key: string]: boolean }>({});
-
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-    if (!result.canceled) {
-      setUser({ ...user, avatar: result.assets[0].uri });
-    }
+  const handleUpdateProfile = (updates: {
+    name: string;
+    email: string;
+    phone: string;
+    department: string;
+    avatar: string | null;
+  }) => {
+    setUser({ ...user, ...updates });
   };
 
-  // Profile validation handlers
-  const handleProfileFieldChange = (field: string, value: string) => {
-    setProfileForm({ ...profileForm, [field]: value });
-    if (profileErrors[field]) {
-      const newErrors = { ...profileErrors };
-      delete newErrors[field];
-      setProfileErrors(newErrors);
-    }
-  };
-
-  const handleProfileFieldBlur = (field: string) => {
-    setProfileTouched({ ...profileTouched, [field]: true });
-    
-    let validation;
-    switch (field) {
-      case "name":
-        validation = validateName(profileForm.name);
-        break;
-      case "email":
-        validation = validateEmail(profileForm.email);
-        break;
-      case "phone":
-        validation = validatePhoneNumber(profileForm.phone);
-        break;
-      default:
-        return;
-    }
-    
-    if (!validation.isValid) {
-      setProfileErrors({ ...profileErrors, [field]: validation.error || "" });
-    }
-  };
-
-  const handleSaveProfile = () => {
-    // Validate all fields
-    const errors: ValidationErrors = {};
-    
-    const nameValidation = validateName(profileForm.name);
-    if (!nameValidation.isValid) errors.name = nameValidation.error!;
-    
-    const emailValidation = validateEmail(profileForm.email);
-    if (!emailValidation.isValid) errors.email = emailValidation.error!;
-    
-    const phoneValidation = validatePhoneNumber(profileForm.phone);
-    if (!phoneValidation.isValid) errors.phone = phoneValidation.error!;
-
-    if (Object.keys(errors).length > 0) {
-      setProfileErrors(errors);
-      setProfileTouched({ name: true, email: true, phone: true });
-      Alert.alert("Validation Error", "Please fix all errors before saving");
-      return;
-    }
-
-    setUser({
-      ...user,
-      name: profileForm.name,
-      email: profileForm.email,
-      phone: profileForm.phone,
-      department: profileForm.department,
-    });
-    setEditingProfile(false);
-    setProfileErrors({});
-    setProfileTouched({});
-    Alert.alert("Success", "Profile updated successfully!");
-  };
-
-  const handleCancelProfileEdit = () => {
-    setProfileForm({
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      department: user.department,
-    });
-    setEditingProfile(false);
-    setProfileErrors({});
-    setProfileTouched({});
-  };
-
-  // Vehicle validation handlers
-  const handleVehicleFieldChange = (field: string, value: string) => {
-    setVehicleForm({ ...vehicleForm, [field]: value });
-    if (vehicleErrors[field]) {
-      const newErrors = { ...vehicleErrors };
-      delete newErrors[field];
-      setVehicleErrors(newErrors);
-    }
-  };
-
-  const handleVehicleFieldBlur = (field: string) => {
-    setVehicleTouched({ ...vehicleTouched, [field]: true });
-    
-    let validation;
-    switch (field) {
-      case "make":
-        validation = validateVehicleMake(vehicleForm.make);
-        break;
-      case "model":
-        validation = validateVehicleModel(vehicleForm.model);
-        break;
-      case "year":
-        validation = validateVehicleYear(vehicleForm.year);
-        break;
-      case "color":
-        validation = validateVehicleColor(vehicleForm.color);
-        break;
-      case "licensePlate":
-        validation = validateLicensePlate(vehicleForm.licensePlate);
-        break;
-      default:
-        return;
-    }
-    
-    if (!validation.isValid) {
-      setVehicleErrors({ ...vehicleErrors, [field]: validation.error || "" });
-    }
-  };
+  // ============================================================================
+  // VEHICLE HANDLERS
+  // ============================================================================
 
   const handleAddVehicle = () => {
     setEditingVehicle(null);
-    setVehicleForm({
-      make: "",
-      model: "",
-      year: "",
-      color: "",
-      licensePlate: "",
-    });
-    setVehicleErrors({});
-    setVehicleTouched({});
-    setModalVisible(true);
+    setVehicleModalVisible(true);
   };
 
   const handleEditVehicle = (vehicle: VehicleType) => {
     setEditingVehicle(vehicle);
-    setVehicleForm({
-      make: vehicle.make,
-      model: vehicle.model,
-      year: vehicle.year,
-      color: vehicle.color,
-      licensePlate: vehicle.licensePlate,
-    });
-    setVehicleErrors({});
-    setVehicleTouched({});
-    setModalVisible(true);
+    setVehicleModalVisible(true);
   };
 
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setVehicleForm({
-      make: "",
-      model: "",
-      year: "",
-      color: "",
-      licensePlate: "",
-    });
-    setEditingVehicle(null);
-    setVehicleErrors({});
-    setVehicleTouched({});
-  };
-
-  const handleSaveVehicle = () => {
-    // Validate all vehicle fields
-    const errors: ValidationErrors = {};
-    
-    const makeValidation = validateVehicleMake(vehicleForm.make);
-    if (!makeValidation.isValid) errors.make = makeValidation.error!;
-    
-    const modelValidation = validateVehicleModel(vehicleForm.model);
-    if (!modelValidation.isValid) errors.model = modelValidation.error!;
-    
-    const yearValidation = validateVehicleYear(vehicleForm.year);
-    if (!yearValidation.isValid) errors.year = yearValidation.error!;
-    
-    const colorValidation = validateVehicleColor(vehicleForm.color);
-    if (!colorValidation.isValid) errors.color = colorValidation.error!;
-    
-    const plateValidation = validateLicensePlate(vehicleForm.licensePlate);
-    if (!plateValidation.isValid) errors.licensePlate = plateValidation.error!;
-
-    if (Object.keys(errors).length > 0) {
-      setVehicleErrors(errors);
-      setVehicleTouched({
-        make: true,
-        model: true,
-        year: true,
-        color: true,
-        licensePlate: true,
-      });
-      Alert.alert("Validation Error", "Please fix all errors before saving");
-      return;
-    }
-
-    // Format license plate
-    const formattedVehicle = {
-      ...vehicleForm,
-      licensePlate: formatLicensePlate(vehicleForm.licensePlate),
-    };
-
+  const handleSaveVehicle = (vehicleData: Omit<VehicleType, "id">) => {
     if (editingVehicle) {
+      // Update existing vehicle
       const updatedVehicles = user.vehicles.map((v) =>
-        v.id === editingVehicle.id
-          ? { ...editingVehicle, ...formattedVehicle }
-          : v
+        v.id === editingVehicle.id ? { ...editingVehicle, ...vehicleData } : v
       );
       setUser({ ...user, vehicles: updatedVehicles });
       Alert.alert("Success", "Vehicle updated successfully!");
     } else {
+      // Add new vehicle
       const newVehicle: VehicleType = {
         id: (user.vehicles.length + 1).toString(),
-        ...formattedVehicle,
+        ...vehicleData,
       };
       setUser({ ...user, vehicles: [...user.vehicles, newVehicle] });
       Alert.alert("Success", "Vehicle added successfully!");
     }
-
-    handleCloseModal();
+    setVehicleModalVisible(false);
+    setEditingVehicle(null);
   };
 
   const handleDeleteVehicle = (vehicleId: string) => {
-    Alert.alert(
-      "Delete Vehicle",
-      "Are you sure you want to delete this vehicle?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            const updatedVehicles = user.vehicles.filter(
-              (v) => v.id !== vehicleId
-            );
-            setUser({ ...user, vehicles: updatedVehicles });
-            Alert.alert("Success", "Vehicle deleted successfully!");
-          },
-        },
-      ]
-    );
+    const updatedVehicles = user.vehicles.filter((v) => v.id !== vehicleId);
+    setUser({ ...user, vehicles: updatedVehicles });
+    Alert.alert("Success", "Vehicle deleted successfully!");
   };
+
+  // ============================================================================
+  // USER DELETION HANDLERS
+  // ============================================================================
+
+  const handleOpenDeleteUserModal = () => {
+    setDeleteUserModalVisible(true);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const response = await fetch(`https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users/${userId}`, {
+        method: 'DELETE',
+      });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete user');
+    }
+
+    setDeleteUserModalVisible(false);
+
+       Alert.alert("Success", "User deleted successfully!", [
+      {
+        text: "OK",
+        onPress: () => router.back(),
+      },
+    ]);
+    
+    }catch(error){
+      Alert.alert("Error", "Failed to delete user");
+    }
+
+ 
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <View style={styles.container}>
@@ -376,409 +158,41 @@ export default function EditUser() {
       </Appbar.Header>
 
       <ScrollView style={styles.content}>
-        {/* Profile Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Profile Information</Text>
-            {!editingProfile ? (
-              <TouchableOpacity
-                onPress={() => setEditingProfile(true)}
-                style={styles.editButton}
-              >
-                <Edit2 color="#388E3C" size={18} />
-                <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.editActions}>
-                <TouchableOpacity
-                  onPress={handleCancelProfileEdit}
-                  style={styles.cancelSmallButton}
-                >
-                  <Text style={styles.cancelSmallButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSaveProfile}
-                  style={styles.saveSmallButton}
-                >
-                  <Save color="#fff" size={16} />
-                  <Text style={styles.saveSmallButtonText}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.profileCard}>
-            <TouchableOpacity
-              onPress={editingProfile ? pickImage : undefined}
-              style={styles.avatarContainer}
-            >
-              {user.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.avatarLarge} />
-              ) : (
-                <View style={styles.avatarPlaceholderLarge}>
-                  <User size={48} color="#94a3b8" />
-                </View>
-              )}
-              {editingProfile && (
-                <View style={styles.avatarEditBadge}>
-                  <Edit2 color="#fff" size={14} />
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.formRow}>
-              <View style={styles.formColumn}>
-                <Text style={styles.label}>
-                  Full Name
-                  {profileTouched.name && profileErrors.name && (
-                    <Text style={styles.errorInline}> - {profileErrors.name}</Text>
-                  )}
-                </Text>
-                {editingProfile ? (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      profileTouched.name && profileErrors.name && styles.inputError,
-                    ]}
-                    value={profileForm.name}
-                    onChangeText={(text) => handleProfileFieldChange("name", text)}
-                    onBlur={() => handleProfileFieldBlur("name")}
-                    placeholder="Enter full name"
-                    placeholderTextColor="#94a3b8"
-                  />
-                ) : (
-                  <Text style={styles.valueText}>{user.name}</Text>
-                )}
-              </View>
-
-              <View style={styles.formColumn}>
-                <Text style={styles.label}>
-                  Email Address
-                  {profileTouched.email && profileErrors.email && (
-                    <Text style={styles.errorInline}> - {profileErrors.email}</Text>
-                  )}
-                </Text>
-                {editingProfile ? (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      profileTouched.email && profileErrors.email && styles.inputError,
-                    ]}
-                    value={profileForm.email}
-                    onChangeText={(text) => handleProfileFieldChange("email", text)}
-                    onBlur={() => handleProfileFieldBlur("email")}
-                    placeholder="user@gmail.com"
-                    placeholderTextColor="#94a3b8"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                ) : (
-                  <View style={styles.valueRow}>
-                    <Mail size={16} color="#64748b" />
-                    <Text style={styles.valueTextSmall}>{user.email}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formColumn}>
-                <Text style={styles.label}>
-                  Phone Number
-                  {profileTouched.phone && profileErrors.phone && (
-                    <Text style={styles.errorInline}> - {profileErrors.phone}</Text>
-                  )}
-                </Text>
-                {editingProfile ? (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      profileTouched.phone && profileErrors.phone && styles.inputError,
-                    ]}
-                    value={profileForm.phone}
-                    onChangeText={(text) => handleProfileFieldChange("phone", text)}
-                    onBlur={() => handleProfileFieldBlur("phone")}
-                    placeholder="+1 (555) 123-4567"
-                    placeholderTextColor="#94a3b8"
-                    keyboardType="phone-pad"
-                  />
-                ) : (
-                  <View style={styles.valueRow}>
-                    <Phone size={16} color="#64748b" />
-                    <Text style={styles.valueTextSmall}>{user.phone}</Text>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.formColumn}>
-                <Text style={styles.label}>Department</Text>
-                {editingProfile ? (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.departmentScroll}
-                  >
-                    <View style={styles.roleContainerRow}>
-                      {["Operations", "Finance", "HR", "IT", "Marketing"].map(
-                        (dept) => (
-                          <TouchableOpacity
-                            key={dept}
-                            style={[
-                              styles.departmentButtonSmall,
-                              profileForm.department === dept &&
-                                styles.departmentButtonActive,
-                            ]}
-                            onPress={() =>
-                              setProfileForm({ ...profileForm, department: dept })
-                            }
-                          >
-                            <Text
-                              style={[
-                                styles.departmentButtonText,
-                                profileForm.department === dept &&
-                                  styles.departmentButtonTextActive,
-                              ]}
-                            >
-                              {dept}
-                            </Text>
-                          </TouchableOpacity>
-                        )
-                      )}
-                    </View>
-                  </ScrollView>
-                ) : (
-                  <View style={styles.departmentTag}>
-                    <Text style={styles.departmentTagText}>{user.department}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Role</Text>
-              <View style={styles.roleTagDisplay}>
-                <Text style={styles.roleTagText}>{user.role}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Vehicles Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Vehicles</Text>
-            <TouchableOpacity
-              onPress={handleAddVehicle}
-              style={styles.addVehicleButton}
-            >
-              <Plus color="#fff" size={18} />
-              <Text style={styles.addVehicleButtonText}>Add Vehicle</Text>
-            </TouchableOpacity>
-          </View>
-
-          {user.vehicles.length === 0 ? (
-            <View style={styles.emptyVehicles}>
-              <Car size={48} color="#cbd5e1" />
-              <Text style={styles.emptyVehiclesText}>No vehicles added</Text>
-              <Text style={styles.emptyVehiclesSubtext}>
-                Add a vehicle to get started
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.vehiclesList}>
-              {user.vehicles.map((vehicle) => (
-                <View key={vehicle.id} style={styles.vehicleCard}>
-                  <View style={styles.vehicleIcon}>
-                    <Car color="#fff" size={24} />
-                  </View>
-                  <View style={styles.vehicleInfo}>
-                    <Text style={styles.vehicleTitle}>
-                      {vehicle.year} {vehicle.make} {vehicle.model}
-                    </Text>
-                    <Text style={styles.vehicleDetail}>
-                      {vehicle.color} • {vehicle.licensePlate}
-                    </Text>
-                  </View>
-                  <View style={styles.vehicleActions}>
-                    <TouchableOpacity
-                      onPress={() => handleEditVehicle(vehicle)}
-                      style={styles.iconButton}
-                    >
-                      <Edit2 color="#388E3C" size={18} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleDeleteVehicle(vehicle.id)}
-                      style={styles.iconButton}
-                    >
-                      <Trash2 color="#ef4444" size={18} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        <ProfileSection user={user} onUpdateProfile={handleUpdateProfile} />
+        
+        <VehiclesSection
+          vehicles={user.vehicles}
+          onAddVehicle={handleAddVehicle}
+          onEditVehicle={handleEditVehicle}
+          onDeleteVehicle={handleDeleteVehicle}
+        />
       </ScrollView>
 
-      {/* Add/Edit Vehicle Modal */}
-      <Modal
-        animationType="slide"
-        transparent
-        visible={modalVisible}
-        onRequestClose={handleCloseModal}
+      {/* Delete User Button */}
+      <TouchableOpacity
+        onPress={handleOpenDeleteUserModal}
+        style={styles.deleteUserButton}
       >
-        <Pressable style={styles.modalOverlay} onPress={handleCloseModal}>
-          <Pressable
-            style={styles.modalContent}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingVehicle ? "Edit Vehicle" : "Add New Vehicle"}
-              </Text>
-              <TouchableOpacity
-                onPress={handleCloseModal}
-                style={styles.closeButton}
-              >
-                <X color="#64748b" size={24} />
-              </TouchableOpacity>
-            </View>
+        <Trash2 color="#fff" size={18} />
+        <Text style={styles.deleteUserButtonText}>Delete User</Text>
+      </TouchableOpacity>
 
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Make *
-                  {vehicleTouched.make && vehicleErrors.make && (
-                    <Text style={styles.errorInline}> - {vehicleErrors.make}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    vehicleTouched.make && vehicleErrors.make && styles.inputError,
-                  ]}
-                  placeholder="e.g., Toyota, Honda"
-                  placeholderTextColor="#94a3b8"
-                  value={vehicleForm.make}
-                  onChangeText={(text) => handleVehicleFieldChange("make", text)}
-                  onBlur={() => handleVehicleFieldBlur("make")}
-                />
-              </View>
+      {/* Vehicle Modal */}
+      <VehicleModal
+        visible={vehicleModalVisible}
+        vehicle={editingVehicle}
+        onClose={() => setVehicleModalVisible(false)}
+        onSave={handleSaveVehicle}
+      />
 
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Model *
-                  {vehicleTouched.model && vehicleErrors.model && (
-                    <Text style={styles.errorInline}> - {vehicleErrors.model}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    vehicleTouched.model && vehicleErrors.model && styles.inputError,
-                  ]}
-                  placeholder="e.g., Camry, Civic"
-                  placeholderTextColor="#94a3b8"
-                  value={vehicleForm.model}
-                  onChangeText={(text) => handleVehicleFieldChange("model", text)}
-                  onBlur={() => handleVehicleFieldBlur("model")}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Year *
-                  {vehicleTouched.year && vehicleErrors.year && (
-                    <Text style={styles.errorInline}> - {vehicleErrors.year}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    vehicleTouched.year && vehicleErrors.year && styles.inputError,
-                  ]}
-                  placeholder="e.g., 2022"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="numeric"
-                  value={vehicleForm.year}
-                  onChangeText={(text) => handleVehicleFieldChange("year", text)}
-                  onBlur={() => handleVehicleFieldBlur("year")}
-                  maxLength={4}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Color *
-                  {vehicleTouched.color && vehicleErrors.color && (
-                    <Text style={styles.errorInline}> - {vehicleErrors.color}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    vehicleTouched.color && vehicleErrors.color && styles.inputError,
-                  ]}
-                  placeholder="e.g., Silver, Blue"
-                  placeholderTextColor="#94a3b8"
-                  value={vehicleForm.color}
-                  onChangeText={(text) => handleVehicleFieldChange("color", text)}
-                  onBlur={() => handleVehicleFieldBlur("color")}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  License Plate *
-                  {vehicleTouched.licensePlate && vehicleErrors.licensePlate && (
-                    <Text style={styles.errorInline}> - {vehicleErrors.licensePlate}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    vehicleTouched.licensePlate &&
-                      vehicleErrors.licensePlate &&
-                      styles.inputError,
-                  ]}
-                  placeholder="e.g., ABC-1234"
-                  placeholderTextColor="#94a3b8"
-                  autoCapitalize="characters"
-                  value={vehicleForm.licensePlate}
-                  onChangeText={(text) =>
-                    handleVehicleFieldChange("licensePlate", text)
-                  }
-                  onBlur={() => handleVehicleFieldBlur("licensePlate")}
-                />
-              </View>
-
-              <View style={styles.infoBox}>
-                <Text style={styles.infoText}>
-                  All fields marked with * are required. Vehicle information is
-                  used for parking management and identification purposes.
-                </Text>
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={handleCloseModal}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleSaveVehicle}
-              >
-                <Text style={styles.submitButtonText}>
-                  {editingVehicle ? "Update" : "Add"} Vehicle
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* Delete User Modal */}
+      <DeleteUserModal
+        visible={deleteUserModalVisible}
+        userName={user.name}
+        vehicleCount={user.vehicles.length}
+        onClose={() => setDeleteUserModalVisible(false)}
+        onConfirm={() => handleDeleteUser(user.id)}
+      />
     </View>
   );
 }
@@ -798,369 +212,25 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  section: {
-    padding: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#0f172a",
-  },
-  editButton: {
+  deleteUserButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#388E3C",
-  },
-  editButtonText: {
-    color: "#388E3C",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  editActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  cancelSmallButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-  },
-  cancelSmallButtonText: {
-    color: "#475569",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  saveSmallButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: "#388E3C",
-  },
-  saveSmallButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  profileCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  avatarContainer: {
-    alignItems: "center",
-    marginBottom: 24,
-    position: "relative",
-  },
-  avatarLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: "#388E3C",
-  },
-  avatarPlaceholderLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#f1f5f9",
     justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-  },
-  avatarEditBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: "35%",
-    backgroundColor: "#388E3C",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: "#fff",
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
-  },
-  formColumn: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0f172a",
-    marginBottom: 8,
-  },
-  errorInline: {
-    color: "#F44336",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
-    color: "#0f172a",
-    backgroundColor: "#f9fafb",
-  },
-  inputError: {
-    borderColor: "#F44336",
-    borderWidth: 2,
-    backgroundColor: "#fef2f2",
-  },
-  valueText: {
-    fontSize: 15,
-    color: "#0f172a",
-  },
-  valueTextSmall: {
-    fontSize: 13,
-    color: "#0f172a",
-    flex: 1,
-  },
-  valueRow: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
-  },
-  roleContainerRow: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  departmentScroll: {
-    flexGrow: 0,
-  },
-  departmentButtonSmall: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    backgroundColor: "#ef4444",
+    marginHorizontal: 16,
+    marginVertical: 16,
+    paddingVertical: 14,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#fff",
-    alignItems: "center",
-  },
-  departmentButtonActive: {
-    backgroundColor: "#3b82f6",
-    borderColor: "#3b82f6",
-  },
-  departmentButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  departmentButtonTextActive: {
-    color: "#fff",
-  },
-  departmentTag: {
-    backgroundColor: "#3b82f6",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-  },
-  departmentTagText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  roleTagDisplay: {
-    backgroundColor: "#388E3C",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-  },
-  roleTagText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  addVehicleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#388E3C",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addVehicleButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  emptyVehicles: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 40,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  emptyVehiclesText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#475569",
-    marginTop: 12,
-  },
-  emptyVehiclesSubtext: {
-    fontSize: 14,
-    color: "#94a3b8",
-    marginTop: 4,
-  },
-  vehiclesList: {
-    gap: 12,
-  },
-  vehicleCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#388E3C",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  vehicleIcon: {
-    backgroundColor: "#388E3C",
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  vehicleInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  vehicleTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0f172a",
-    marginBottom: 4,
-  },
-  vehicleDetail: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  vehicleActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  iconButton: {
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: "#f8fafc",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "90%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#0f172a",
-  },
-  closeButton: {
-    padding: 4,
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: 500,
-  },
-  infoBox: {
-    backgroundColor: "#f0f9ff",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
-    marginTop: 4,
-  },
-  infoText: {
-    fontSize: 13,
-    color: "#1e40af",
-    lineHeight: 18,
-  },
-  modalFooter: {
-    flexDirection: "row",
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
-  },
-  cancelButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#475569",
-  },
-  submitButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    backgroundColor: "#388E3C",
-    alignItems: "center",
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+  deleteUserButtonText: {
     color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
