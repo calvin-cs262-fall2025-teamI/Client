@@ -1,3 +1,4 @@
+import { useAuth } from "@/app/utils/authContext";
 import { useRouter } from "expo-router";
 import {
   Bell,
@@ -25,7 +26,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "@/app/utils/authContext";
 
 
 
@@ -199,12 +199,9 @@ export default function ClientHomeScreen() {
   };
 
 
-
-
   const handleNavigateSchedule = () => {
-    router.push("../screens/user/(tabs)/schedule");
+    router.push("/user/(tabs)/schedule" as any);
   };
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -302,8 +299,7 @@ export default function ClientHomeScreen() {
         {/* Quick Actions Section */}
         <TouchableOpacity
           style={[styles.actionButton, styles.actionButtonFullWidth]}
-          onPress={() => router.push("/screens/user/(tabs)/home/view-parking-lots" as any)}
-        >
+          onPress={() => router.push("/user/(tabs)/home/view-parking-lots" as any)}        >
           <MapPin color="#4CAF50" size={24} />
           <Text style={styles.actionButtonText}>View Parking Lots</Text>
         </TouchableOpacity>

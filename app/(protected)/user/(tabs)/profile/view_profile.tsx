@@ -68,12 +68,12 @@ export default function ProfileScreen() {
   ]);
 
   const handleEdit = () => {
-    router.push("/screens/user/(tabs)/profile/edit_profile");
+    router.push("/user/(tabs)/profile/edit_profile" as any);
   };
 
   const handleSignOut = () => {
     const confirmSignOut = () => {
-      router.push("/screens/auth/signInScreen");
+      router.push("/signIn");
     };
 
     if (Platform.OS === "web") {

@@ -27,12 +27,12 @@ export default function ScheduleIndexScreen() {
           <Calendar color="#cbd5e1" size={64} />
           <Text style={styles.emptyStateTitle}>No Reservations Yet</Text>
           <Text style={styles.emptyStateText}>
-            You don't have any parking reservations scheduled.
+            You do not have any parking reservations scheduled.
           </Text>
-          
+
           <TouchableOpacity
             style={styles.requestButton}
-            onPress={() => router.push("/screens/user/(tabs)/schedule/reservation-request")}
+            onPress={() => router.push("/user/(tabs)/schedule/reservation-request" as any)}
           >
             <Plus color="#fff" size={20} />
             <Text style={styles.requestButtonText}>Request New Spot</Text>
