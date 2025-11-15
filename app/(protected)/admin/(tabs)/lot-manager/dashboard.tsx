@@ -249,67 +249,99 @@ export default function LotManagerScreen() {
         <View style={styles.actionContainer}>
           <TouchableOpacity
             style={styles.createButton}
-            onPress={() => router.push("/admin/(tabs)/lot-manager/createLotScreen" as any)}           >
+            onPress={() => router.push("/admin/(tabs)/lot-manager/createLotScreen" as any)}
+          >
             <Text style={styles.createButtonText}>Create New Parking Lot</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.manageButton}
+            onPress={() => router.push("/admin/(tabs)/lot-manager/manage-lots" as any)}
+          >
+            <Text style={styles.manageButtonText}>Manage Parking Lots</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.sectionTitle}>Parking Lots</Text>
+
+          {/* Lot Cards */}
+          {lots.map((lot) => (
+            <View key={lot.id} style={styles.lotCard}>
+              <View style={styles.lotHeader}>
+                <Text style={styles.lotName}>{lot.name}</Text>
+                <Text style={styles.lotStats}>
+                  {lot.occupied}/{lot.total}
+                </Text>
+              </View>
+
+
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${(lot.occupied / lot.total) * 100}%`,
+                        backgroundColor:
+                          ((lot.total - lot.occupied) / lot.total) > 0.5
+                            ? "#4CAF50"
+                            : ((lot.total - lot.occupied) / lot.total) > 0.2
+                              ? "#FBC02D"
+                              : "#F44336",
+
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              {/* Individual Parking Lot Details*/}
+              <View style={styles.lotDetails}>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Available</Text>
+                  <Text style={[styles.detailValue, { color: lot.availableColor }]}>{lot.available}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Occupied</Text>
+                  <Text style={[styles.detailValue, { color: lot.occupiedColor }]}>{lot.occupied}</Text>
+                </View>
+              </View>
+
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={async () => {
+                    try {
+                      // Fetch full lot data from backend
+                      const response = await fetch(`https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/parking-lots/${lot.id}`);
+                      const fullLotData = await response.json();
+
+                      // Parse JSONB fields
+                      const parsedLot = {
+                        ...fullLotData,
+                        spaces: typeof fullLotData.spaces === 'string'
+                          ? JSON.parse(fullLotData.spaces)
+                          : fullLotData.spaces || [],
+                        merged_aisles: typeof fullLotData.merged_aisles === 'string'
+                          ? JSON.parse(fullLotData.merged_aisles)
+                          : fullLotData.merged_aisles || []
+                      };
+
+                      router.push({
+                        pathname: "/admin/(tabs)/lot-manager/viewLotScreen" as any,
+                        params: { lotData: JSON.stringify(parsedLot) }
+                      });
+                    } catch (error) {
+                      console.error("Error fetching lot data:", error);
+                      Alert.alert("Error", "Could not load parking lot details");
+                    }
+                  }}
+                >
+                  <Text style={styles.actionButtonText}>View Details</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
         </View>
-
-        <Text style={styles.sectionTitle}>Parking Lots</Text>
-
-        {/* Lot Cards */}
-        {lots.map((lot) => (
-          <View key={lot.id} style={styles.lotCard}>
-            <View style={styles.lotHeader}>
-              <Text style={styles.lotName}>{lot.name}</Text>
-              <Text style={styles.lotStats}>
-                {lot.occupied}/{lot.total}
-              </Text>
-            </View>
-
-
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${(lot.occupied / lot.total) * 100}%`,
-                      backgroundColor:
-                        ((lot.total - lot.occupied) / lot.total) > 0.5
-                          ? "#4CAF50"
-                          : ((lot.total - lot.occupied) / lot.total) > 0.2
-                            ? "#FBC02D"
-                            : "#F44336",
-
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-
-            {/* Individual Parking Lot Details*/}
-            <View style={styles.lotDetails}>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Available</Text>
-                <Text style={[styles.detailValue, { color: lot.availableColor }]}>{lot.available}</Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Occupied</Text>
-                <Text style={[styles.detailValue, { color: lot.occupiedColor }]}>{lot.occupied}</Text>
-              </View>
-            </View>
-
-
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.actionButton}>
-                <Text style={styles.actionButtonText}>View Details</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Text style={styles.actionButtonText}>Manage</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
       </ScrollView>
 
       {/* Notifications Modal */}
@@ -718,6 +750,20 @@ const styles = StyleSheet.create({
   deleteIssueButtonText: {
     fontSize: 13,
     color: "#F44336",
+    fontWeight: "600",
+  },
+  manageButton: {
+    borderRadius: 10,
+    padding: 16,
+    borderColor: "#388E3C",
+    borderWidth: 2,
+    alignItems: "center",
+    backgroundColor: "#fff",
+    marginTop: 12, // Add spacing between buttons
+  },
+  manageButtonText: {
+    color: "#388E3C",
+    fontSize: 16,
     fontWeight: "600",
   },
 });
