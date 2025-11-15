@@ -2,13 +2,13 @@ import { useRouter } from "expo-router";
 import { Edit2, MapPin, Trash2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Appbar } from "react-native-paper";
 
@@ -52,12 +52,41 @@ export default function ManageLotsScreen() {
       
       const data = await response.json();
       
-      // Parse JSONB fields from PostgreSQL
-      const parsedLots = data.map((lot: any) => ({
-        ...lot,
-        spaces: typeof lot.spaces === 'string' ? JSON.parse(lot.spaces) : lot.spaces || [],
-        merged_aisles: typeof lot.merged_aisles === 'string' ? JSON.parse(lot.merged_aisles) : lot.merged_aisles || []
-      }));
+      // Parse JSONB fields from PostgreSQL - handle both string and already-parsed arrays
+      const parsedLots = data.map((lot: any) => {
+        let spaces = [];
+        let merged_aisles = [];
+        
+        // Handle spaces
+        if (typeof lot.spaces === 'string') {
+          try {
+            spaces = JSON.parse(lot.spaces);
+          } catch (e) {
+            console.error('Error parsing spaces:', e);
+            spaces = [];
+          }
+        } else if (Array.isArray(lot.spaces)) {
+          spaces = lot.spaces;
+        }
+        
+        // Handle merged_aisles
+        if (typeof lot.merged_aisles === 'string') {
+          try {
+            merged_aisles = JSON.parse(lot.merged_aisles);
+          } catch (e) {
+            console.error('Error parsing merged_aisles:', e);
+            merged_aisles = [];
+          }
+        } else if (Array.isArray(lot.merged_aisles)) {
+          merged_aisles = lot.merged_aisles;
+        }
+        
+        return {
+          ...lot,
+          spaces,
+          merged_aisles
+        };
+      });
       
       setParkingLots(parsedLots);
     } catch (error) {
@@ -205,8 +234,7 @@ export default function ManageLotsScreen() {
   return (
     <View style={styles.container}>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-        <Appbar.BackAction onPress={() => router.back()} color="#fff" />
-        <Appbar.Content title="Manage Parking Lots" color="#fff" />
+        <Appbar.Content title="Manage Parking Lots" titleStyle={{ color: "#fff" }} />
       </Appbar.Header>
 
       {loading ? (

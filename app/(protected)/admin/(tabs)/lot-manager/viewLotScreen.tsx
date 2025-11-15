@@ -152,8 +152,7 @@ export default function ViewLotScreen() {
   return (
     <View style={styles.safeArea}>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-        <Appbar.BackAction onPress={() => router.back()} color="#fff" />
-        <Appbar.Content title={`View: ${lotName}`} color="#fff" />
+        <Appbar.Content title={`View: ${lotName}`} titleStyle={{ color: "#fff" }} />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.container}>

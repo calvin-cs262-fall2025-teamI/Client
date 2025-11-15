@@ -252,8 +252,7 @@ export default function EditLotScreen() {
   return (
     <View style={styles.safeArea}>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-        <Appbar.BackAction onPress={() => router.back()} color="#fff" />
-        <Appbar.Content title="Edit Parking Lot" color="#fff" />
+        <Appbar.Content title="Edit Parking Lot" titleStyle={{ color: "#fff" }} />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.container}>
