@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { Bell } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
@@ -25,9 +25,20 @@ interface Issue {
   isRead: boolean;
 }
 
+interface ParkingLot {
+  id: number;
+  name: string;
+  rows: number;
+  cols: number;
+  spaces: any[];
+  merged_aisles: any[];
+}
+
 export default function LotManagerScreen() {
   const router = useRouter();
   const [isNotificationModalVisible, setIsNotificationModalVisible] = useState(false);
+  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
+  const [loading, setLoading] = useState(true);
   const { logout } = useAuth();
 
   // Sample issues - in a real app, this would come from your backend
@@ -60,12 +71,70 @@ export default function LotManagerScreen() {
 
   const unreadCount = issues.filter(issue => !issue.isRead).length;
 
-  // Default values and parking lots for testing/until data implemented
-  const defaultStats = {
-    totalSpots: 250,
-    occupiedSpots: 180,
-    availableSpots: 70,
+  // Fetch parking lots from API
+  useEffect(() => {
+    fetchParkingLots();
+  }, []);
+
+  const fetchParkingLots = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/parking-lots`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch parking lots");
+      }
+      
+      const data = await response.json();
+      
+      // Parse JSONB fields from PostgreSQL
+      const parsedLots = data.map((lot: any) => {
+        let spaces = [];
+        let merged_aisles = [];
+        
+        if (typeof lot.spaces === 'string') {
+          try {
+            spaces = JSON.parse(lot.spaces);
+          } catch (e) {
+            spaces = [];
+          }
+        } else if (Array.isArray(lot.spaces)) {
+          spaces = lot.spaces;
+        }
+        
+        if (typeof lot.merged_aisles === 'string') {
+          try {
+            merged_aisles = JSON.parse(lot.merged_aisles);
+          } catch (e) {
+            merged_aisles = [];
+          }
+        } else if (Array.isArray(lot.merged_aisles)) {
+          merged_aisles = lot.merged_aisles;
+        }
+        
+        return {
+          id: lot.id,
+          name: lot.name,
+          rows: lot.rows,
+          cols: lot.cols,
+          spaces,
+          merged_aisles
+        };
+      });
+      
+      setParkingLots(parsedLots);
+    } catch (error) {
+      console.error("Error fetching parking lots:", error);
+      Alert.alert("Error", "Could not load parking lots from server");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Calculate stats from actual parking lots
+  const totalSpots = parkingLots.reduce((sum, lot) => sum + (lot.rows * lot.cols), 0);
+  const occupiedSpots = 0; // TODO: Get from real occupancy data
+  const availableSpots = totalSpots - occupiedSpots;
 
   //Color of numbers on admin dashboard based on value
   const getIssueColor = (count: number) => {
@@ -75,6 +144,7 @@ export default function LotManagerScreen() {
   };
 
   const getOccupiedSpotsColor = (occupied: number, total: number) => {
+    if (total === 0) return "#757575";
     const ratio = occupied / total;
     if (ratio < 0.5) return "#4CAF50";
     if (ratio < 0.8) return "#FBC02D";
@@ -82,6 +152,7 @@ export default function LotManagerScreen() {
   };
 
   const getAvailableSpotsColor = (available: number, total: number) => {
+    if (total === 0) return "#757575";
     const ratio = available / total;
     if (ratio > 0.5) return "#4CAF50";
     if (ratio > 0.2) return "#FBC02D";
@@ -92,43 +163,44 @@ export default function LotManagerScreen() {
     return "#4CAF50";
   };
 
-  const baseLots = [
-    { id: 1, name: "North Lot", total: 100, occupied: 25 },
-    { id: 2, name: "South Lot", total: 100, occupied: 60 },
-    { id: 3, name: "East Lot", total: 70, occupied: 60 },
-  ];
-
-  const lots = baseLots.map(lot => {
-    let available = lot.total - lot.occupied;
+  // Create lot cards from actual data
+  const lots = parkingLots.map(lot => {
+    const total = lot.rows * lot.cols;
+    const occupied = 0; // TODO: Get from real occupancy data
+    let available = total - occupied;
+    
     if (available < 0) {
       available = 0;
-    } else if (available > lot.total) {
-      available = lot.total;
+    } else if (available > total) {
+      available = total;
     }
 
     return {
-      ...lot,
+      id: lot.id,
+      name: lot.name,
+      total,
+      occupied,
       available,
-      occupiedColor: getOccupiedSpotsColor(lot.occupied, lot.total),
-      availableColor: getAvailableSpotsColor(available, lot.total),
+      occupiedColor: getOccupiedSpotsColor(occupied, total),
+      availableColor: getAvailableSpotsColor(available, total),
     };
   });
 
   const stats = [
     {
       title: "Total Spots",
-      value: defaultStats.totalSpots.toString(),
+      value: totalSpots.toString(),
       color: getTotalSpotsColor(),
     },
     {
       title: "Occupied",
-      value: defaultStats.occupiedSpots.toString(),
-      color: getOccupiedSpotsColor(defaultStats.occupiedSpots, defaultStats.totalSpots),
+      value: occupiedSpots.toString(),
+      color: getOccupiedSpotsColor(occupiedSpots, totalSpots),
     },
     {
       title: "Available",
-      value: defaultStats.availableSpots.toString(),
-      color: getAvailableSpotsColor(defaultStats.availableSpots, defaultStats.totalSpots),
+      value: availableSpots.toString(),
+      color: getAvailableSpotsColor(availableSpots, totalSpots),
     },
     {
       title: "Unread Issues",
@@ -184,6 +256,57 @@ export default function LotManagerScreen() {
       
       router.push({
         pathname: "/admin/(tabs)/lot-manager/viewLotScreen" as any,
+        params: { lotData: JSON.stringify(parsedLot) }
+      });
+    } catch (error) {
+      console.error("Error fetching lot data:", error);
+      Alert.alert("Error", "Could not load parking lot details");
+    }
+  };
+
+  const handleEditLot = async (lot: any) => {
+    try {
+      // Fetch full lot data from backend
+      const response = await fetch(`${API_URL}/api/parking-lots/${lot.id}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch lot details");
+      }
+      
+      const fullLotData = await response.json();
+      
+      // Parse JSONB fields
+      let spaces = [];
+      let merged_aisles = [];
+      
+      if (typeof fullLotData.spaces === 'string') {
+        try {
+          spaces = JSON.parse(fullLotData.spaces);
+        } catch (e) {
+          spaces = [];
+        }
+      } else if (Array.isArray(fullLotData.spaces)) {
+        spaces = fullLotData.spaces;
+      }
+      
+      if (typeof fullLotData.merged_aisles === 'string') {
+        try {
+          merged_aisles = JSON.parse(fullLotData.merged_aisles);
+        } catch (e) {
+          merged_aisles = [];
+        }
+      } else if (Array.isArray(fullLotData.merged_aisles)) {
+        merged_aisles = fullLotData.merged_aisles;
+      }
+      
+      const parsedLot = {
+        ...fullLotData,
+        spaces,
+        merged_aisles
+      };
+      
+      router.push({
+        pathname: "/admin/(tabs)/lot-manager/editLotScreen" as any,
         params: { lotData: JSON.stringify(parsedLot) }
       });
     } catch (error) {
@@ -304,113 +427,77 @@ export default function LotManagerScreen() {
 
         <Text style={styles.sectionTitle}>Parking Lots</Text>
 
-        {/* Lot Cards */}
-        {lots.map((lot) => (
-          <View key={lot.id} style={styles.lotCard}>
-            <View style={styles.lotHeader}>
-              <Text style={styles.lotName}>{lot.name}</Text>
-              <Text style={styles.lotStats}>
-                {lot.occupied}/{lot.total}
-              </Text>
-            </View>
-
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${(lot.occupied / lot.total) * 100}%`,
-                      backgroundColor:
-                        ((lot.total - lot.occupied) / lot.total) > 0.5
-                          ? "#4CAF50"
-                          : ((lot.total - lot.occupied) / lot.total) > 0.2
-                            ? "#FBC02D"
-                            : "#F44336",
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-
-            {/* Individual Parking Lot Details*/}
-            <View style={styles.lotDetails}>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Available</Text>
-                <Text style={[styles.detailValue, { color: lot.availableColor }]}>{lot.available}</Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Occupied</Text>
-                <Text style={[styles.detailValue, { color: lot.occupiedColor }]}>{lot.occupied}</Text>
-              </View>
-            </View>
-
-            {/* Button Row with View Details and Edit */}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => handleViewLotDetails(lot)}
-              >
-                <Text style={styles.actionButtonText}>View Details</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={async () => {
-                  try {
-                    // Fetch full lot data from backend
-                    const response = await fetch(`${API_URL}/api/parking-lots/${lot.id}`);
-                    
-                    if (!response.ok) {
-                      throw new Error("Failed to fetch lot details");
-                    }
-                    
-                    const fullLotData = await response.json();
-                    
-                    // Parse JSONB fields
-                    let spaces = [];
-                    let merged_aisles = [];
-                    
-                    if (typeof fullLotData.spaces === 'string') {
-                      try {
-                        spaces = JSON.parse(fullLotData.spaces);
-                      } catch (e) {
-                        spaces = [];
-                      }
-                    } else if (Array.isArray(fullLotData.spaces)) {
-                      spaces = fullLotData.spaces;
-                    }
-                    
-                    if (typeof fullLotData.merged_aisles === 'string') {
-                      try {
-                        merged_aisles = JSON.parse(fullLotData.merged_aisles);
-                      } catch (e) {
-                        merged_aisles = [];
-                      }
-                    } else if (Array.isArray(fullLotData.merged_aisles)) {
-                      merged_aisles = fullLotData.merged_aisles;
-                    }
-                    
-                    const parsedLot = {
-                      ...fullLotData,
-                      spaces,
-                      merged_aisles
-                    };
-                    
-                    router.push({
-                      pathname: "/admin/(tabs)/lot-manager/editLotScreen" as any,
-                      params: { lotData: JSON.stringify(parsedLot) }
-                    });
-                  } catch (error) {
-                    console.error("Error fetching lot data:", error);
-                    Alert.alert("Error", "Could not load parking lot details");
-                  }
-                }}
-              >
-                <Text style={styles.actionButtonText}>Edit</Text>
-              </TouchableOpacity>
-            </View>
+        {/* Loading State */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading parking lots...</Text>
           </View>
-        ))}
+        ) : lots.length === 0 ? (
+          <View style={styles.emptyLotsContainer}>
+            <Text style={styles.emptyLotsText}>No parking lots created yet</Text>
+            <Text style={styles.emptyLotsSubtext}>Create your first parking lot to get started</Text>
+          </View>
+        ) : (
+          /* Lot Cards */
+          lots.map((lot) => (
+            <View key={lot.id} style={styles.lotCard}>
+              <View style={styles.lotHeader}>
+                <Text style={styles.lotName}>{lot.name}</Text>
+                <Text style={styles.lotStats}>
+                  {lot.occupied}/{lot.total}
+                </Text>
+              </View>
+
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: lot.total > 0 ? `${(lot.occupied / lot.total) * 100}%` : '0%',
+                        backgroundColor:
+                          lot.total === 0 ? "#757575" :
+                          ((lot.total - lot.occupied) / lot.total) > 0.5
+                            ? "#4CAF50"
+                            : ((lot.total - lot.occupied) / lot.total) > 0.2
+                              ? "#FBC02D"
+                              : "#F44336",
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              {/* Individual Parking Lot Details*/}
+              <View style={styles.lotDetails}>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Available</Text>
+                  <Text style={[styles.detailValue, { color: lot.availableColor }]}>{lot.available}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Occupied</Text>
+                  <Text style={[styles.detailValue, { color: lot.occupiedColor }]}>{lot.occupied}</Text>
+                </View>
+              </View>
+
+              {/* Button Row with View Details and Edit */}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => handleViewLotDetails(lot)}
+                >
+                  <Text style={styles.actionButtonText}>View Details</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => handleEditLot(lot)}
+                >
+                  <Text style={styles.actionButtonText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
+        )}
       </ScrollView>
 
       {/* Notifications Modal */}
@@ -593,6 +680,31 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#333",
     marginBottom: 16,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#757575",
+  },
+  emptyLotsContainer: {
+    padding: 40,
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  emptyLotsText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+  emptyLotsSubtext: {
+    fontSize: 14,
+    color: "#757575",
   },
   lotCard: {
     marginBottom: 16,
