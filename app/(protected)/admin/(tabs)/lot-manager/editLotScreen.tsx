@@ -1,10 +1,12 @@
-import { useNavigation } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Button, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Button, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Appbar } from "react-native-paper";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
+
+const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
 type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
 
@@ -15,16 +17,30 @@ interface Space {
   type: SpaceType;
 }
 
-export default function CreateLotScreen() {
-  const navigation = useNavigation();
+interface ParkingLot {
+  id: number;
+  name: string;
+  rows: number;
+  cols: number;
+  spaces: Space[];
+  merged_aisles: number[];
+}
+
+export default function EditLotScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  const [lotName, setLotName] = useState("");
   const [rows, setRows] = useState("4");
   const [cols, setCols] = useState("10");
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
-  const [lotName, setLotName] = useState("");
   const [mergeRow1, setMergeRow1] = useState("");
   const [mergeRow2, setMergeRow2] = useState("");
   const [mergedAisles, setMergedAisles] = useState<Set<number>>(new Set());
+  const [lotId, setLotId] = useState<number | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
 
@@ -38,6 +54,68 @@ export default function CreateLotScreen() {
 
   const rowCount = parseInt(rows) || 0;
   const colCount = parseInt(cols) || 0;
+
+  // Load existing lot data ONCE
+  useEffect(() => {
+    if (params.lotData && !dataLoaded) {
+      try {
+        const lot: ParkingLot = JSON.parse(params.lotData as string);
+        console.log("Loading lot data:", lot);
+        
+        setLotId(lot.id);
+        setLotName(lot.name);
+        setRows(lot.rows.toString());
+        setCols(lot.cols.toString());
+        
+        // Load spaces with their types
+        if (lot.spaces && Array.isArray(lot.spaces) && lot.spaces.length > 0) {
+          setSpaces(lot.spaces);
+        } else {
+          // Generate default spaces if none exist
+          generateDefaultSpaces(lot.rows, lot.cols);
+        }
+        
+        // Load merged aisles
+        if (lot.merged_aisles && Array.isArray(lot.merged_aisles)) {
+          setMergedAisles(new Set(lot.merged_aisles));
+        }
+        
+        setDataLoaded(true);
+      } catch (error) {
+        console.error("Error parsing lot data:", error);
+        Alert.alert("Error", "Failed to load parking lot data");
+      }
+    }
+  }, [params.lotData, dataLoaded]);
+
+  // Generate default spaces
+  const generateDefaultSpaces = (numRows: number, numCols: number) => {
+    let id = 1;
+    const arr: Space[] = [];
+    for (let r = 0; r < numRows; r++) {
+      for (let c = 0; c < numCols; c++) {
+        arr.push({ id: id++, row: r, col: c, type: "regular" });
+      }
+    }
+    setSpaces(arr);
+  };
+
+  // Update spaces when dimensions change (only after initial load)
+  useEffect(() => {
+    if (!dataLoaded) return;
+    
+    let id = 1;
+    const arr: Space[] = [];
+    for (let r = 0; r < rowCount; r++) {
+      for (let c = 0; c < colCount; c++) {
+        // Try to preserve existing space type
+        const existingSpace = spaces.find(s => s.row === r && s.col === c);
+        const type = existingSpace?.type || "regular";
+        arr.push({ id: id++, row: r, col: c, type });
+      }
+    }
+    setSpaces(arr);
+  }, [rowCount, colCount, dataLoaded]);
 
   const getAisleWidth = (afterRow: number) => {
     return mergedAisles.has(afterRow) ? mergedAisleWidth : aisleWidth;
@@ -70,17 +148,17 @@ export default function CreateLotScreen() {
     const r2 = parseInt(mergeRow2);
 
     if (isNaN(r1) || isNaN(r2)) {
-      alert("Please enter valid row numbers.");
+      Alert.alert("Error", "Please enter valid row numbers.");
       return;
     }
 
     if (r1 < 0 || r1 >= rowCount || r2 < 0 || r2 >= rowCount) {
-      alert(`Row numbers must be between 0 and ${rowCount - 1}.`);
+      Alert.alert("Error", `Row numbers must be between 0 and ${rowCount - 1}.`);
       return;
     }
 
     if (Math.abs(r1 - r2) !== 1) {
-      alert("Rows must be adjacent to merge.");
+      Alert.alert("Error", "Rows must be adjacent to merge.");
       return;
     }
 
@@ -88,12 +166,12 @@ export default function CreateLotScreen() {
     setMergedAisles(prev => new Set(prev).add(lowerRow));
     setMergeRow1("");
     setMergeRow2("");
-    alert(`Successfully merged rows ${r1} and ${r2}!`);
+    Alert.alert("Success", `Successfully merged rows ${r1} and ${r2}!`);
   };
 
   const handleResetMerges = () => {
     setMergedAisles(new Set());
-    alert("All row merges have been reset.");
+    Alert.alert("Success", "All row merges have been reset.");
   };
 
   const pinchGesture = Gesture.Pinch()
@@ -115,17 +193,6 @@ export default function CreateLotScreen() {
     };
   });
 
-  useEffect(() => {
-    let id = 1;
-    const arr: Space[] = [];
-    for (let r = 0; r < rowCount; r++) {
-      for (let c = 0; c < colCount; c++) {
-        arr.push({ id: id++, row: r, col: c, type: "regular" });
-      }
-    }
-    setSpaces(arr);
-  }, [rowCount, colCount]);
-
   const updateSpaceType = (id: number, type: SpaceType) => {
     setSpaces((prev) => prev.map((s) => (s.id === id ? { ...s, type } : s)));
   };
@@ -133,7 +200,7 @@ export default function CreateLotScreen() {
   const getSpaceColor = (type: SpaceType) => {
     switch (type) {
       case "visitor":
-        return "#FBC02D"; // Yellow to match theme
+        return "#FBC02D";
       case "handicapped":
         return "#00BFFF";
       case "authorized personnel":
@@ -143,49 +210,49 @@ export default function CreateLotScreen() {
     }
   };
 
-const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
+  const handleSave = async () => {
+    if (!lotName.trim()) {
+      Alert.alert("Error", "Please enter a lot name before saving.");
+      return;
+    }
 
-const handleSave = async () => {
-  if (!lotName.trim()) {
-    alert("Please enter a lot name before saving.");
-    return;
-  }
+    if (!lotId) {
+      Alert.alert("Error", "Lot ID not found.");
+      return;
+    }
 
-  const payload = {
-    name: lotName,
-    rows: rowCount,
-    cols: colCount,
-    spaces: JSON.stringify(spaces), // Convert to JSON string for PostgreSQL JSONB
-    merged_aisles: JSON.stringify(Array.from(mergedAisles)) // Convert to JSON string for PostgreSQL JSONB
+    const payload = {
+      name: lotName,
+      rows: rowCount,
+      cols: colCount,
+      spaces: JSON.stringify(spaces),
+      merged_aisles: JSON.stringify(Array.from(mergedAisles))
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/api/parking-lots/${lotId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update lot");
+      }
+      
+      Alert.alert("Success", "Parking lot updated successfully!");
+      router.back();
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert("Error", err.message || "Could not update parking lot.");
+    }
   };
 
-  try {
-    const response = await fetch(`${API_URL}/api/parking-lots`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to save lot");
-    }
-    
-    const result = await response.json();
-    console.log("Parking lot created successfully:", result);
-    alert("Parking lot saved successfully!");
-    navigation.goBack();
-  } catch (err: any) {
-    console.error(err);
-    alert(err.message || "Could not save parking lot. Please try again.");
-  }
-};
-
   return (
-    <View>
+    <View style={styles.safeArea}>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
-        <Appbar.Content title="Create Parking Lot" color="#fff" />
+        <Appbar.Content title="Edit Parking Lot" titleStyle={{ color: "#fff" }} />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -292,7 +359,7 @@ const handleSave = async () => {
         <Legend />
 
         <View style={styles.buttonContainer}>
-          <Button title="Save Parking Lot" onPress={handleSave} color="#388E3C" />
+          <Button title="Save Changes" onPress={handleSave} color="#388E3C" />
         </View>
 
         {editingSpace && (
