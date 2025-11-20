@@ -16,5 +16,4 @@ export interface UserType {
   status: string;
   department: string;
   avatar: string | null;
-  vehicles: VehicleType[];
 }

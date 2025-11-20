@@ -21,6 +21,7 @@ import {
 
 interface ProfileSectionProps {
   user: {
+    id: string;
     name: string;
     email: string;
     phone: string;
@@ -48,6 +49,7 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
   const [avatar, setAvatar] = useState(user.avatar);
   const [profileErrors, setProfileErrors] = useState<ValidationErrors>({});
   const [profileTouched, setProfileTouched] = useState<{ [key: string]: boolean }>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -93,7 +95,7 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
     }
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     const errors: ValidationErrors = {};
 
     const nameValidation = validateName(profileForm.name);
@@ -112,14 +114,25 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
       return;
     }
 
-    onUpdateProfile({
-      ...profileForm,
-      avatar,
-    });
-    setEditingProfile(false);
-    setProfileErrors({});
-    setProfileTouched({});
-    Alert.alert("Success", "Profile updated successfully!");
+    try {
+      setIsSaving(true);
+      
+      // Call the onUpdateProfile callback with the updated data
+      await onUpdateProfile({
+        ...profileForm,
+        avatar,
+      });
+      
+      setEditingProfile(false);
+      setProfileErrors({});
+      setProfileTouched({});
+      Alert.alert("Success", "Profile updated successfully!");
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      Alert.alert("Error", "Failed to update profile. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancelProfileEdit = () => {
@@ -152,15 +165,19 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
             <TouchableOpacity
               onPress={handleCancelProfileEdit}
               style={styles.cancelSmallButton}
+              disabled={isSaving}
             >
               <Text style={styles.cancelSmallButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSaveProfile}
-              style={styles.saveSmallButton}
+              style={[styles.saveSmallButton, isSaving && styles.saveSmallButtonDisabled]}
+              disabled={isSaving}
             >
               <Save color="#fff" size={16} />
-              <Text style={styles.saveSmallButtonText}>Save</Text>
+              <Text style={styles.saveSmallButtonText}>
+                {isSaving ? "Saving..." : "Save"}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -171,6 +188,7 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
         <TouchableOpacity
           onPress={editingProfile ? pickImage : undefined}
           style={styles.avatarContainer}
+          disabled={isSaving}
         >
           {avatar ? (
             <Image source={{ uri: avatar }} style={styles.avatarLarge} />
@@ -206,6 +224,7 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
                 onBlur={() => handleProfileFieldBlur("name")}
                 placeholder="Enter full name"
                 placeholderTextColor="#94a3b8"
+                editable={!isSaving}
               />
             ) : (
               <Text style={styles.valueText}>{user.name}</Text>
@@ -232,6 +251,7 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
                 placeholderTextColor="#94a3b8"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                editable={!isSaving}
               />
             ) : (
               <View style={styles.valueRow}>
@@ -262,6 +282,7 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
                 placeholder="+1 (555) 123-4567"
                 placeholderTextColor="#94a3b8"
                 keyboardType="phone-pad"
+                editable={!isSaving}
               />
             ) : (
               <View style={styles.valueRow}>
@@ -290,6 +311,7 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
                       onPress={() =>
                         setProfileForm({ ...profileForm, department: dept })
                       }
+                      disabled={isSaving}
                     >
                       <Text
                         style={[
@@ -377,6 +399,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     backgroundColor: "#388E3C",
+  },
+  saveSmallButtonDisabled: {
+    backgroundColor: "#94a3b8",
   },
   saveSmallButtonText: {
     color: "#fff",
