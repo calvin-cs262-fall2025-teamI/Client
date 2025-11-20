@@ -15,7 +15,7 @@ interface VehicleType {
   model: string;
   year: string;
   color: string;
-  licensePlate: string;
+  license_plate: string;
 }
 
 interface VehiclesSectionProps {
@@ -76,7 +76,7 @@ export default function VehiclesSection({
                   {vehicle.year} {vehicle.make} {vehicle.model}
                 </Text>
                 <Text style={styles.vehicleDetail}>
-                  {vehicle.color} • {vehicle.licensePlate}
+                  {vehicle.color} • {vehicle.license_plate}
                 </Text>
               </View>
               <View style={styles.vehicleActions}>

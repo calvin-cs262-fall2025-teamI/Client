@@ -28,7 +28,7 @@ interface VehicleType {
   model: string;
   year: string;
   color: string;
-  licensePlate: string;
+  license_plate: string;
 }
 
 interface VehicleModalProps {
@@ -49,7 +49,7 @@ export default function VehicleModal({
     model: "",
     year: "",
     color: "",
-    licensePlate: "",
+    license_plate: "",
   });
 
   const [vehicleErrors, setVehicleErrors] = useState<ValidationErrors>({});
@@ -65,7 +65,7 @@ export default function VehicleModal({
         model: vehicle.model,
         year: vehicle.year,
         color: vehicle.color,
-        licensePlate: vehicle.licensePlate,
+        license_plate: vehicle.license_plate,
       });
     } else {
       setVehicleForm({
@@ -73,7 +73,7 @@ export default function VehicleModal({
         model: "",
         year: "",
         color: "",
-        licensePlate: "",
+        license_plate: "",
       });
     }
     setVehicleErrors({});
@@ -106,8 +106,8 @@ export default function VehicleModal({
       case "color":
         validation = validateVehicleColor(vehicleForm.color);
         break;
-      case "licensePlate":
-        validation = validateLicensePlate(vehicleForm.licensePlate);
+      case "license_plate":
+        validation = validateLicensePlate(vehicleForm.license_plate);
         break;
       default:
         return;
@@ -133,8 +133,8 @@ export default function VehicleModal({
     const colorValidation = validateVehicleColor(vehicleForm.color);
     if (!colorValidation.isValid) errors.color = colorValidation.error!;
 
-    const plateValidation = validateLicensePlate(vehicleForm.licensePlate);
-    if (!plateValidation.isValid) errors.licensePlate = plateValidation.error!;
+    const plateValidation = validateLicensePlate(vehicleForm.license_plate);
+    if (!plateValidation.isValid) errors.license_plate = plateValidation.error!;
 
     if (Object.keys(errors).length > 0) {
       setVehicleErrors(errors);
@@ -151,7 +151,7 @@ export default function VehicleModal({
 
     const formattedVehicle = {
       ...vehicleForm,
-      licensePlate: formatLicensePlate(vehicleForm.licensePlate),
+      license_plate: formatLicensePlate(vehicleForm.license_plate ),
     };
 
     onSave(formattedVehicle);
@@ -278,11 +278,11 @@ export default function VehicleModal({
                 placeholder="e.g., ABC-1234"
                 placeholderTextColor="#94a3b8"
                 autoCapitalize="characters"
-                value={vehicleForm.licensePlate}
+                value={vehicleForm.license_plate}
                 onChangeText={(text) =>
-                  handleVehicleFieldChange("licensePlate", text)
+                  handleVehicleFieldChange("license_plate", text)
                 }
-                onBlur={() => handleVehicleFieldBlur("licensePlate")}
+                onBlur={() => handleVehicleFieldBlur("license_plate")}
               />
             </View>
 
