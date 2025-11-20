@@ -4,7 +4,7 @@ export interface VehicleType {
   model: string;
   year: string;
   color: string;
-  licensePlate: string;
+  license_plate: string;
 }
 
 export interface UserType {

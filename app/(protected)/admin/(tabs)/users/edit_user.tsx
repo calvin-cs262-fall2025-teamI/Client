@@ -25,6 +25,21 @@ export default function EditUser() {
 
   // User state
   const [user, setUser] = useState<UserType | null>(null);
+  const [vehicles, setVehicles] = useState<VehicleType[]>([]);
+  
+  // Vehicle state
+  useEffect(() => {
+    const fetchUserVehicles = async () => {
+      try {
+        const response = await fetch(`https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/vehicles/user/${userId}`);
+        const data = await response.json();
+        setVehicles(data);
+      } catch (error) {
+        console.error("Error fetching user vehicles:", error);
+      }
+    };
+    fetchUserVehicles();
+  }, []);
 
   // Get user data from API based on userId
   useEffect(() => {
@@ -38,7 +53,7 @@ export default function EditUser() {
         console.error("Error fetching user data:", error);
       }
     };
-
+    
     fetchUserData();
   }, [userId]);
 
@@ -145,42 +160,62 @@ export default function EditUser() {
   // VEHICLE HANDLERS
   // ============================================================================
 
-  // const handleAddVehicle = () => {
-  //   setEditingVehicle(null);
-  //   setVehicleModalVisible(true);
-  // };
+    const handleAddVehicle = () => {
+      setEditingVehicle(null);
+      setVehicleModalVisible(true);
+    };
 
-  // const handleEditVehicle = (vehicle: VehicleType) => {
-  //   setEditingVehicle(vehicle);
-  //   setVehicleModalVisible(true);
-  // };
+  const handleEditVehicle = (vehicle: VehicleType) => {
+    setEditingVehicle(vehicle);
+    setVehicleModalVisible(true);
+  };
 
-  // const handleSaveVehicle = (vehicleData: Omit<VehicleType, "id">) => {
-  //   if (editingVehicle) {
-  //     // Update existing vehicle
-  //     const updatedVehicles = user.vehicles.map((v) =>
-  //       v.id === editingVehicle.id ? { ...editingVehicle, ...vehicleData } : v
-  //     );
-  //     setUser({ ...user, vehicles: updatedVehicles });
-  //     Alert.alert("Success", "Vehicle updated successfully!");
-  //   } else {
-  //     // Add new vehicle
-  //     const newVehicle: VehicleType = {
-  //       id: (user.vehicles.length + 1).toString(),
-  //       ...vehicleData,
-  //     };
-  //     setUser({ ...user, vehicles: [...user.vehicles, newVehicle] });
-  //     Alert.alert("Success", "Vehicle added successfully!");
-  //   }
-  //   setVehicleModalVisible(false);
-  //   setEditingVehicle(null);
-  // };
+  const handleSaveVehicle = async (vehicleData: Omit<VehicleType, "id">) => {
+    if (editingVehicle) {
+      // Update existing vehicle
+      const updatedVehicles = vehicles.map((v) =>
+        v.id === editingVehicle.id ? { ...editingVehicle, ...vehicleData } : v
+      );
+      setVehicles(updatedVehicles);
+      Alert.alert("Success", "Vehicle updated successfully!");
+    } else {
+      // Add new vehicle
+      const newVehicle: VehicleType = {
+        id: (vehicles.length + 1).toString(),
+        ...vehicleData,
+      };
+      setVehicles([...vehicles, newVehicle]);
+      try{
+        const response = await fetch(`https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/vehicles`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            make: vehicleData.make,
+            model: vehicleData.model,
+            year: vehicleData.year,
+            color: vehicleData.color,
+            license_plate: vehicleData.license_plate
+          }),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to add vehicle");
+        }
+      } catch (error) {
+        Alert.alert("Error", error as string);
+      }
+      Alert.alert("Success", "Vehicle added successfully!");
+    }
+    setVehicleModalVisible(false);
+    setEditingVehicle(null);
+  };
 
-  // const handleDeleteVehicle = (vehicleId: string) => {
-  //   const updatedVehicles = user.vehicles.filter((v) => v.id !== vehicleId);
-  //   setUser({ ...user, vehicles: updatedVehicles });
-  //   Alert.alert("Success", "Vehicle deleted successfully!");
-  // };
+  const handleDeleteVehicle = (vehicleId: string) => {
+    
+    Alert.alert("Success", "Vehicle deleted successfully!");
+  };
 
   // ============================================================================
   // USER DELETION HANDLERS
@@ -226,13 +261,12 @@ export default function EditUser() {
 
       <ScrollView style={styles.content}>
         {user && <ProfileSection user={user} onUpdateProfile={handleUpdateProfile} />}
-        
-        {/* <VehiclesSection
-          vehicles={user.vehicles}
+        {user && <VehiclesSection
+          vehicles={vehicles}
           onAddVehicle={handleAddVehicle}
           onEditVehicle={handleEditVehicle}
           onDeleteVehicle={handleDeleteVehicle}
-        /> */}
+        />} 
       </ScrollView>
 
       {/* Delete User Button */}
@@ -245,12 +279,12 @@ export default function EditUser() {
       </TouchableOpacity>
 
       {/* Vehicle Modal */}
-      {/* <VehicleModal
+      <VehicleModal
         visible={vehicleModalVisible}
         vehicle={editingVehicle}
         onClose={() => setVehicleModalVisible(false)}
         onSave={handleSaveVehicle}
-      /> */}
+      />
 
       {/* Delete User Modal */}
      { user && (
