@@ -234,60 +234,159 @@ const handleSave = async () => {
           </View>
         </View>
 
-        <ScrollView horizontal style={styles.canvas}>
-          <GestureDetector gesture={pinchGesture}>
-            <Animated.View
-              style={[
-                {
-                  width: lotWidth * baseScaleValue,
-                  height: lotHeight * baseScaleValue,
-                },
-                animatedStyle
-              ]}
-            >
-              <Svg
-                viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-                width={lotWidth * baseScaleValue}
-                height={lotHeight * baseScaleValue}
-              >
-                <Rect
-                  x={0}
-                  y={0}
-                  width={lotWidth}
-                  height={lotHeight}
-                  fill="#e9f0f7"
-                  stroke="#64748b"
-                  strokeWidth={0.05}
-                />
-                {spaces.map((s) => (
-                  <React.Fragment key={s.id}>
-                    <Rect
-                      x={s.col * spaceWidth}
-                      y={getRowYPosition(s.row)}
-                      width={spaceWidth}
-                      height={spaceDepth}
-                      fill={getSpaceColor(s.type)}
-                      stroke="#388E3C"
-                      strokeWidth={0.05}
-                      onPress={() => setEditingSpace(s)}
-                    />
-                    <SvgText
-                      x={s.col * spaceWidth + spaceWidth / 2}
-                      y={getRowYPosition(s.row) + spaceDepth / 2}
-                      fill="#388E3C"
-                      fontSize={0.5}
-                      textAnchor="middle"
-                      alignmentBaseline="middle"
-                      onPress={() => setEditingSpace(s)}
+        {/* Parking Lot Canvas - FIXED VERSION */}
+        {rowCount > 0 && colCount > 0 && (
+          <View style={styles.canvasSection}>
+            <Text style={styles.sectionTitle}>Parking Lot Preview</Text>
+            <Text style={styles.helperText}>
+              {Platform.OS === 'web' 
+                ? 'Tap any space to change its type. Use scrollbars to navigate.' 
+                : 'Tap any space to change its type. Pinch to zoom, drag to scroll.'}
+            </Text>
+            
+            <View style={styles.canvasWrapper}>
+              {Platform.OS === 'web' ? (
+                // Web version - use native div scrolling
+                <div
+                  style={{
+                    width: '100%',
+                    height: '400px',
+                    overflow: 'auto',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    backgroundColor: '#fff',
+                    padding: '8px',
+                  }}
+                >
+                  <GestureDetector gesture={pinchGesture}>
+                    <Animated.View
+                      style={[
+                        {
+                          width: lotWidth * baseScaleValue,
+                          height: lotHeight * baseScaleValue,
+                          minHeight: 200,
+                        },
+                        animatedStyle
+                      ]}
                     >
-                      {`P${s.id}`}
-                    </SvgText>
-                  </React.Fragment>
-                ))}
-              </Svg>
-            </Animated.View>
-          </GestureDetector>
-        </ScrollView>
+                      <Svg
+                        viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+                        width={lotWidth * baseScaleValue}
+                        height={lotHeight * baseScaleValue}
+                      >
+                        <Rect
+                          x={0}
+                          y={0}
+                          width={lotWidth}
+                          height={lotHeight}
+                          fill="#e9f0f7"
+                          stroke="#64748b"
+                          strokeWidth={0.05}
+                        />
+                        {spaces.map((s) => (
+                          <React.Fragment key={s.id}>
+                            <Rect
+                              x={s.col * spaceWidth}
+                              y={getRowYPosition(s.row)}
+                              width={spaceWidth}
+                              height={spaceDepth}
+                              fill={getSpaceColor(s.type)}
+                              stroke="#388E3C"
+                              strokeWidth={0.05}
+                              onPress={() => setEditingSpace(s)}
+                            />
+                            <SvgText
+                              x={s.col * spaceWidth + spaceWidth / 2}
+                              y={getRowYPosition(s.row) + spaceDepth / 2}
+                              fill="#388E3C"
+                              fontSize={0.5}
+                              textAnchor="middle"
+                              alignmentBaseline="middle"
+                              onPress={() => setEditingSpace(s)}
+                            >
+                              {`P${s.id}`}
+                            </SvgText>
+                          </React.Fragment>
+                        ))}
+                      </Svg>
+                    </Animated.View>
+                  </GestureDetector>
+                </div>
+              ) : (
+                // Mobile version - use ScrollView with proper container
+                <View style={styles.mobileCanvasContainer}>
+                  <ScrollView 
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    scrollEnabled={true}
+                    style={styles.horizontalScroll}
+                  >
+                    <ScrollView
+                      showsVerticalScrollIndicator={false}
+                      scrollEnabled={true}
+                      nestedScrollEnabled={true}
+                      style={styles.verticalScroll}
+                    >
+                      <GestureDetector gesture={pinchGesture}>
+                        <Animated.View
+                          style={[
+                            {
+                              width: lotWidth * baseScaleValue,
+                              height: lotHeight * baseScaleValue,
+                              minHeight: 200,
+                            },
+                            animatedStyle
+                          ]}
+                        >
+                          <Svg
+                            viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+                            width={lotWidth * baseScaleValue}
+                            height={lotHeight * baseScaleValue}
+                          >
+                            <Rect
+                              x={0}
+                              y={0}
+                              width={lotWidth}
+                              height={lotHeight}
+                              fill="#e9f0f7"
+                              stroke="#64748b"
+                              strokeWidth={0.05}
+                            />
+                            {spaces.map((s) => (
+                              <React.Fragment key={s.id}>
+                                <Rect
+                                  x={s.col * spaceWidth}
+                                  y={getRowYPosition(s.row)}
+                                  width={spaceWidth}
+                                  height={spaceDepth}
+                                  fill={getSpaceColor(s.type)}
+                                  stroke="#388E3C"
+                                  strokeWidth={0.05}
+                                  onPress={() => setEditingSpace(s)}
+                                />
+                                <SvgText
+                                  x={s.col * spaceWidth + spaceWidth / 2}
+                                  y={getRowYPosition(s.row) + spaceDepth / 2}
+                                  fill="#388E3C"
+                                  fontSize={0.5}
+                                  textAnchor="middle"
+                                  alignmentBaseline="middle"
+                                  onPress={() => setEditingSpace(s)}
+                                >
+                                  {`P${s.id}`}
+                                </SvgText>
+                              </React.Fragment>
+                            ))}
+                          </Svg>
+                        </Animated.View>
+                      </GestureDetector>
+                    </ScrollView>
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         <Legend />
 
@@ -398,6 +497,35 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 14,
     backgroundColor: "#f9fafb",
+  },
+  canvasSection: {
+    marginBottom: 20,
+  },
+  canvasWrapper: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    overflow: 'hidden',
+  },
+  mobileCanvasContainer: {
+    height: 400,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  horizontalScroll: {
+    flex: 1,
+  },
+  verticalScroll: {
+    flex: 1,
+  },
+  helperText: {
+    fontSize: 13,
+    color: "#64748b",
+    marginBottom: 12,
+    textAlign: "center",
   },
   canvas: {
     backgroundColor: "#fff",
