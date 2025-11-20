@@ -34,6 +34,7 @@ interface UserType {
   avatar: string | null;
 }
 
+
 export default function UserList() {
   const [search, setSearch] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
@@ -46,16 +47,15 @@ export default function UserList() {
     department: "",
     password: "",
   });
+
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-
-
   const [users, setUsers] = useState<UserType[]>([]);
 
+  
   // Get Users from API
-
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -68,15 +68,16 @@ export default function UserList() {
     };
 
     fetchUsers();
-  }, []);
+  }, [users]);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
     });
+
     if (!result.canceled) {
       setAvatar(result.assets[0].uri);
     }
@@ -117,126 +118,151 @@ export default function UserList() {
     }
   };
 
-const handleAddUser = async () => {
-  // Mark all fields as touched
-  const allTouched = {
-    name: true,
-    email: true,
-    phone: true,
-    role: true,
-    department: true,
-    password: true, // Don't forget password
-  };
-  setTouched(allTouched);
+  const handleAddUser = async () => {
+    // Mark all fields as touched
+    const allTouched = {
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      department: true,
+      password: true,
+    };
+    setTouched(allTouched);
 
-  // Validate all fields
-  const validationErrors: ValidationErrors = {};
+    // Validate all fields
+    const validationErrors: ValidationErrors = {};
 
-  const nameValidation = validateName(formData.name);
-  if (!nameValidation.isValid) {
-    validationErrors.name = nameValidation.error!;
-  }
+    const nameValidation = validateName(formData.name);
+    if (!nameValidation.isValid) {
+      validationErrors.name = nameValidation.error!;
+    }
 
-  const emailValidation = validateEmail(formData.email);
-  if (!emailValidation.isValid) {
-    validationErrors.email = emailValidation.error!;
-  }
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      validationErrors.email = emailValidation.error!;
+    }
 
-  const phoneValidation = validatePhoneNumber(formData.phone);
-  if (!phoneValidation.isValid) {
-    validationErrors.phone = phoneValidation.error!;
-  }
+    const phoneValidation = validatePhoneNumber(formData.phone);
+    if (!phoneValidation.isValid) {
+      validationErrors.phone = phoneValidation.error!;
+    }
 
-  if (!formData.role) {
-    validationErrors.role = "Role is required";
-  }
+    if (!formData.role) {
+      validationErrors.role = "Role is required";
+    }
 
-  if (!formData.department) {
-    validationErrors.department = "Department is required";
-  }
+    if (!formData.department) {
+      validationErrors.department = "Department is required";
+    }
 
-  if (!formData.password || formData.password.length < 8) {
-    validationErrors.password = "Password must be at least 8 characters";
-  }
+    if (!formData.password || formData.password.length < 8) {
+      validationErrors.password = "Password must be at least 8 characters";
+    }
 
-  // If there are errors, set them and show alert
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    Alert.alert("Validation Error", "Please fix all errors before submitting");
-    return;
-  }
-
-  try {
-    // Show loading state (optional)
-    // setIsLoading(true);
-
-    // Make POST request to your API
-    const response = await fetch('https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        role: formData.role,
-        department: formData.department,
-        status: 'active',
-        avatar: avatar,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      // Handle specific error cases
-      if (response.status === 409) {
-        Alert.alert("Error", "A user with this email already exists");
-      } else {
-        Alert.alert("Error", data.message || "Failed to create user");
-      }
+    // If there are errors, set them and show alert
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      Alert.alert("Validation Error", "Please fix all errors before submitting");
       return;
     }
 
-    // Create user object from server response
-    const newUser: UserType = {
-      id: data.id.toString(),
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      role: data.role,
-      status: data.status,
-      department: data.department,
-      avatar: data.avatar,
-    };
+    try {
+      setIsSubmitting(true);
 
-    // Update local state
-    setUsers([...users, newUser]);
+      // ============================================================
+      // FIXED: Use FormData instead of JSON
+      // ============================================================
+      const formDataToSend = new FormData();
+      
+      // Add all text fields
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("phone", formData.phone);
+      formDataToSend.append("password", formData.password);
+      formDataToSend.append("role", formData.role);
+      formDataToSend.append("department", formData.department);
+      formDataToSend.append("status", "active");
 
-    // Reset form and close modal
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      role: "",
-      department: "",
-      password: "",
-    });
-    setAvatar(null);
-    setErrors({});
-    setTouched({});
-    setModalVisible(false);
+      // Add avatar if selected
+      if (avatar) {
+        // Extract file information
+        const uriParts = avatar.split("/");
+        const fileName = uriParts[uriParts.length - 1];
+        const fileType = fileName.split(".").pop() || "jpg";
+        
+        // Create file object for upload
+        const file = {
+          uri: avatar,
+          type: `image/${fileType}`,
+          name: fileName || `avatar_${Date.now()}.${fileType}`,
+        } as any;
+        
+        formDataToSend.append("avatar", file);
+        console.log("📤 Uploading avatar:", fileName);
+      }
 
-    Alert.alert("Success", `${newUser.name} has been added successfully!`);
-  } catch (error) {
-    console.error('Error adding user:', error);
-    Alert.alert("Error", "Network error. Please check your connection and try again.");
-  } finally {
-    // setIsLoading(false);
-  }
-};
+      // Make POST request with FormData
+      const response = await fetch('https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users', {
+        method: 'POST',
+        headers: {
+          // ⚠️ CRITICAL: Do NOT set Content-Type header!
+          // Let the browser set it automatically with the boundary
+        },
+        body: formDataToSend,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle specific error cases
+        if (response.status === 409) {
+          Alert.alert("Error", "A user with this email already exists");
+        } else {
+          Alert.alert("Error", data.message || "Failed to create user");
+        }
+        return;
+      }
+
+      console.log("✅ User created successfully:", data);
+
+      // Create user object from server response
+      const newUser: UserType = {
+        id: data.id.toString(),
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+        status: data.status,
+        department: data.department,
+        avatar: data.avatar,
+      };
+
+      // Update local state
+      setUsers([...users, newUser]);
+
+      // Reset form and close modal
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        role: "",
+        department: "",
+        password: "",
+      });
+      setAvatar(null);
+      setErrors({});
+      setTouched({});
+      setModalVisible(false);
+
+      Alert.alert("Success", `${newUser.name} has been added successfully!`);
+    } catch (error) {
+      console.error('❌ Error adding user:', error);
+      Alert.alert("Error", "Network error. Please check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleCloseModal = () => {
     setFormData({
@@ -359,6 +385,7 @@ const handleAddUser = async () => {
               <TouchableOpacity
                 onPress={handleCloseModal}
                 style={styles.closeButton}
+                disabled={isSubmitting}
               >
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
@@ -368,6 +395,7 @@ const handleAddUser = async () => {
               <TouchableOpacity
                 onPress={pickImage}
                 style={styles.avatarUpload}
+                disabled={isSubmitting}
               >
                 {avatar ? (
                   <Image source={{ uri: avatar }} style={styles.avatarImage} />
@@ -396,6 +424,7 @@ const handleAddUser = async () => {
                   value={formData.name}
                   onChangeText={(text) => handleFieldChange("name", text)}
                   onBlur={() => handleFieldBlur("name")}
+                  editable={!isSubmitting}
                 />
               </View>
 
@@ -418,9 +447,9 @@ const handleAddUser = async () => {
                   value={formData.email}
                   onChangeText={(text) => handleFieldChange("email", text)}
                   onBlur={() => handleFieldBlur("email")}
+                  editable={!isSubmitting}
                 />
               </View>
-
 
               <View style={styles.formGroup}>
                 <Text style={styles.label}>
@@ -440,6 +469,7 @@ const handleAddUser = async () => {
                   value={formData.password}
                   onChangeText={(text) => handleFieldChange("password", text)}
                   onBlur={() => handleFieldBlur("password")}
+                  editable={!isSubmitting}
                 />
               </View>
 
@@ -461,6 +491,7 @@ const handleAddUser = async () => {
                   value={formData.phone}
                   onChangeText={(text) => handleFieldChange("phone", text)}
                   onBlur={() => handleFieldBlur("phone")}
+                  editable={!isSubmitting}
                 />
               </View>
 
@@ -472,7 +503,7 @@ const handleAddUser = async () => {
                   )}
                 </Text>
                 <View style={styles.roleContainer}>
-                  {["user", "admin"].map((role) => (  // Changed from 'client' to 'user'
+                  {["user", "admin"].map((role) => (
                     <TouchableOpacity
                       key={role}
                       style={[
@@ -483,6 +514,7 @@ const handleAddUser = async () => {
                         handleFieldChange("role", role);
                         setTouched({ ...touched, role: true });
                       }}
+                      disabled={isSubmitting}
                     >
                       <Text
                         style={[
@@ -518,6 +550,7 @@ const handleAddUser = async () => {
                           handleFieldChange("department", dept);
                           setTouched({ ...touched, department: true });
                         }}
+                        disabled={isSubmitting}
                       >
                         <Text
                           style={[
@@ -546,14 +579,21 @@ const handleAddUser = async () => {
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={handleCloseModal}
+                disabled={isSubmitting}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.submitButton}
+                style={[
+                  styles.submitButton,
+                  isSubmitting && styles.submitButtonDisabled,
+                ]}
                 onPress={handleAddUser}
+                disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>Add User</Text>
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? "Adding..." : "Add User"}
+                </Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -879,6 +919,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#388E3C",
     alignItems: "center",
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#94a3b8",
   },
   submitButtonText: {
     fontSize: 16,
