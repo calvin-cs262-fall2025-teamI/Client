@@ -151,6 +151,12 @@ const handleSave = async () => {
     return;
   }
 
+  // Validate that we have rows and columns
+  if (rowCount <= 0 || colCount <= 0) {
+    alert("Please enter valid row and column numbers.");
+    return;
+  }
+
   const payload = {
     name: lotName,
     rows: rowCount,
@@ -158,6 +164,8 @@ const handleSave = async () => {
     spaces: JSON.stringify(spaces), // Convert to JSON string for PostgreSQL JSONB
     merged_aisles: JSON.stringify(Array.from(mergedAisles)) // Convert to JSON string for PostgreSQL JSONB
   };
+
+  console.log("Saving parking lot to server:", payload);
 
   try {
     const response = await fetch(`${API_URL}/api/parking-lots`, {
@@ -176,7 +184,7 @@ const handleSave = async () => {
     alert("Parking lot saved successfully!");
     navigation.goBack();
   } catch (err: any) {
-    console.error(err);
+    console.error("Error saving parking lot:", err);
     alert(err.message || "Could not save parking lot. Please try again.");
   }
 };
@@ -246,72 +254,77 @@ const handleSave = async () => {
             
             <View style={styles.canvasWrapper}>
               {Platform.OS === 'web' ? (
-                // Web version - use native div scrolling
-                <div
-                  style={{
-                    width: '100%',
-                    height: '400px',
-                    overflow: 'auto',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    backgroundColor: '#fff',
-                    padding: '8px',
-                  }}
-                >
-                  <GestureDetector gesture={pinchGesture}>
-                    <Animated.View
-                      style={[
-                        {
-                          width: lotWidth * baseScaleValue,
-                          height: lotHeight * baseScaleValue,
-                          minHeight: 200,
-                        },
-                        animatedStyle
-                      ]}
+                // Web version - use ScrollView with proper styling
+                <View style={styles.webCanvasContainer}>
+                  <ScrollView 
+                    horizontal
+                    showsHorizontalScrollIndicator={true}
+                    scrollEnabled={true}
+                    style={styles.horizontalScroll}
+                    contentContainerStyle={{ flexGrow: 0 }}
+                  >
+                    <ScrollView
+                      showsVerticalScrollIndicator={true}
+                      scrollEnabled={true}
+                      style={styles.verticalScroll}
+                      contentContainerStyle={{ flexGrow: 0 }}
                     >
-                      <Svg
-                        viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-                        width={lotWidth * baseScaleValue}
-                        height={lotHeight * baseScaleValue}
-                      >
-                        <Rect
-                          x={0}
-                          y={0}
-                          width={lotWidth}
-                          height={lotHeight}
-                          fill="#e9f0f7"
-                          stroke="#64748b"
-                          strokeWidth={0.05}
-                        />
-                        {spaces.map((s) => (
-                          <React.Fragment key={s.id}>
+                      <GestureDetector gesture={pinchGesture}>
+                        <Animated.View
+                          style={[
+                            {
+                              width: lotWidth * baseScaleValue,
+                              height: lotHeight * baseScaleValue,
+                              minHeight: 200,
+                            },
+                            animatedStyle
+                          ]}
+                        >
+                          <Svg
+                            viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+                            width={lotWidth * baseScaleValue}
+                            height={lotHeight * baseScaleValue}
+                          >
                             <Rect
-                              x={s.col * spaceWidth}
-                              y={getRowYPosition(s.row)}
-                              width={spaceWidth}
-                              height={spaceDepth}
-                              fill={getSpaceColor(s.type)}
-                              stroke="#388E3C"
+                              x={0}
+                              y={0}
+                              width={lotWidth}
+                              height={lotHeight}
+                              fill="#e9f0f7"
+                              stroke="#64748b"
                               strokeWidth={0.05}
-                              onPress={() => setEditingSpace(s)}
                             />
-                            <SvgText
-                              x={s.col * spaceWidth + spaceWidth / 2}
-                              y={getRowYPosition(s.row) + spaceDepth / 2}
-                              fill="#388E3C"
-                              fontSize={0.5}
-                              textAnchor="middle"
-                              alignmentBaseline="middle"
-                              onPress={() => setEditingSpace(s)}
-                            >
-                              {`P${s.id}`}
-                            </SvgText>
-                          </React.Fragment>
-                        ))}
-                      </Svg>
-                    </Animated.View>
-                  </GestureDetector>
-                </div>
+                            {spaces.map((s) => (
+                              <React.Fragment key={s.id}>
+                                <Rect
+                                  x={s.col * spaceWidth}
+                                  y={getRowYPosition(s.row)}
+                                  width={spaceWidth}
+                                  height={spaceDepth}
+                                  fill={getSpaceColor(s.type)}
+                                  stroke="#388E3C"
+                                  strokeWidth={0.05}
+                                  onPress={() => setEditingSpace(s)}
+                                />
+                                <SvgText
+                                  x={s.col * spaceWidth + spaceWidth / 2}
+                                  y={getRowYPosition(s.row) + spaceDepth / 2}
+                                  fill="#388E3C"
+                                  fontSize={0.5}
+                                  textAnchor="middle"
+                                  alignmentBaseline="middle"
+                                  onPress={() => setEditingSpace(s)}
+                                >
+                                  {`P${s.id}`}
+                                </SvgText>
+                              </React.Fragment>
+                            ))}
+                          </Svg>
+                        </Animated.View>
+                      </GestureDetector>
+                    </ScrollView>
+                  </ScrollView>
+                </View>
               ) : (
                 // Mobile version - use ScrollView with proper container
                 <View style={styles.mobileCanvasContainer}>
@@ -507,6 +520,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     overflow: 'hidden',
+  },
+  webCanvasContainer: {
+    height: 400,
+    backgroundColor: "#fff",
   },
   mobileCanvasContainer: {
     height: 400,
