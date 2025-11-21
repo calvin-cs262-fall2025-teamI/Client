@@ -1,8 +1,6 @@
 import { Stack } from "expo-router";
-import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MD3LightTheme, PaperProvider } from "react-native-paper";
-import LoadingScreen from '../components/LoadingScreen';
 import AuthProvider from "./utils/authContext";
 
 // Green and Yellow theme
@@ -21,25 +19,6 @@ const theme = {
 };
 
 export default function RootLayout() {
-  const [isReady, setIsReady] = useState(false);
-  
-
-  // useEffect(() => {
-  //   async function prepare() {
-  //     try {
-  //       await new Promise(resolve => setTimeout(resolve, 2000));
-  //     } catch (e) {
-  //       console.warn(e);
-  //     } finally {
-  //       setIsReady(true);
-  //     }
-  //   }
-  //   prepare();
-  // }, []);
-
-  // if (!isReady) {
-  //   return <LoadingScreen />;
-  // }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PaperProvider theme={theme}>
