@@ -297,12 +297,45 @@ export default function ClientHomeScreen() {
         </View>
 
         {/* Quick Actions Section */}
-        <TouchableOpacity
-          style={[styles.actionButton, styles.actionButtonFullWidth]}
-          onPress={() => router.push("/user/(tabs)/home/view-parking-lots" as any)}        >
-          <MapPin color="#4CAF50" size={24} />
-          <Text style={styles.actionButtonText}>View Parking Lots</Text>
-        </TouchableOpacity>
+
+  {/* Parking Availability Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Parking Availability</Text>
+          
+          {/* North Lot Card */}
+          <View style={styles.lotCard}>
+            <View style={styles.lotHeaderSimple}>
+              <MapPin color="#388E3C" size={20} />
+              <Text style={styles.lotName}>North Lot</Text>
+              <Text style={styles.lotTotalSpots}>24 spots</Text>
+            </View>
+          </View>
+
+          {/* South Lot Card */}
+          <View style={styles.lotCard}>
+            <View style={styles.lotHeaderSimple}>
+              <MapPin color="#388E3C" size={20} />
+              <Text style={styles.lotName}>South Lot</Text>
+              <Text style={styles.lotTotalSpots}>24 spots</Text>
+            </View>
+          </View>
+
+          {/* East Lot Card */}
+          <View style={styles.lotCard}>
+            <View style={styles.lotHeaderSimple}>
+              <MapPin color="#388E3C" size={20} />
+              <Text style={styles.lotName}>East Lot</Text>
+              <Text style={styles.lotTotalSpots}>20 spots</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionButtonFullWidth, styles.viewDetailsButton]}
+            onPress={() => router.push("/user/(tabs)/home/view-parking-lots" as any)}
+          >
+            <Text style={styles.viewDetailsButtonText}>View Full Details</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support and Feedback</Text>
           <View style={styles.quickActionsGrid}>
@@ -797,5 +830,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#fff",
+  },
+  viewDetailsButton: {
+    backgroundColor: "#388E3C",
+    borderColor: "#388E3C",
+    marginTop: 8,
+  },
+  viewDetailsButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  lotCard: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  lotHeaderSimple: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  lotName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0f172a",
+    flex: 1,
+  },
+  lotTotalSpots: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
   },
 });
