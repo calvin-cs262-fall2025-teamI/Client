@@ -9,7 +9,6 @@ import {useAuth} from "./utils/authContext";
 
 
 export default function SignInScreen() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");

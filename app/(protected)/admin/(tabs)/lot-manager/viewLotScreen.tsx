@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Button, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -25,7 +25,7 @@ interface ParkingLot {
 }
 
 export default function ViewLotScreen() {
-  const router = useRouter();
+  
   const params = useLocalSearchParams();
   
   const [lotName, setLotName] = useState("");
