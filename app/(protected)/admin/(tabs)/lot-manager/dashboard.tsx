@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Bell } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -71,10 +71,20 @@ export default function LotManagerScreen() {
 
   const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
-  // Fetch parking lots from API
+  // Fetch parking lots from API on mount
   useEffect(() => {
     fetchParkingLots();
   }, []);
+
+  // Refresh data when screen comes into focus using useFocusEffect
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchParkingLots();
+      return () => {
+        // Cleanup if needed
+      };
+    }, [])
+  );
 
   const fetchParkingLots = async () => {
     try {
