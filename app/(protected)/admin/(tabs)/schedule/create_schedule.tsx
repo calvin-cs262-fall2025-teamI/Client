@@ -5,43 +5,31 @@ import { Appbar } from 'react-native-paper';
 import ProgressIndicator from './components/ProgressIndicator';
 import ReservationParkingStep from './components/ReservationParkingStep';
 import ReviewSubmitStep from './components/ReviewSubmitStep';
-import UserInfoStep from './components/UserInfoStep';
+import type { ReservationData } from '@/types/global.types';
+import ParkingStep from './components/ParkingStep';
 
 interface UserData {
   name: string;
   role: 'employee' | 'admin';
 }
 
-interface ReservationData {
-  date: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  parkingLot: string;
-  spot: string;
-  recurring: boolean;
-  repeatPattern: string;
-  endDate: string;
-}
 
 export default function App() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   
-  const [userData, setUserData] = useState<UserData>({
-    name: 'John Smith',
-    role: 'employee',
-  });
   
   const [reservationData, setReservationData] = useState<ReservationData>({
-    date: 'October 22nd, 2025',
+    user_id: undefined,
+    name: undefined,
+    date: new Date('October 22nd, 2025'),
     startTime: '09:00',
     endTime: '17:00',
-    recurring: true,
+    recurring: false,
     repeatPattern: 'Weekly',
-    endDate: 'October 31st, 2025',
-    location: 'Main Campus',
-    parkingLot: 'Lot B',
-    spot: 'Spot B3',
+    endDate: new Date('October 31st, 2025'),
+    location: '',
+    parkingLot: '',
+    spot: '',
   });
 
   const handleNext = (): void => {
@@ -68,7 +56,7 @@ export default function App() {
         <View style={styles.fixedHeader}>
        
           
-          <ProgressIndicator currentStep={currentStep} />
+          <ProgressIndicator currentStep={currentStep} setCurrentStep={setCurrentStep} />
         </View>
 
         {/* Scrollable Content */}
@@ -78,9 +66,9 @@ export default function App() {
           showsVerticalScrollIndicator={true}
         >
           {currentStep === 1 && (
-            <UserInfoStep
-              userData={userData}
-              setUserData={setUserData}
+            <ParkingStep
+              reservationData={reservationData}
+              setReservationData={setReservationData}
               onNext={handleNext}
             />
           )}
@@ -96,7 +84,6 @@ export default function App() {
 
           {currentStep === 3 && (
             <ReviewSubmitStep
-              userData={userData}
               reservationData={reservationData}
               onPrevious={handlePrevious}
               onSubmit={handleSubmit}

@@ -17,7 +17,7 @@ import {
   validateName,
   validatePhoneNumber,
   ValidationErrors,
-} from "../../../../../utils/validationUtils";
+} from "../../../../../../utils/validationUtils";
 
 interface ProfileSectionProps {
   user: {

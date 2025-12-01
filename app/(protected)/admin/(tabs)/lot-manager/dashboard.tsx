@@ -12,7 +12,7 @@ import {
   View
 } from "react-native";
 
-import { useAuth } from "../../../../utils/authContext";
+import { useAuth } from "../../../../../utils/authContext";
 
 interface Issue {
   id: number;

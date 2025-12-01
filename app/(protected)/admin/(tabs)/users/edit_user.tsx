@@ -15,7 +15,7 @@ import DeleteUserModal from "./components/DeleteUserModal";
 import ProfileSection from "./components/ProfileSection";
 import VehicleModal from "./components/VehicleModal";
 import VehiclesSection from "./components/VehicleSection";
-import { UserType, VehicleType } from "../../../../types/admin.types";
+import { UserType, VehicleType } from "../../../../../types/admin.types";
 import { useEffect } from "react";
 
 export default function EditUser() {
