@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, MapPin, X } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   ScrollView,
   StatusBar,
@@ -12,6 +13,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
+
+const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
 type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
 type SpaceStatus = "available" | "occupied";
@@ -27,11 +30,14 @@ interface Space {
 }
 
 interface Reservation {
-  spaceId: number;
-  userName: string;
-  startTime: string; // HH:MM format
-  endTime: string;   // HH:MM format
-  lotId: number;
+  id: number;
+  user_id: number;
+  parking_lot_id: number;
+  space_id: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  user_name?: string;
 }
 
 interface ParkingLot {
@@ -40,124 +46,157 @@ interface ParkingLot {
   rows: number;
   cols: number;
   spaces: Space[];
+  merged_aisles: number[];
   totalSpots: number;
   availableSpots: number;
   occupiedSpots: number;
 }
-
-// Mock reservation data - in production, this comes from Azure
-const mockReservations: Reservation[] = [
-  // North Lot reservations
-  { spaceId: 3, userName: "John Smith", startTime: "08:00", endTime: "17:00", lotId: 1 },
-  { spaceId: 7, userName: "Sarah Johnson", startTime: "09:00", endTime: "15:00", lotId: 1 },
-  { spaceId: 12, userName: "Mike Davis", startTime: "07:30", endTime: "16:00", lotId: 1 },
-  
-  // South Lot reservations
-  { spaceId: 5, userName: "Emily Chen", startTime: "10:00", endTime: "18:00", lotId: 2 },
-  { spaceId: 15, userName: "David Wilson", startTime: "08:30", endTime: "14:30", lotId: 2 },
-  
-  // East Lot reservations
-  { spaceId: 8, userName: "Lisa Brown", startTime: "09:00", endTime: "17:30", lotId: 3 },
-];
 
 export default function ViewParkingLotsScreen() {
   const router = useRouter();
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
 
   // Update current time every minute
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Update every minute
+    }, 60000);
 
     return () => clearInterval(timer);
   }, []);
 
-  // Check if current time is within reservation time
-  const isTimeInRange = (startTime: string, endTime: string): boolean => {
-    const now = currentTime;
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  // Fetch parking lots and reservations from server
+  useEffect(() => {
+    fetchParkingData();
+  }, []);
 
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const startMinutes = startHour * 60 + startMin;
+  const fetchParkingData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch parking lots and reservations in parallel
+      const [lotsResponse, reservationsResponse] = await Promise.all([
+        fetch(`${API_URL}/api/parking-lots`),
+        fetch(`${API_URL}/api/reservations`)
+      ]);
+      
+      if (!lotsResponse.ok) {
+        throw new Error("Failed to fetch parking lots");
+      }
 
-    const [endHour, endMin] = endTime.split(':').map(Number);
-    const endMinutes = endHour * 60 + endMin;
+      const lotsData = await lotsResponse.json();
+      
+      // Handle reservations - might not exist yet in your backend
+      let reservationsData: Reservation[] = [];
+      if (reservationsResponse.ok) {
+        reservationsData = await reservationsResponse.json();
+        setReservations(reservationsData);
+      } else {
+        console.log("Reservations endpoint not available, using empty array");
+      }
 
-    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-  };
-
-  function generateLotWithReservations(
-    lotId: number,
-    name: string,
-    rows: number,
-    cols: number
-  ): ParkingLot {
-    const spaces: Space[] = [];
-    let id = 1;
-    let occupiedCount = 0;
-
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        // Assign space types (mostly regular, some special)
-        let type: SpaceType = "regular";
-        if (id % 8 === 0) type = "visitor";
-        else if (id % 12 === 0) type = "handicapped";
-        else if (id % 15 === 0) type = "authorized personnel";
-
-        // Check if this space has a reservation for current time
-        const reservation = mockReservations.find(
-          (r) => r.spaceId === id && r.lotId === lotId
-        );
-
-        let status: SpaceStatus = "available";
-        let occupiedBy: string | undefined;
-        let occupiedUntil: string | undefined;
-
-        if (reservation && isTimeInRange(reservation.startTime, reservation.endTime)) {
-          status = "occupied";
-          occupiedBy = reservation.userName;
-          occupiedUntil = reservation.endTime;
-          occupiedCount++;
+      
+      // Parse and process parking lots
+      const processedLots = lotsData.map((lot: any) => {
+        // Parse JSONB fields from PostgreSQL
+        let spaces = [];
+        let merged_aisles = [];
+        
+        if (typeof lot.spaces === 'string') {
+          try {
+            spaces = JSON.parse(lot.spaces);
+          } catch (e) {
+            console.error('Error parsing spaces:', e);
+            spaces = [];
+          }
+        } else if (Array.isArray(lot.spaces)) {
+          spaces = lot.spaces;
+        }
+        
+        if (typeof lot.merged_aisles === 'string') {
+          try {
+            merged_aisles = JSON.parse(lot.merged_aisles);
+          } catch (e) {
+            console.error('Error parsing merged_aisles:', e);
+            merged_aisles = [];
+          }
+        } else if (Array.isArray(lot.merged_aisles)) {
+          merged_aisles = lot.merged_aisles;
         }
 
-        spaces.push({
-          id: id++,
-          row: r,
-          col: c,
-          type,
-          status,
-          occupiedBy,
-          occupiedUntil,
+        // Apply reservation status to spaces
+        const spacesWithStatus = spaces.map((space: any) => {
+          // Find active reservation for this space in this lot
+          const reservation = reservationsData.find(
+            (r) => 
+              r.space_id === space.id && 
+              r.parking_lot_id === lot.id &&
+              r.status === 'active' &&
+              isTimeInReservationRange(r.start_time, r.end_time)
+          );
+
+          let status: SpaceStatus = "available";
+          let occupiedBy: string | undefined;
+          let occupiedUntil: string | undefined;
+
+          if (reservation) {
+            status = "occupied";
+            occupiedBy = reservation.user_name || `User ${reservation.user_id}`;
+            // Extract time from datetime string (format: HH:MM)
+            occupiedUntil = new Date(reservation.end_time).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            });
+          }
+
+          return {
+            ...space,
+            status,
+            occupiedBy,
+            occupiedUntil,
+          };
         });
-      }
+
+        const totalSpots = lot.rows * lot.cols;
+        const occupiedSpots = spacesWithStatus.filter((s: Space) => s.status === "occupied").length;
+        const availableSpots = totalSpots - occupiedSpots;
+
+        return {
+          id: lot.id,
+          name: lot.name,
+          rows: lot.rows,
+          cols: lot.cols,
+          spaces: spacesWithStatus,
+          merged_aisles: merged_aisles,
+          totalSpots,
+          availableSpots,
+          occupiedSpots,
+        };
+      });
+      
+      setParkingLots(processedLots);
+    } catch (error) {
+      console.error("Error fetching parking data:", error);
+      Alert.alert("Error", "Could not load parking data from server");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const totalSpots = rows * cols;
-    const availableSpots = totalSpots - occupiedCount;
+  // Check if current time is within reservation time (for datetime strings from database)
+  const isTimeInReservationRange = (startTime: string, endTime: string): boolean => {
+    const now = new Date();
+    const start = new Date(startTime);
+    const end = new Date(endTime);
 
-    return {
-      id: lotId,
-      name,
-      rows,
-      cols,
-      spaces,
-      totalSpots,
-      availableSpots,
-      occupiedSpots: occupiedCount,
-    };
-  }
-
-  // Generate parking lots with time-based occupancy
-  const parkingLots = React.useMemo(() => {
-    return [
-      generateLotWithReservations(1, "North Lot", 3, 8),
-      generateLotWithReservations(2, "South Lot", 4, 6),
-      generateLotWithReservations(3, "East Lot", 2, 10),
-    ];
-  }, [currentTime]);
+    return now >= start && now <= end;
+  };
 
   const handleViewLot = (lot: ParkingLot) => {
     setSelectedLot(lot);
@@ -189,7 +228,31 @@ export default function ViewParkingLotsScreen() {
   const spaceWidth = 2.5;
   const spaceDepth = 5;
   const aisleWidth = 6;
+  const mergedAisleWidth = 0.1;
   const baseScaleValue = 25;
+
+  const getAisleWidth = (afterRow: number, mergedAisles: number[]) => {
+    return mergedAisles.includes(afterRow) ? mergedAisleWidth : aisleWidth;
+  };
+
+  const calculateLotHeight = (rows: number, mergedAisles: number[]): number => {
+    let totalHeight = 0;
+    for (let r = 0; r < rows; r++) {
+      totalHeight += spaceDepth;
+      if (r < rows - 1) {
+        totalHeight += getAisleWidth(r, mergedAisles);
+      }
+    }
+    return totalHeight;
+  };
+
+  const getRowYPosition = (row: number, mergedAisles: number[]): number => {
+    let y = 0;
+    for (let r = 0; r < row; r++) {
+      y += spaceDepth + getAisleWidth(r, mergedAisles);
+    }
+    return y;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -227,67 +290,81 @@ export default function ViewParkingLotsScreen() {
             View real-time parking availability
           </Text>
 
-          {parkingLots.map((lot) => (
-            <View key={lot.id} style={styles.lotCard}>
-              <View style={styles.lotHeader}>
-                <View style={styles.lotHeaderLeft}>
-                  <MapPin color="#388E3C" size={20} />
-                  <Text style={styles.lotName}>{lot.name}</Text>
-                </View>
-                <View style={styles.lotStats}>
-                  <Text style={styles.availableText}>
-                    {lot.availableSpots} Available
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Total</Text>
-                  <Text style={styles.statValue}>{lot.totalSpots}</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Available</Text>
-                  <Text style={[styles.statValue, { color: "#388E3C" }]}>
-                    {lot.availableSpots}
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Occupied</Text>
-                  <Text style={[styles.statValue, { color: "#ef4444" }]}>
-                    {lot.occupiedSpots}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${(lot.occupiedSpots / lot.totalSpots) * 100}%`,
-                        backgroundColor:
-                          lot.occupiedSpots / lot.totalSpots > 0.8
-                            ? "#ef4444"
-                            : "#FBC02D",
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.progressText}>
-                  {Math.round((lot.occupiedSpots / lot.totalSpots) * 100)}% Full
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.viewButton}
-                onPress={() => handleViewLot(lot)}
-              >
-                <Text style={styles.viewButtonText}>View Lot Layout</Text>
-              </TouchableOpacity>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading parking lots...</Text>
             </View>
-          ))}
+          ) : parkingLots.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MapPin color="#cbd5e1" size={64} />
+              <Text style={styles.emptyStateTitle}>No Parking Lots</Text>
+              <Text style={styles.emptyStateText}>
+                No parking lots are currently available
+              </Text>
+            </View>
+          ) : (
+            parkingLots.map((lot) => (
+              <View key={lot.id} style={styles.lotCard}>
+                <View style={styles.lotHeader}>
+                  <View style={styles.lotHeaderLeft}>
+                    <MapPin color="#388E3C" size={20} />
+                    <Text style={styles.lotName}>{lot.name}</Text>
+                  </View>
+                  <View style={styles.lotStats}>
+                    <Text style={styles.availableText}>
+                      {lot.availableSpots} Available
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Total</Text>
+                    <Text style={styles.statValue}>{lot.totalSpots}</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Available</Text>
+                    <Text style={[styles.statValue, { color: "#388E3C" }]}>
+                      {lot.availableSpots}
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Occupied</Text>
+                    <Text style={[styles.statValue, { color: "#ef4444" }]}>
+                      {lot.occupiedSpots}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${(lot.occupiedSpots / lot.totalSpots) * 100}%`,
+                          backgroundColor:
+                            lot.occupiedSpots / lot.totalSpots > 0.8
+                              ? "#ef4444"
+                              : "#FBC02D",
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {Math.round((lot.occupiedSpots / lot.totalSpots) * 100)}% Full
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.viewButton}
+                  onPress={() => handleViewLot(lot)}
+                >
+                  <Text style={styles.viewButtonText}>View Lot Layout</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Legend */}
@@ -358,21 +435,22 @@ export default function ViewParkingLotsScreen() {
                   <View
                     style={{
                       width: selectedLot.cols * spaceWidth * baseScaleValue,
-                      height: calculateLotHeight(selectedLot.rows) * baseScaleValue,
+                      height: calculateLotHeight(selectedLot.rows, selectedLot.merged_aisles) * baseScaleValue,
                     }}
                   >
                     <Svg
                       viewBox={`0 0 ${selectedLot.cols * spaceWidth} ${calculateLotHeight(
-                        selectedLot.rows
+                        selectedLot.rows,
+                        selectedLot.merged_aisles
                       )}`}
                       width={selectedLot.cols * spaceWidth * baseScaleValue}
-                      height={calculateLotHeight(selectedLot.rows) * baseScaleValue}
+                      height={calculateLotHeight(selectedLot.rows, selectedLot.merged_aisles) * baseScaleValue}
                     >
                       <Rect
                         x={0}
                         y={0}
                         width={selectedLot.cols * spaceWidth}
-                        height={calculateLotHeight(selectedLot.rows)}
+                        height={calculateLotHeight(selectedLot.rows, selectedLot.merged_aisles)}
                         fill="#e9f0f7"
                         stroke="#64748b"
                         strokeWidth={0.05}
@@ -381,7 +459,7 @@ export default function ViewParkingLotsScreen() {
                         <React.Fragment key={space.id}>
                           <Rect
                             x={space.col * spaceWidth}
-                            y={getRowYPosition(space.row)}
+                            y={getRowYPosition(space.row, selectedLot.merged_aisles)}
                             width={spaceWidth}
                             height={spaceDepth}
                             fill={getSpaceColor(space)}
@@ -390,7 +468,7 @@ export default function ViewParkingLotsScreen() {
                           />
                           <SvgText
                             x={space.col * spaceWidth + spaceWidth / 2}
-                            y={getRowYPosition(space.row) + spaceDepth / 2}
+                            y={getRowYPosition(space.row, selectedLot.merged_aisles) + spaceDepth / 2}
                             fill="#fff"
                             fontSize={0.6}
                             fontWeight="bold"
@@ -469,34 +547,6 @@ export default function ViewParkingLotsScreen() {
   );
 }
 
-// Helper functions remain the same
-function calculateLotHeight(rows: number): number {
-  const spaceDepth = 5;
-  const aisleWidth = 6;
-  let totalHeight = 0;
-  
-  for (let r = 0; r < rows; r++) {
-    totalHeight += spaceDepth;
-    if (r < rows - 1) {
-      totalHeight += aisleWidth;
-    }
-  }
-  
-  return totalHeight;
-}
-
-function getRowYPosition(row: number): number {
-  const spaceDepth = 5;
-  const aisleWidth = 6;
-  let y = 0;
-  
-  for (let r = 0; r < row; r++) {
-    y += spaceDepth + aisleWidth;
-  }
-  
-  return y;
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -560,6 +610,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748b",
     marginBottom: 16,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#64748b",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: "#64748b",
+    textAlign: "center",
   },
   lotCard: {
     backgroundColor: "#fff",
