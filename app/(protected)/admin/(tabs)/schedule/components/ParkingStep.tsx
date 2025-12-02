@@ -1,12 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text } from 'react-native-paper';
 import { Dropdown } from 'react-native-element-dropdown';
+import { ScrollView } from 'react-native-gesture-handler';
+
 import { validateName } from '../../../../../../utils/validationUtils';
 import { useGlobalData } from '@/utils/GlobalDataContext';
 import type { ReservationData } from '@/types/global.types';
-import { ScrollView } from 'react-native-gesture-handler';
 
 interface ParkingStepProps {
   reservationData: ReservationData;
@@ -16,54 +17,27 @@ interface ParkingStepProps {
 
 const GREEN = '#1b5e20';
 
-// Static example data
-const locationOptions = [
-  { label: 'Main Campus', value: 'Main Campus' },
-  { label: 'East Campus', value: 'East Campus' },
-  { label: 'West Campus', value: 'West Campus' },
-];
+interface ParkingLot {
+  id: number;
+  name: string;
+  location: string;
+  spaces?: ParkingSpace[] | string;
+}
 
-const lotsByLocation: Record<string, { label: string; value: string }[]> = {
-  'Main Campus': [
-    { label: 'Lot A', value: 'Lot A' },
-    { label: 'Lot B', value: 'Lot B' },
-    { label: 'Lot C', value: 'Lot C' },
-  ],
-  'East Campus': [
-    { label: 'Lot D', value: 'Lot D' },
-    { label: 'Lot E', value: 'Lot E' },
-  ],
-  'West Campus': [
-    { label: 'Lot F', value: 'Lot F' },
-    { label: 'Lot G', value: 'Lot G' },
-  ],
-};
+interface ParkingSpace {
+  id: number;
+  col: number;
+  row: number;
+  type: string;
+  status: string;
+  user_id: number | null;
+}
 
-const spotsByLot: Record<string, { label: string; value: string }[]> = {
-  'Lot A': [
-    { label: 'A1', value: 'A1' },
-    { label: 'A2', value: 'A2' },
-    { label: 'A3', value: 'A3' },
-  ],
-  'Lot B': [
-    { label: 'B1', value: 'B1' },
-    { label: 'B2', value: 'B2' },
-  ],
-  'Lot C': [
-    { label: 'C1', value: 'C1' },
-    { label: 'C2', value: 'C2' },
-  ],
-  'Lot D': [
-    { label: 'D1', value: 'D1' },
-    { label: 'D2', value: 'D2' },
-  ],
-  'Lot E': [{ label: 'E1', value: 'E1' }],
-  'Lot F': [
-    { label: 'F1', value: 'F1' },
-    { label: 'F2', value: 'F2' },
-  ],
-  'Lot G': [{ label: 'G1', value: 'G1' }],
-};
+interface DropdownOption {
+  label: string;
+  value: string;
+  id?: number | string;
+}
 
 export default function ParkingStep({
   reservationData,
@@ -71,6 +45,7 @@ export default function ParkingStep({
   onNext,
 }: ParkingStepProps) {
   const { users } = useGlobalData();
+  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
 
   const [userFocus, setUserFocus] = useState(false);
   const [locationFocus, setLocationFocus] = useState(false);
@@ -80,22 +55,69 @@ export default function ParkingStep({
   const [nameError, setNameError] = useState('');
   const [touched, setTouched] = useState(false);
 
-  const userOptions =
-    users && users.length > 0
-      ? users.map(u => ({ id: u.id, label: u.name, value: u.name }))
-      : [];
+  const userOptions: DropdownOption[] = useMemo(
+    () =>
+      users && users.length > 0
+        ? users.map(u => ({ id: u.id, label: u.name, value: u.name }))
+        : [],
+    [users]
+  );
 
-  const lotOptions = useMemo(() => {
-    if (!reservationData.location) return [];
-    return lotsByLocation[reservationData.location] || [];
-  }, [reservationData.location]);
+  const locationOptions: DropdownOption[] = useMemo(() => {
+    const uniqueLocations = Array.from(
+      new Set(parkingLots.map(lot => lot.location))
+    );
+    return uniqueLocations.map(location => ({
+      label: location,
+      value: location,
+    }));
+  }, [parkingLots]);
 
-  const spotOptions = useMemo(() => {
+  const lotOptions: DropdownOption[] = useMemo(
+    () =>
+      parkingLots
+        .filter(lot => lot.location === reservationData.location)
+        .map(lot => ({ label: lot.name, value: lot.name })),
+    [parkingLots, reservationData.location]
+  );
+
+  const spotOptions: DropdownOption[] = useMemo(() => {
     if (!reservationData.parkingLot) return [];
-    return spotsByLot[reservationData.parkingLot] || [];
-  }, [reservationData.parkingLot]);
+
+    const selectedLot = parkingLots.find(
+      lot =>
+        lot.name === reservationData.parkingLot &&
+        (!reservationData.location || lot.location === reservationData.location)
+    );
+
+    if (!selectedLot || !selectedLot.spaces) return [];
+
+    let spaces: ParkingSpace[] = [];
+    try {
+      spaces =
+        typeof selectedLot.spaces === 'string'
+          ? JSON.parse(selectedLot.spaces)
+          : (selectedLot.spaces as ParkingSpace[]);
+    } catch (e) {
+      console.warn('Error parsing spaces JSON', e);
+      return [];
+    }
+
+    return spaces
+      .filter(
+        space =>
+          space.status === 'active' &&
+          (space.user_id === null || space.user_id === undefined)
+      )
+      .map(space => ({
+        id: space.id,
+        label: `Row ${space.row + 1} · Spot ${space.col + 1}`,
+        value: String(space.id),
+      }));
+  }, [parkingLots, reservationData.parkingLot, reservationData.location]);
 
   const isFormComplete =
+    !!reservationData.user_id &&
     !!reservationData.name &&
     !!reservationData.location &&
     !!reservationData.parkingLot &&
@@ -118,10 +140,28 @@ export default function ParkingStep({
     onNext();
   };
 
+  useEffect(() => {
+    const fetchParkingLots = async () => {
+      try {
+        const response = await fetch(
+          'https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/parking-lots'
+        );
+        const data = await response.json();
+        setParkingLots(data);
+      } catch (error) {
+        console.error('Error in ParkingStep useEffect:', error);
+      }
+    };
+
+    fetchParkingLots();
+  }, []);
+
   return (
+    <SafeAreaView style={{ flex: 1 }}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
+        contentContainerStyle={{ paddingBottom: 24 }}
       >
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Select Parking</Text>
@@ -154,8 +194,12 @@ export default function ParkingStep({
               onBlur={() => setUserFocus(false)}
               dropdownPosition="auto"
               flatListProps={{ nestedScrollEnabled: true }}
-              onChange={item => {
-                setReservationData(prev => ({ ...prev, user_id: item.id, name: item.value }));
+              onChange={(item: DropdownOption) => {
+                setReservationData(prev => ({
+                  ...prev,
+                  user_id: item.id ? String(item.id) : undefined,
+                  name: item.value,
+                }));
                 setUserFocus(false);
                 setTouched(true);
                 setNameError('');
@@ -319,11 +363,11 @@ export default function ParkingStep({
           </Button>
         </View>
       </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,

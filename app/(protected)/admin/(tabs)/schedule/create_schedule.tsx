@@ -5,6 +5,7 @@ import { Appbar } from 'react-native-paper';
 import ProgressIndicator from './components/ProgressIndicator';
 import ReservationParkingStep from './components/ReservationParkingStep';
 import ReviewSubmitStep from './components/ReviewSubmitStep';
+import { buildScheduleFromReservation } from '@/utils/reservationSchedule';
 import type { ReservationData } from '@/types/global.types';
 import ParkingStep from './components/ParkingStep';
 
@@ -40,9 +41,27 @@ export default function App() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = (): void => {
-    router.back();
-};
+ const handleSubmit = async () => {
+    try {
+      const schedule = buildScheduleFromReservation(reservationData);
+      console.log('Generated Schedule:', schedule);
+
+      // Example: send all occurrences to your API
+      await fetch(
+        'https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/reservations/bulk',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reservations: schedule }),
+        }
+      );
+
+      // maybe navigate away or show success here
+    } catch (err) {
+      console.error('Error submitting reservation', err);
+      // show error toast / dialog if you want
+    }
+  };
 
   return (
     <>
