@@ -143,51 +143,51 @@ export default function CreateLotScreen() {
     }
   };
 
-const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
+  const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
-const handleSave = async () => {
-  if (!lotName.trim()) {
-    alert("Please enter a lot name before saving.");
-    return;
-  }
-
-  // Validate that we have rows and columns
-  if (rowCount <= 0 || colCount <= 0) {
-    alert("Please enter valid row and column numbers.");
-    return;
-  }
-
-  const payload = {
-    name: lotName,
-    rows: rowCount,
-    cols: colCount,
-    spaces: JSON.stringify(spaces), // Convert to JSON string for PostgreSQL JSONB
-    merged_aisles: JSON.stringify(Array.from(mergedAisles)) // Convert to JSON string for PostgreSQL JSONB
-  };
-
-  console.log("Saving parking lot to server:", payload);
-
-  try {
-    const response = await fetch(`${API_URL}/api/parking-lots`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to save lot");
+  const handleSave = async () => {
+    if (!lotName.trim()) {
+      alert("Please enter a lot name before saving.");
+      return;
     }
-    
-    const result = await response.json();
-    console.log("Parking lot created successfully:", result);
-    alert("Parking lot saved successfully!");
-    navigation.goBack();
-  } catch (err: any) {
-    console.error("Error saving parking lot:", err);
-    alert(err.message || "Could not save parking lot. Please try again.");
-  }
-};
+
+    // Validate that we have rows and columns
+    if (rowCount <= 0 || colCount <= 0) {
+      alert("Please enter valid row and column numbers.");
+      return;
+    }
+
+    const payload = {
+      name: lotName,
+      rows: rowCount,
+      cols: colCount,
+      spaces: JSON.stringify(spaces), // Convert to JSON string for PostgreSQL JSONB
+      merged_aisles: JSON.stringify(Array.from(mergedAisles)) // Convert to JSON string for PostgreSQL JSONB
+    };
+
+    console.log("Saving parking lot to server:", payload);
+
+    try {
+      const response = await fetch(`${API_URL}/api/parking-lots`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to save lot");
+      }
+
+      const result = await response.json();
+      console.log("Parking lot created successfully:", result);
+      alert("Parking lot saved successfully!");
+      navigation.goBack();
+    } catch (err: any) {
+      console.error("Error saving parking lot:", err);
+      alert(err.message || "Could not save parking lot. Please try again.");
+    }
+  };
 
   return (
     <View>
@@ -247,16 +247,16 @@ const handleSave = async () => {
           <View style={styles.canvasSection}>
             <Text style={styles.sectionTitle}>Parking Lot Preview</Text>
             <Text style={styles.helperText}>
-              {Platform.OS === 'web' 
-                ? 'Tap any space to change its type. Use scrollbars to navigate.' 
+              {Platform.OS === 'web'
+                ? 'Tap any space to change its type. Use scrollbars to navigate.'
                 : 'Tap any space to change its type. Pinch to zoom, drag to scroll.'}
             </Text>
-            
+
             <View style={styles.canvasWrapper}>
               {Platform.OS === 'web' ? (
                 // Web version - use ScrollView with proper styling
                 <View style={styles.webCanvasContainer}>
-                  <ScrollView 
+                  <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={true}
                     scrollEnabled={true}
@@ -328,7 +328,7 @@ const handleSave = async () => {
               ) : (
                 // Mobile version - use ScrollView with proper container
                 <View style={styles.mobileCanvasContainer}>
-                  <ScrollView 
+                  <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     scrollEnabled={true}
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
     marginBottom: 20,
   },
-  buttonContainer: { marginTop: 20, marginBottom: 40 },
+  buttonContainer: { marginTop: 20, marginBottom: 100 },
   modalOverlay: {
     position: "absolute",
     top: 0,
