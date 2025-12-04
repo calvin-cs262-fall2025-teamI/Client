@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text } from 'react-native-paper';
 import { Dropdown } from 'react-native-element-dropdown';
@@ -51,6 +51,12 @@ export default function ParkingStep({
   const [locationFocus, setLocationFocus] = useState(false);
   const [lotFocus, setLotFocus] = useState(false);
   const [spotFocus, setSpotFocus] = useState(false);
+
+  // refs to the dropdowns so we can programmatically open them on overlay press
+  const userDropdownRef = useRef<any>(null);
+  const locationDropdownRef = useRef<any>(null);
+  const lotDropdownRef = useRef<any>(null);
+  const spotDropdownRef = useRef<any>(null);
 
   const [nameError, setNameError] = useState('');
   const [touched, setTouched] = useState(false);
@@ -177,6 +183,8 @@ export default function ParkingStep({
                 styles.dropdown,
                 userFocus && { borderColor: GREEN, borderWidth: 1 },
               ]}
+              accessibilityLabel="User dropdown"
+              ref={userDropdownRef as any}
               containerStyle={styles.dropdownMenu}
               placeholderStyle={styles.placeholderStyle}
               selectedTextStyle={styles.selectedTextStyle}
@@ -205,6 +213,17 @@ export default function ParkingStep({
                 setNameError('');
               }}
             />
+            {/* invisible overlay to increase touch target and reliably open dropdown */}
+            <Pressable
+              style={styles.touchOverlay}
+              onPress={() => {
+                // try known method names, otherwise focus as fallback
+                const d = userDropdownRef.current as any;
+                if (d?.open) return d.open();
+                if (d?.toggle) return d.toggle();
+                setUserFocus(true);
+              }}
+            />
             {touched && nameError ? (
               <Text style={styles.errorText}>{nameError}</Text>
             ) : null}
@@ -218,6 +237,8 @@ export default function ParkingStep({
                 styles.dropdown,
                 locationFocus && { borderColor: GREEN, borderWidth: 1 },
               ]}
+              accessibilityLabel="Location dropdown"
+              ref={locationDropdownRef as any}
               containerStyle={styles.dropdownMenu}
               placeholderStyle={styles.placeholderStyle}
               selectedTextStyle={styles.selectedTextStyle}
@@ -246,6 +267,15 @@ export default function ParkingStep({
                 setTouched(true);
               }}
             />
+            <Pressable
+              style={styles.touchOverlay}
+              onPress={() => {
+                const d = locationDropdownRef.current as any;
+                if (d?.open) return d.open();
+                if (d?.toggle) return d.toggle();
+                setLocationFocus(true);
+              }}
+            />
           </View>
 
           {/* Parking Lot Dropdown */}
@@ -256,6 +286,8 @@ export default function ParkingStep({
                 styles.dropdown,
                 lotFocus && { borderColor: GREEN, borderWidth: 1 },
               ]}
+              accessibilityLabel="Parking lot dropdown"
+              ref={lotDropdownRef as any}
               containerStyle={styles.dropdownMenu}
               placeholderStyle={styles.placeholderStyle}
               selectedTextStyle={styles.selectedTextStyle}
@@ -290,6 +322,15 @@ export default function ParkingStep({
                 setTouched(true);
               }}
             />
+            <Pressable
+              style={styles.touchOverlay}
+              onPress={() => {
+                const d = lotDropdownRef.current as any;
+                if (d?.open) return d.open();
+                if (d?.toggle) return d.toggle();
+                setLotFocus(true);
+              }}
+            />
           </View>
 
           {/* Available Spot Dropdown */}
@@ -300,6 +341,8 @@ export default function ParkingStep({
                 styles.dropdown,
                 spotFocus && { borderColor: GREEN, borderWidth: 1 },
               ]}
+              accessibilityLabel="Available spot dropdown"
+              ref={spotDropdownRef as any}
               containerStyle={styles.dropdownMenu}
               placeholderStyle={styles.placeholderStyle}
               selectedTextStyle={styles.selectedTextStyle}
@@ -331,6 +374,15 @@ export default function ParkingStep({
                 }));
                 setSpotFocus(false);
                 setTouched(true);
+              }}
+            />
+            <Pressable
+              style={styles.touchOverlay}
+              onPress={() => {
+                const d = spotDropdownRef.current as any;
+                if (d?.open) return d.open();
+                if (d?.toggle) return d.toggle();
+                setSpotFocus(true);
               }}
             />
           </View>
@@ -392,6 +444,7 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     marginBottom: 20,
+    position: 'relative',
   },
   fieldLabel: {
     fontSize: 14,
@@ -400,11 +453,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   dropdown: {
-    height: 50,
+    height: 48,
+    minHeight: 48,
     borderColor: '#ccc',
     borderWidth: 0.7,
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     backgroundColor: '#fff',
   },
   dropdownMenu: {
@@ -460,5 +515,13 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     marginTop: 8,
+  },
+  touchOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
   },
 });

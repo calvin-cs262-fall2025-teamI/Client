@@ -22,7 +22,7 @@ interface ReservationData {
     startTime: string;
     endTime: string;
     recurring: boolean;
-    repeatPattern: string;
+    recurringDays: string[];
     endDate: Date | undefined;
     location: string;
     parkingLot: string;

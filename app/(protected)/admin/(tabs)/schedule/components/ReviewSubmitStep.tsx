@@ -67,8 +67,21 @@ export default function ReviewSubmitStep({
               <Text style={styles.icon}>🔄</Text>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Recurring</Text>
-                <Text style={styles.infoValue}>{reservationData.repeatPattern}</Text>
-                <Text style={styles.infoSubvalue}>Until {reservationData.endDate?.toDateString() || ''}</Text>
+                 {reservationData.recurringDays.length > 0 && (
+                              <View style={styles.recurringSummary}>
+                                <Text style={styles.recurringSummaryTitle}>
+                                  Recurring Days
+                                </Text>
+                                {reservationData.recurringDays.map(d => (
+                                  <Text
+                                    key={d}
+                                    style={styles.recurringSummaryText}
+                                  >
+                                    • {new Date(d).toDateString()}
+                                  </Text>
+                                ))}
+                              </View>
+                            )}
               </View>
             </View>
 
@@ -151,5 +164,21 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+  },
+  recurringSummary: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  recurringSummaryTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+    color: '#333',
+  },
+  recurringSummaryText: {
+    fontSize: 13,
+    color: '#555',
   },
 });

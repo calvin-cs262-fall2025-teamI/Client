@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Button, Switch } from 'react-native-paper';
 import { DatePickerInput, TimePickerModal } from 'react-native-paper-dates';
@@ -6,7 +6,6 @@ import type { ReservationData } from '@/types/global.types';
 
 interface ReservationParkingStepProps {
   reservationData: ReservationData;
- 
   setReservationData: React.Dispatch<
     React.SetStateAction<ReservationParkingStepProps['reservationData']>
   >;
@@ -49,6 +48,31 @@ const parseTimeOrDefault = (
   if (isNaN(hours) || isNaN(minutes)) return fallback;
 
   return { hours, minutes };
+};
+
+// ---------- recurring dates helper ----------
+
+const buildWeeklyRecurringDates = (
+  start?: Date,
+  end?: Date
+): Date[] => {
+  if (!start || !end) return [];
+  if (end < start) return [];
+
+  const dates: Date[] = [];
+  const current = new Date(start);
+
+  // zero out time portion so comparison is cleaner
+  current.setHours(0, 0, 0, 0);
+  const endCopy = new Date(end);
+  endCopy.setHours(0, 0, 0, 0);
+
+  while (current <= endCopy) {
+    dates.push(new Date(current)); // push a copy
+    current.setDate(current.getDate() + 7); // weekly
+  }
+
+  return dates;
 };
 
 export default function ReservationParkingStep({
@@ -121,6 +145,25 @@ export default function ReservationParkingStep({
   const safeReservationDate = toSafeDate(reservationData.date);
   const safeEndDate = toSafeDate(reservationData.endDate);
 
+  // ---- recurring dates (weekly) ----
+  const recurringDates = useMemo(
+    () =>
+      reservationData.recurring
+        ? buildWeeklyRecurringDates(safeReservationDate, safeEndDate)
+        : [],
+    [reservationData.recurring, safeReservationDate, safeEndDate]
+  );
+
+  useEffect(() => {
+    if (reservationData.recurring) {
+      setReservationData(prev => ({
+        ...prev,
+        recurringDays: recurringDates.map(d => d.toISOString()),
+      }));
+    }
+
+  }, [recurringDates, reservationData.recurring, setReservationData]);
+
   return (
     <ScrollView
       keyboardDismissMode="on-drag"
@@ -144,14 +187,13 @@ export default function ReservationParkingStep({
             value={safeReservationDate}
             onChange={handleDateChange}
             inputMode="start"
-            underlineColor='transparent'
+            underlineColor="transparent"
             style={styles.datePickerInput}
-            
           />
         </View>
 
         {/* TIME */}
-        <View style={styles.timeRow}>
+        <View className="timeRow" style={styles.timeRow}>
           <View style={styles.timeColumn}>
             <Text style={styles.label}>Start Time</Text>
             <TouchableOpacity
@@ -184,7 +226,7 @@ export default function ReservationParkingStep({
           <View>
             <Text style={styles.label}>Recurring Reservation</Text>
             <Text style={styles.switchSubtext}>
-              Enable to repeat this reservation
+              Repeat this reservation every week
             </Text>
           </View>
           <Switch
@@ -199,11 +241,6 @@ export default function ReservationParkingStep({
         {/* RECURRING OPTIONS */}
         {reservationData.recurring && (
           <>
-            <Text style={styles.label}>Repeat Pattern</Text>
-            <TouchableOpacity style={styles.dropdown}>
-              <Text>{reservationData.repeatPattern || 'Select pattern'}</Text>
-            </TouchableOpacity>
-
             <Text style={styles.label}>End Date</Text>
             <View style={styles.datePickerWrapper}>
               <DatePickerInput
@@ -212,11 +249,27 @@ export default function ReservationParkingStep({
                 value={safeEndDate}
                 onChange={handleEndDateChange}
                 inputMode="start"
-                underlineColor='transparent'
+                underlineColor="transparent"
                 style={styles.datePickerInput}
-                
               />
             </View>
+
+            {/* RECURRING DATES SUMMARY */}
+            {recurringDates.length > 0 && (
+              <View style={styles.recurringSummary}>
+                <Text style={styles.recurringSummaryTitle}>
+                  Recurring Days
+                </Text>
+                {recurringDates.map(d => (
+                  <Text
+                    key={d.toISOString()}
+                    style={styles.recurringSummaryText}
+                  >
+                    • {d.toDateString()}
+                  </Text>
+                ))}
+              </View>
+            )}
           </>
         )}
       </View>
@@ -363,5 +416,21 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+  },
+  recurringSummary: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  recurringSummaryTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+    color: '#333',
+  },
+  recurringSummaryText: {
+    fontSize: 13,
+    color: '#555',
   },
 });

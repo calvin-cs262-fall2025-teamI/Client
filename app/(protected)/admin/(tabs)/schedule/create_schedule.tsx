@@ -5,14 +5,9 @@ import { Appbar } from 'react-native-paper';
 import ProgressIndicator from './components/ProgressIndicator';
 import ReservationParkingStep from './components/ReservationParkingStep';
 import ReviewSubmitStep from './components/ReviewSubmitStep';
-import { buildScheduleFromReservation } from '@/utils/reservationSchedule';
 import type { ReservationData } from '@/types/global.types';
 import ParkingStep from './components/ParkingStep';
 
-interface UserData {
-  name: string;
-  role: 'employee' | 'admin';
-}
 
 
 export default function App() {
@@ -26,7 +21,7 @@ export default function App() {
     startTime: '09:00',
     endTime: '17:00',
     recurring: false,
-    repeatPattern: 'Weekly',
+    recurringDays: [],
     endDate: new Date('October 31st, 2025'),
     location: '',
     parkingLot: '',
@@ -42,19 +37,28 @@ export default function App() {
   };
 
  const handleSubmit = async () => {
+  const reservation = {
+      user_id: reservationData.user_id,
+      date: reservationData.date,
+      spot_number: reservationData.spot,
+      start_time: reservationData.startTime,
+      end_time: reservationData.endTime,
+      is_recurring: reservationData.recurring,
+      recurring_days: reservationData.recurringDays,
+      location: reservationData.location,
+      parking_lot: reservationData.parkingLot,
+  }
     try {
-      const schedule = buildScheduleFromReservation(reservationData);
-      console.log('Generated Schedule:', schedule);
-
-      // Example: send all occurrences to your API
-      await fetch(
-        'https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/reservations/bulk',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reservations: schedule }),
-        }
-      );
+      
+        // Example: send all occurrences to your API
+        await fetch(
+          'https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/schedules',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reservation),
+          }
+        );
 
       // maybe navigate away or show success here
     } catch (err) {
