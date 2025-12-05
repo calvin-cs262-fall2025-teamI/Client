@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
-import { ArrowLeft, MapPin, X } from "lucide-react-native";
-import React, { useState } from "react";
+import { ArrowLeft, MapPin, Maximize2, X } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   ScrollView,
   StatusBar,
@@ -12,6 +13,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
+
+const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
 type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
 type SpaceStatus = "available" | "occupied";
@@ -27,11 +30,14 @@ interface Space {
 }
 
 interface Reservation {
-  spaceId: number;
-  userName: string;
-  startTime: string; // HH:MM format
-  endTime: string;   // HH:MM format
-  lotId: number;
+  id: number;
+  user_id: number;
+  parking_lot_id: number;
+  space_id: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  user_name?: string;
 }
 
 interface ParkingLot {
@@ -40,164 +46,221 @@ interface ParkingLot {
   rows: number;
   cols: number;
   spaces: Space[];
+  merged_aisles: number[];
   totalSpots: number;
   availableSpots: number;
   occupiedSpots: number;
 }
 
-// Mock reservation data - in production, this comes from Azure
-const mockReservations: Reservation[] = [
-  // North Lot reservations
-  { spaceId: 3, userName: "John Smith", startTime: "08:00", endTime: "17:00", lotId: 1 },
-  { spaceId: 7, userName: "Sarah Johnson", startTime: "09:00", endTime: "15:00", lotId: 1 },
-  { spaceId: 12, userName: "Mike Davis", startTime: "07:30", endTime: "16:00", lotId: 1 },
-  
-  // South Lot reservations
-  { spaceId: 5, userName: "Emily Chen", startTime: "10:00", endTime: "18:00", lotId: 2 },
-  { spaceId: 15, userName: "David Wilson", startTime: "08:30", endTime: "14:30", lotId: 2 },
-  
-  // East Lot reservations
-  { spaceId: 8, userName: "Lisa Brown", startTime: "09:00", endTime: "17:30", lotId: 3 },
-];
-
 export default function ViewParkingLotsScreen() {
   const router = useRouter();
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
 
   // Update current time every minute
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Update every minute
+    }, 60000);
 
     return () => clearInterval(timer);
   }, []);
 
-  // Check if current time is within reservation time
-  const isTimeInRange = (startTime: string, endTime: string): boolean => {
-    const now = currentTime;
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  // Fetch parking lots and reservations from server
+  useEffect(() => {
+    fetchParkingData();
+  }, []);
 
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const startMinutes = startHour * 60 + startMin;
+  const fetchParkingData = async () => {
+    try {
+      setLoading(true);
 
-    const [endHour, endMin] = endTime.split(':').map(Number);
-    const endMinutes = endHour * 60 + endMin;
+      const [lotsResponse, reservationsResponse] = await Promise.all([
+        fetch(`${API_URL}/api/parking-lots`),
+        fetch(`${API_URL}/api/reservations`)
+      ]);
 
-    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-  };
+      if (!lotsResponse.ok) {
+        throw new Error("Failed to fetch parking lots");
+      }
 
-  function generateLotWithReservations(
-    lotId: number,
-    name: string,
-    rows: number,
-    cols: number
-  ): ParkingLot {
-    const spaces: Space[] = [];
-    let id = 1;
-    let occupiedCount = 0;
+      const lotsData = await lotsResponse.json();
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        // Assign space types (mostly regular, some special)
-        let type: SpaceType = "regular";
-        if (id % 8 === 0) type = "visitor";
-        else if (id % 12 === 0) type = "handicapped";
-        else if (id % 15 === 0) type = "authorized personnel";
+      let reservationsData: Reservation[] = [];
+      if (reservationsResponse.ok) {
+        reservationsData = await reservationsResponse.json();
+        setReservations(reservationsData);
+      } else {
+        console.log("Reservations endpoint not available, using empty array");
+      }
 
-        // Check if this space has a reservation for current time
-        const reservation = mockReservations.find(
-          (r) => r.spaceId === id && r.lotId === lotId
-        );
+      const processedLots = lotsData.map((lot: any) => {
+        let spaces = [];
+        let merged_aisles = [];
 
-        let status: SpaceStatus = "available";
-        let occupiedBy: string | undefined;
-        let occupiedUntil: string | undefined;
-
-        if (reservation && isTimeInRange(reservation.startTime, reservation.endTime)) {
-          status = "occupied";
-          occupiedBy = reservation.userName;
-          occupiedUntil = reservation.endTime;
-          occupiedCount++;
+        if (typeof lot.spaces === 'string') {
+          try {
+            spaces = JSON.parse(lot.spaces);
+          } catch (e) {
+            console.error('Error parsing spaces:', e);
+            spaces = [];
+          }
+        } else if (Array.isArray(lot.spaces)) {
+          spaces = lot.spaces;
         }
 
-        spaces.push({
-          id: id++,
-          row: r,
-          col: c,
-          type,
-          status,
-          occupiedBy,
-          occupiedUntil,
+        if (typeof lot.merged_aisles === 'string') {
+          try {
+            merged_aisles = JSON.parse(lot.merged_aisles);
+          } catch (e) {
+            console.error('Error parsing merged_aisles:', e);
+            merged_aisles = [];
+          }
+        } else if (Array.isArray(lot.merged_aisles)) {
+          merged_aisles = lot.merged_aisles;
+        }
+
+        const spacesWithStatus = spaces.map((space: any) => {
+          const reservation = reservationsData.find(
+            (r) =>
+              r.space_id === space.id &&
+              r.parking_lot_id === lot.id &&
+              r.status === 'active' &&
+              isTimeInReservationRange(r.start_time, r.end_time)
+          );
+
+          let status: SpaceStatus = "available";
+          let occupiedBy: string | undefined;
+          let occupiedUntil: string | undefined;
+
+          if (reservation) {
+            status = "occupied";
+            occupiedBy = reservation.user_name || `User ${reservation.user_id}`;
+            occupiedUntil = new Date(reservation.end_time).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            });
+          }
+
+          return {
+            ...space,
+            status,
+            occupiedBy,
+            occupiedUntil,
+          };
         });
-      }
+
+        const totalSpots = lot.rows * lot.cols;
+        const occupiedSpots = spacesWithStatus.filter((s: Space) => s.status === "occupied").length;
+        const availableSpots = totalSpots - occupiedSpots;
+
+        return {
+          id: lot.id,
+          name: lot.name,
+          rows: lot.rows,
+          cols: lot.cols,
+          spaces: spacesWithStatus,
+          merged_aisles: merged_aisles,
+          totalSpots,
+          availableSpots,
+          occupiedSpots,
+        };
+      });
+
+      setParkingLots(processedLots);
+    } catch (error) {
+      console.error("Error fetching parking data:", error);
+      Alert.alert("Error", "Could not load parking data from server");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const totalSpots = rows * cols;
-    const availableSpots = totalSpots - occupiedCount;
-
-    return {
-      id: lotId,
-      name,
-      rows,
-      cols,
-      spaces,
-      totalSpots,
-      availableSpots,
-      occupiedSpots: occupiedCount,
-    };
-  }
-
-  // Generate parking lots with time-based occupancy
-  const parkingLots = React.useMemo(() => {
-    return [
-      generateLotWithReservations(1, "North Lot", 3, 8),
-      generateLotWithReservations(2, "South Lot", 4, 6),
-      generateLotWithReservations(3, "East Lot", 2, 10),
-    ];
-  }, [currentTime]);
+  const isTimeInReservationRange = (startTime: string, endTime: string): boolean => {
+    const now = new Date();
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    return now >= start && now <= end;
+  };
 
   const handleViewLot = (lot: ParkingLot) => {
     setSelectedLot(lot);
     setIsModalVisible(true);
+    setIsFullscreen(false);
   };
 
   const handleCloseModal = () => {
     setIsModalVisible(false);
     setSelectedLot(null);
+    setIsFullscreen(false);
+  };
+
+  const handleFullscreen = () => {
+    setIsFullscreen(true);
+  };
+
+  const handleExitFullscreen = () => {
+    setIsFullscreen(false);
   };
 
   const getSpaceColor = (space: Space) => {
     if (space.status === "occupied") {
-      return "#ef4444"; // Red for occupied
+      return "#ef4444";
     }
 
     switch (space.type) {
       case "visitor":
-        return "#FBC02D"; // Yellow
+        return "#FBC02D";
       case "handicapped":
-        return "#00BFFF"; // Blue
+        return "#00BFFF";
       case "authorized personnel":
-        return "#FF4500"; // Orange
+        return "#FF4500";
       default:
-        return "#388E3C"; // Green for available regular
+        return "#388E3C";
     }
   };
 
   const spaceWidth = 2.5;
   const spaceDepth = 5;
   const aisleWidth = 6;
+  const mergedAisleWidth = 0.1;
   const baseScaleValue = 25;
+
+  const getAisleWidth = (afterRow: number, mergedAisles: number[]) => {
+    return mergedAisles.includes(afterRow) ? mergedAisleWidth : aisleWidth;
+  };
+
+  const calculateLotHeight = (rows: number, mergedAisles: number[]): number => {
+    let totalHeight = 0;
+    for (let r = 0; r < rows; r++) {
+      totalHeight += spaceDepth;
+      if (r < rows - 1) {
+        totalHeight += getAisleWidth(r, mergedAisles);
+      }
+    }
+    return totalHeight;
+  };
+
+  const getRowYPosition = (row: number, mergedAisles: number[]): number => {
+    let y = 0;
+    for (let r = 0; r < row; r++) {
+      y += spaceDepth + getAisleWidth(r, mergedAisles);
+    }
+    return y;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
 
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -208,7 +271,6 @@ export default function ViewParkingLotsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Current Time Display */}
         <View style={styles.timeCard}>
           <Text style={styles.timeLabel}>Current Time</Text>
           <Text style={styles.timeValue}>
@@ -227,70 +289,83 @@ export default function ViewParkingLotsScreen() {
             View real-time parking availability
           </Text>
 
-          {parkingLots.map((lot) => (
-            <View key={lot.id} style={styles.lotCard}>
-              <View style={styles.lotHeader}>
-                <View style={styles.lotHeaderLeft}>
-                  <MapPin color="#388E3C" size={20} />
-                  <Text style={styles.lotName}>{lot.name}</Text>
-                </View>
-                <View style={styles.lotStats}>
-                  <Text style={styles.availableText}>
-                    {lot.availableSpots} Available
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Total</Text>
-                  <Text style={styles.statValue}>{lot.totalSpots}</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Available</Text>
-                  <Text style={[styles.statValue, { color: "#388E3C" }]}>
-                    {lot.availableSpots}
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Occupied</Text>
-                  <Text style={[styles.statValue, { color: "#ef4444" }]}>
-                    {lot.occupiedSpots}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${(lot.occupiedSpots / lot.totalSpots) * 100}%`,
-                        backgroundColor:
-                          lot.occupiedSpots / lot.totalSpots > 0.8
-                            ? "#ef4444"
-                            : "#FBC02D",
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.progressText}>
-                  {Math.round((lot.occupiedSpots / lot.totalSpots) * 100)}% Full
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.viewButton}
-                onPress={() => handleViewLot(lot)}
-              >
-                <Text style={styles.viewButtonText}>View Lot Layout</Text>
-              </TouchableOpacity>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading parking lots...</Text>
             </View>
-          ))}
+          ) : parkingLots.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MapPin color="#cbd5e1" size={64} />
+              <Text style={styles.emptyStateTitle}>No Parking Lots</Text>
+              <Text style={styles.emptyStateText}>
+                No parking lots are currently available
+              </Text>
+            </View>
+          ) : (
+            parkingLots.map((lot) => (
+              <View key={lot.id} style={styles.lotCard}>
+                <View style={styles.lotHeader}>
+                  <View style={styles.lotHeaderLeft}>
+                    <MapPin color="#388E3C" size={20} />
+                    <Text style={styles.lotName}>{lot.name}</Text>
+                  </View>
+                  <View style={styles.lotStats}>
+                    <Text style={styles.availableText}>
+                      {lot.availableSpots} Available
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Total</Text>
+                    <Text style={styles.statValue}>{lot.totalSpots}</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Available</Text>
+                    <Text style={[styles.statValue, { color: "#388E3C" }]}>
+                      {lot.availableSpots}
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Occupied</Text>
+                    <Text style={[styles.statValue, { color: "#ef4444" }]}>
+                      {lot.occupiedSpots}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${(lot.occupiedSpots / lot.totalSpots) * 100}%`,
+                          backgroundColor:
+                            lot.occupiedSpots / lot.totalSpots > 0.8
+                              ? "#ef4444"
+                              : "#FBC02D",
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {Math.round((lot.occupiedSpots / lot.totalSpots) * 100)}% Full
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.viewButton}
+                  onPress={() => handleViewLot(lot)}
+                >
+                  <Text style={styles.viewButtonText}>View Lot Layout</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
         </View>
 
-        {/* Legend */}
         <View style={styles.legendCard}>
           <Text style={styles.legendTitle}>Legend</Text>
           <View style={styles.legendGrid}>
@@ -318,7 +393,6 @@ export default function ViewParkingLotsScreen() {
         </View>
       </ScrollView>
 
-      {/* Lot Detail Modal */}
       <Modal
         visible={isModalVisible}
         animationType="slide"
@@ -326,53 +400,75 @@ export default function ViewParkingLotsScreen() {
         onRequestClose={handleCloseModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={isFullscreen ? styles.fullscreenContent : styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {selectedLot?.name} Layout
               </Text>
-              <TouchableOpacity
-                onPress={handleCloseModal}
-                style={styles.closeButton}
-              >
-                <X color="#64748b" size={24} />
-              </TouchableOpacity>
+              <View style={styles.modalHeaderButtons}>
+                {!isFullscreen && (
+                  <>
+                    <TouchableOpacity
+                      onPress={handleFullscreen}
+                      style={styles.fullscreenButton}
+                    >
+                      <Maximize2 color="#388E3C" size={20} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={handleFullscreen}
+                      style={styles.fullscreenTextButton}
+                    >
+                      <Text style={styles.fullscreenText}>View in Fullscreen</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                <TouchableOpacity
+                  onPress={handleCloseModal}
+                  style={styles.closeButton}
+                >
+                  <X color="#64748b" size={24} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {selectedLot && (
-              <ScrollView 
+              <ScrollView
                 style={styles.modalBody}
                 showsVerticalScrollIndicator={false}
               >
-                <View style={styles.lotInfo}>
-                  <Text style={styles.lotInfoText}>
-                    Total: {selectedLot.totalSpots} spots
-                  </Text>
-                  <Text style={styles.lotInfoText}>
-                    Available: {selectedLot.availableSpots} | Occupied:{" "}
-                    {selectedLot.occupiedSpots}
-                  </Text>
-                </View>
+                {!isFullscreen && (
+                  <View style={styles.lotInfo}>
+                    <Text style={styles.lotInfoText}>
+                      Total: {selectedLot.totalSpots} spots
+                    </Text>
+                    <Text style={styles.lotInfoText}>
+                      Available: {selectedLot.availableSpots} | Occupied:{" "}
+                      {selectedLot.occupiedSpots}
+                    </Text>
+                  </View>
+                )}
 
                 <ScrollView horizontal style={styles.svgContainer}>
                   <View
                     style={{
                       width: selectedLot.cols * spaceWidth * baseScaleValue,
-                      height: calculateLotHeight(selectedLot.rows) * baseScaleValue,
+                      height: calculateLotHeight(selectedLot.rows, selectedLot.merged_aisles) * baseScaleValue,
                     }}
                   >
                     <Svg
                       viewBox={`0 0 ${selectedLot.cols * spaceWidth} ${calculateLotHeight(
-                        selectedLot.rows
+                        selectedLot.rows,
+                        selectedLot.merged_aisles
                       )}`}
                       width={selectedLot.cols * spaceWidth * baseScaleValue}
-                      height={calculateLotHeight(selectedLot.rows) * baseScaleValue}
+                      height={calculateLotHeight(selectedLot.rows, selectedLot.merged_aisles) * baseScaleValue}
                     >
                       <Rect
                         x={0}
                         y={0}
                         width={selectedLot.cols * spaceWidth}
-                        height={calculateLotHeight(selectedLot.rows)}
+                        height={calculateLotHeight(selectedLot.rows, selectedLot.merged_aisles)}
                         fill="#e9f0f7"
                         stroke="#64748b"
                         strokeWidth={0.05}
@@ -381,7 +477,7 @@ export default function ViewParkingLotsScreen() {
                         <React.Fragment key={space.id}>
                           <Rect
                             x={space.col * spaceWidth}
-                            y={getRowYPosition(space.row)}
+                            y={getRowYPosition(space.row, selectedLot.merged_aisles)}
                             width={spaceWidth}
                             height={spaceDepth}
                             fill={getSpaceColor(space)}
@@ -390,7 +486,7 @@ export default function ViewParkingLotsScreen() {
                           />
                           <SvgText
                             x={space.col * spaceWidth + spaceWidth / 2}
-                            y={getRowYPosition(space.row) + spaceDepth / 2}
+                            y={getRowYPosition(space.row, selectedLot.merged_aisles) + spaceDepth / 2}
                             fill="#fff"
                             fontSize={0.6}
                             fontWeight="bold"
@@ -405,96 +501,85 @@ export default function ViewParkingLotsScreen() {
                   </View>
                 </ScrollView>
 
-                {/* Show occupied spaces info */}
-                {selectedLot.spaces.filter(s => s.status === "occupied").length > 0 && (
-                  <View style={styles.occupiedInfoCard}>
-                    <Text style={styles.occupiedInfoTitle}>Currently Occupied Spots</Text>
-                    {selectedLot.spaces
-                      .filter(s => s.status === "occupied")
-                      .map(space => (
-                        <View key={space.id} style={styles.occupiedItem}>
-                          <Text style={styles.occupiedSpot}>P{space.id}</Text>
-                          <View style={styles.occupiedDetails}>
-                            <Text style={styles.occupiedUser}>{space.occupiedBy}</Text>
-                            <Text style={styles.occupiedTime}>Until {space.occupiedUntil}</Text>
-                          </View>
-                        </View>
-                      ))}
+                {isFullscreen && (
+                  <View style={styles.fullscreenControls}>
+                    <TouchableOpacity
+                      style={styles.exitFullscreenButton}
+                      onPress={handleExitFullscreen}
+                    >
+                      <X color="#fff" size={20} />
+                      <Text style={styles.exitFullscreenText}>Exit Fullscreen</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
 
-                <View style={styles.modalLegend}>
-                  <Text style={styles.modalLegendTitle}>Parking Space Legend</Text>
-                  <View style={styles.legendGrid}>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#388E3C" }]} />
-                      <Text style={styles.legendText}>Available</Text>
+                {!isFullscreen && (
+                  <>
+                    {selectedLot.spaces.filter(s => s.status === "occupied").length > 0 && (
+                      <View style={styles.occupiedInfoCard}>
+                        <Text style={styles.occupiedInfoTitle}>Currently Occupied Spots</Text>
+                        {selectedLot.spaces
+                          .filter(s => s.status === "occupied")
+                          .map(space => (
+                            <View key={space.id} style={styles.occupiedItem}>
+                              <Text style={styles.occupiedSpot}>P{space.id}</Text>
+                              <View style={styles.occupiedDetails}>
+                                <Text style={styles.occupiedUser}>{space.occupiedBy}</Text>
+                                <Text style={styles.occupiedTime}>Until {space.occupiedUntil}</Text>
+                              </View>
+                            </View>
+                          ))}
+                      </View>
+                    )}
+
+                    <View style={styles.modalLegend}>
+                      <Text style={styles.modalLegendTitle}>Parking Space Legend</Text>
+                      <View style={styles.legendGrid}>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#388E3C" }]} />
+                          <Text style={styles.legendText}>Available</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#ef4444" }]} />
+                          <Text style={styles.legendText}>Occupied</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#FBC02D" }]} />
+                          <Text style={styles.legendText}>Visitor</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#00BFFF" }]} />
+                          <Text style={styles.legendText}>Handicapped</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#FF4500" }]} />
+                          <Text style={styles.legendText}>Authorized</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.legendNote}>
+                        Note: Occupied spots show as red regardless of type
+                      </Text>
                     </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#ef4444" }]} />
-                      <Text style={styles.legendText}>Occupied</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#FBC02D" }]} />
-                      <Text style={styles.legendText}>Visitor</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#00BFFF" }]} />
-                      <Text style={styles.legendText}>Handicapped</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#FF4500" }]} />
-                      <Text style={styles.legendText}>Authorized</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.legendNote}>
-                    Note: Occupied spots show as red regardless of type
-                  </Text>
-                </View>
+                  </>
+                )}
               </ScrollView>
             )}
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.closeModalButton}
-                onPress={handleCloseModal}
-              >
-                <Text style={styles.closeModalButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
+            {!isFullscreen && (
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={styles.closeModalButton}
+                  onPress={handleCloseModal}
+                >
+                  <Text style={styles.closeModalButtonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
     </SafeAreaView>
   );
-}
-
-// Helper functions remain the same
-function calculateLotHeight(rows: number): number {
-  const spaceDepth = 5;
-  const aisleWidth = 6;
-  let totalHeight = 0;
-  
-  for (let r = 0; r < rows; r++) {
-    totalHeight += spaceDepth;
-    if (r < rows - 1) {
-      totalHeight += aisleWidth;
-    }
-  }
-  
-  return totalHeight;
-}
-
-function getRowYPosition(row: number): number {
-  const spaceDepth = 5;
-  const aisleWidth = 6;
-  let y = 0;
-  
-  for (let r = 0; r < row; r++) {
-    y += spaceDepth + aisleWidth;
-  }
-  
-  return y;
 }
 
 const styles = StyleSheet.create({
@@ -560,6 +645,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748b",
     marginBottom: 16,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#64748b",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: "#64748b",
+    textAlign: "center",
   },
   lotCard: {
     backgroundColor: "#fff",
@@ -705,6 +815,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
   },
+  fullscreenContent: {
+    backgroundColor: "#000",
+    width: "100%",
+    height: "100%",
+  },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -712,6 +827,14 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
+  },
+  modalHeaderButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  fullscreenButton: {
+    padding: 4,
   },
   modalTitle: {
     fontSize: 20,
@@ -743,6 +866,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     marginBottom: 16,
+  },
+  fullscreenControls: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  exitFullscreenButton: {
+    backgroundColor: "rgba(56, 142, 60, 0.9)",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  exitFullscreenText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   modalLegend: {
     backgroundColor: "#f9fafb",
@@ -817,4 +960,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#fff",
   },
+  fullscreenTextButton: {
+  paddingVertical: 4,
+  paddingHorizontal: 8,
+},
+
+fullscreenText: {
+  color: "#388E3C",
+  fontSize: 14,
+  fontWeight: "600",
+},
 });
