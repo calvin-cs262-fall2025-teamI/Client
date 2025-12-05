@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { ArrowLeft, MapPin, X } from "lucide-react-native";
+import { ArrowLeft, MapPin, Maximize2, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -56,6 +56,7 @@ export default function ViewParkingLotsScreen() {
   const router = useRouter();
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,20 +79,18 @@ export default function ViewParkingLotsScreen() {
   const fetchParkingData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch parking lots and reservations in parallel
+
       const [lotsResponse, reservationsResponse] = await Promise.all([
         fetch(`${API_URL}/api/parking-lots`),
         fetch(`${API_URL}/api/reservations`)
       ]);
-      
+
       if (!lotsResponse.ok) {
         throw new Error("Failed to fetch parking lots");
       }
 
       const lotsData = await lotsResponse.json();
-      
-      // Handle reservations - might not exist yet in your backend
+
       let reservationsData: Reservation[] = [];
       if (reservationsResponse.ok) {
         reservationsData = await reservationsResponse.json();
@@ -100,13 +99,10 @@ export default function ViewParkingLotsScreen() {
         console.log("Reservations endpoint not available, using empty array");
       }
 
-      
-      // Parse and process parking lots
       const processedLots = lotsData.map((lot: any) => {
-        // Parse JSONB fields from PostgreSQL
         let spaces = [];
         let merged_aisles = [];
-        
+
         if (typeof lot.spaces === 'string') {
           try {
             spaces = JSON.parse(lot.spaces);
@@ -117,7 +113,7 @@ export default function ViewParkingLotsScreen() {
         } else if (Array.isArray(lot.spaces)) {
           spaces = lot.spaces;
         }
-        
+
         if (typeof lot.merged_aisles === 'string') {
           try {
             merged_aisles = JSON.parse(lot.merged_aisles);
@@ -129,12 +125,10 @@ export default function ViewParkingLotsScreen() {
           merged_aisles = lot.merged_aisles;
         }
 
-        // Apply reservation status to spaces
         const spacesWithStatus = spaces.map((space: any) => {
-          // Find active reservation for this space in this lot
           const reservation = reservationsData.find(
-            (r) => 
-              r.space_id === space.id && 
+            (r) =>
+              r.space_id === space.id &&
               r.parking_lot_id === lot.id &&
               r.status === 'active' &&
               isTimeInReservationRange(r.start_time, r.end_time)
@@ -147,7 +141,6 @@ export default function ViewParkingLotsScreen() {
           if (reservation) {
             status = "occupied";
             occupiedBy = reservation.user_name || `User ${reservation.user_id}`;
-            // Extract time from datetime string (format: HH:MM)
             occupiedUntil = new Date(reservation.end_time).toLocaleTimeString('en-US', {
               hour: '2-digit',
               minute: '2-digit',
@@ -179,7 +172,7 @@ export default function ViewParkingLotsScreen() {
           occupiedSpots,
         };
       });
-      
+
       setParkingLots(processedLots);
     } catch (error) {
       console.error("Error fetching parking data:", error);
@@ -189,39 +182,47 @@ export default function ViewParkingLotsScreen() {
     }
   };
 
-  // Check if current time is within reservation time (for datetime strings from database)
   const isTimeInReservationRange = (startTime: string, endTime: string): boolean => {
     const now = new Date();
     const start = new Date(startTime);
     const end = new Date(endTime);
-
     return now >= start && now <= end;
   };
 
   const handleViewLot = (lot: ParkingLot) => {
     setSelectedLot(lot);
     setIsModalVisible(true);
+    setIsFullscreen(false);
   };
 
   const handleCloseModal = () => {
     setIsModalVisible(false);
     setSelectedLot(null);
+    setIsFullscreen(false);
+  };
+
+  const handleFullscreen = () => {
+    setIsFullscreen(true);
+  };
+
+  const handleExitFullscreen = () => {
+    setIsFullscreen(false);
   };
 
   const getSpaceColor = (space: Space) => {
     if (space.status === "occupied") {
-      return "#ef4444"; // Red for occupied
+      return "#ef4444";
     }
 
     switch (space.type) {
       case "visitor":
-        return "#FBC02D"; // Yellow
+        return "#FBC02D";
       case "handicapped":
-        return "#00BFFF"; // Blue
+        return "#00BFFF";
       case "authorized personnel":
-        return "#FF4500"; // Orange
+        return "#FF4500";
       default:
-        return "#388E3C"; // Green for available regular
+        return "#388E3C";
     }
   };
 
@@ -258,9 +259,8 @@ export default function ViewParkingLotsScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
 
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -271,7 +271,6 @@ export default function ViewParkingLotsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Current Time Display */}
         <View style={styles.timeCard}>
           <Text style={styles.timeLabel}>Current Time</Text>
           <Text style={styles.timeValue}>
@@ -367,7 +366,6 @@ export default function ViewParkingLotsScreen() {
           )}
         </View>
 
-        {/* Legend */}
         <View style={styles.legendCard}>
           <Text style={styles.legendTitle}>Legend</Text>
           <View style={styles.legendGrid}>
@@ -395,7 +393,6 @@ export default function ViewParkingLotsScreen() {
         </View>
       </ScrollView>
 
-      {/* Lot Detail Modal */}
       <Modal
         visible={isModalVisible}
         animationType="slide"
@@ -403,33 +400,54 @@ export default function ViewParkingLotsScreen() {
         onRequestClose={handleCloseModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={isFullscreen ? styles.fullscreenContent : styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {selectedLot?.name} Layout
               </Text>
-              <TouchableOpacity
-                onPress={handleCloseModal}
-                style={styles.closeButton}
-              >
-                <X color="#64748b" size={24} />
-              </TouchableOpacity>
+              <View style={styles.modalHeaderButtons}>
+                {!isFullscreen && (
+                  <>
+                    <TouchableOpacity
+                      onPress={handleFullscreen}
+                      style={styles.fullscreenButton}
+                    >
+                      <Maximize2 color="#388E3C" size={20} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={handleFullscreen}
+                      style={styles.fullscreenTextButton}
+                    >
+                      <Text style={styles.fullscreenText}>View in Fullscreen</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                <TouchableOpacity
+                  onPress={handleCloseModal}
+                  style={styles.closeButton}
+                >
+                  <X color="#64748b" size={24} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {selectedLot && (
-              <ScrollView 
+              <ScrollView
                 style={styles.modalBody}
                 showsVerticalScrollIndicator={false}
               >
-                <View style={styles.lotInfo}>
-                  <Text style={styles.lotInfoText}>
-                    Total: {selectedLot.totalSpots} spots
-                  </Text>
-                  <Text style={styles.lotInfoText}>
-                    Available: {selectedLot.availableSpots} | Occupied:{" "}
-                    {selectedLot.occupiedSpots}
-                  </Text>
-                </View>
+                {!isFullscreen && (
+                  <View style={styles.lotInfo}>
+                    <Text style={styles.lotInfoText}>
+                      Total: {selectedLot.totalSpots} spots
+                    </Text>
+                    <Text style={styles.lotInfoText}>
+                      Available: {selectedLot.availableSpots} | Occupied:{" "}
+                      {selectedLot.occupiedSpots}
+                    </Text>
+                  </View>
+                )}
 
                 <ScrollView horizontal style={styles.svgContainer}>
                   <View
@@ -483,63 +501,80 @@ export default function ViewParkingLotsScreen() {
                   </View>
                 </ScrollView>
 
-                {/* Show occupied spaces info */}
-                {selectedLot.spaces.filter(s => s.status === "occupied").length > 0 && (
-                  <View style={styles.occupiedInfoCard}>
-                    <Text style={styles.occupiedInfoTitle}>Currently Occupied Spots</Text>
-                    {selectedLot.spaces
-                      .filter(s => s.status === "occupied")
-                      .map(space => (
-                        <View key={space.id} style={styles.occupiedItem}>
-                          <Text style={styles.occupiedSpot}>P{space.id}</Text>
-                          <View style={styles.occupiedDetails}>
-                            <Text style={styles.occupiedUser}>{space.occupiedBy}</Text>
-                            <Text style={styles.occupiedTime}>Until {space.occupiedUntil}</Text>
-                          </View>
-                        </View>
-                      ))}
+                {isFullscreen && (
+                  <View style={styles.fullscreenControls}>
+                    <TouchableOpacity
+                      style={styles.exitFullscreenButton}
+                      onPress={handleExitFullscreen}
+                    >
+                      <X color="#fff" size={20} />
+                      <Text style={styles.exitFullscreenText}>Exit Fullscreen</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
 
-                <View style={styles.modalLegend}>
-                  <Text style={styles.modalLegendTitle}>Parking Space Legend</Text>
-                  <View style={styles.legendGrid}>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#388E3C" }]} />
-                      <Text style={styles.legendText}>Available</Text>
+                {!isFullscreen && (
+                  <>
+                    {selectedLot.spaces.filter(s => s.status === "occupied").length > 0 && (
+                      <View style={styles.occupiedInfoCard}>
+                        <Text style={styles.occupiedInfoTitle}>Currently Occupied Spots</Text>
+                        {selectedLot.spaces
+                          .filter(s => s.status === "occupied")
+                          .map(space => (
+                            <View key={space.id} style={styles.occupiedItem}>
+                              <Text style={styles.occupiedSpot}>P{space.id}</Text>
+                              <View style={styles.occupiedDetails}>
+                                <Text style={styles.occupiedUser}>{space.occupiedBy}</Text>
+                                <Text style={styles.occupiedTime}>Until {space.occupiedUntil}</Text>
+                              </View>
+                            </View>
+                          ))}
+                      </View>
+                    )}
+
+                    <View style={styles.modalLegend}>
+                      <Text style={styles.modalLegendTitle}>Parking Space Legend</Text>
+                      <View style={styles.legendGrid}>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#388E3C" }]} />
+                          <Text style={styles.legendText}>Available</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#ef4444" }]} />
+                          <Text style={styles.legendText}>Occupied</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#FBC02D" }]} />
+                          <Text style={styles.legendText}>Visitor</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#00BFFF" }]} />
+                          <Text style={styles.legendText}>Handicapped</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View style={[styles.legendBox, { backgroundColor: "#FF4500" }]} />
+                          <Text style={styles.legendText}>Authorized</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.legendNote}>
+                        Note: Occupied spots show as red regardless of type
+                      </Text>
                     </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#ef4444" }]} />
-                      <Text style={styles.legendText}>Occupied</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#FBC02D" }]} />
-                      <Text style={styles.legendText}>Visitor</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#00BFFF" }]} />
-                      <Text style={styles.legendText}>Handicapped</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.legendBox, { backgroundColor: "#FF4500" }]} />
-                      <Text style={styles.legendText}>Authorized</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.legendNote}>
-                    Note: Occupied spots show as red regardless of type
-                  </Text>
-                </View>
+                  </>
+                )}
               </ScrollView>
             )}
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.closeModalButton}
-                onPress={handleCloseModal}
-              >
-                <Text style={styles.closeModalButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
+            {!isFullscreen && (
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={styles.closeModalButton}
+                  onPress={handleCloseModal}
+                >
+                  <Text style={styles.closeModalButtonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -780,6 +815,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
   },
+  fullscreenContent: {
+    backgroundColor: "#000",
+    width: "100%",
+    height: "100%",
+  },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -787,6 +827,14 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
+  },
+  modalHeaderButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  fullscreenButton: {
+    padding: 4,
   },
   modalTitle: {
     fontSize: 20,
@@ -818,6 +866,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     marginBottom: 16,
+  },
+  fullscreenControls: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  exitFullscreenButton: {
+    backgroundColor: "rgba(56, 142, 60, 0.9)",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  exitFullscreenText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   modalLegend: {
     backgroundColor: "#f9fafb",
@@ -892,4 +960,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#fff",
   },
+  fullscreenTextButton: {
+  paddingVertical: 4,
+  paddingHorizontal: 8,
+},
+
+fullscreenText: {
+  color: "#388E3C",
+  fontSize: 14,
+  fontWeight: "600",
+},
 });
