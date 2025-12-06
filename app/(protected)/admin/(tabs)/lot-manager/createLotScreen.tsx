@@ -74,8 +74,8 @@ export default function CreateLotScreen() {
       return;
     }
 
-    if (r1 < 0 || r1 >= rowCount || r2 < 0 || r2 >= rowCount) {
-      alert(`Row numbers must be between 0 and ${rowCount - 1}.`);
+    if (r1 - 1 < 0 || r1 - 1 >= rowCount || r2 - 1 < 0 || r2 - 1 >= rowCount) {
+      alert(`Row numbers must be between 1 and ${rowCount}.`);
       return;
     }
 
@@ -84,7 +84,7 @@ export default function CreateLotScreen() {
       return;
     }
 
-    const lowerRow = Math.min(r1, r2);
+    const lowerRow = Math.min(r1 - 1, r2 - 1);
     setMergedAisles(prev => new Set(prev).add(lowerRow));
     setMergeRow1("");
     setMergeRow2("");
