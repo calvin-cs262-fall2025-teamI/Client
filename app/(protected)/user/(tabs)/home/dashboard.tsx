@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import {
   Bell,
   Clock,
+  HelpCircle,
   LogOut,
   MapPin,
   MessageSquare,
@@ -214,6 +215,14 @@ export default function ClientHomeScreen() {
           <Text style={styles.headerSubtitle}>Welcome back, John</Text>
         </View>
         <View style={styles.headerIcons}>
+          {/* Help Button */}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push("/user/(tabs)/help" as any)}
+          >
+            <HelpCircle color="#fff" size={24} />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.iconButton}>
             <Search color="#fff" size={24} />
           </TouchableOpacity>
