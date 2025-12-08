@@ -206,9 +206,9 @@ export default function CreateLotScreen() {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.controls}>
-          <LabelInput label="Lot Name" value={lotName} setValue={setLotName} textType="default" />
-          <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" maxValue={20} />
-          <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" maxValue={100} />
+          <LabelInput label="Lot Name" value={lotName} setValue={setLotName} textType="default" disabled={isGenerating} />
+          <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" maxValue={20} disabled={isGenerating} />
+          <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" maxValue={100} disabled={isGenerating} />
         </View>
 
         <View style={styles.controls}>
@@ -218,20 +218,22 @@ export default function CreateLotScreen() {
             value={mergeRow1}
             setValue={setMergeRow1}
             textType="numeric"
+            disabled={isGenerating}
           />
           <LabelInput
             label="Second Row Number"
             value={mergeRow2}
             setValue={setMergeRow2}
             textType="numeric"
+            disabled={isGenerating}
           />
           <View style={styles.mergeButtons}>
             <View style={styles.buttonWrapper}>
-              <Button title="Merge Rows" onPress={handleMergeRows} color="#388E3C" />
+              <Button title="Merge Rows" onPress={handleMergeRows} color="#388E3C" disabled={isGenerating} />
             </View>
             {mergedAisles.size > 0 && (
               <View style={styles.buttonWrapper}>
-                <Button title="Reset Merges" onPress={handleResetMerges} color="#dc2626" />
+                <Button title="Reset Merges" onPress={handleResetMerges} color="#dc2626" disabled={isGenerating} />
               </View>
             )}
           </View>
@@ -417,7 +419,7 @@ export default function CreateLotScreen() {
         <Legend />
 
         <View style={styles.buttonContainer}>
-          <Button title="Save Parking Lot" onPress={handleSave} color="#388E3C" />
+          <Button title="Save Parking Lot" onPress={handleSave} color="#388E3C" disabled={isGenerating} />
         </View>
 
         {editingSpace && (
@@ -459,17 +461,21 @@ function LabelInput({
   value,
   setValue,
   textType = "numeric",
-  maxValue = 99, // fallback max value
+  maxValue = 99,
+  disabled = false,
 }: {
   label: string;
   value: string;
   setValue: (t: string) => void;
   textType?: "numeric" | "default";
   maxValue?: number;
+  disabled?: boolean;
 }) {
   const [tempValue, setTempValue] = useState(value);
 
   const handleSubmit = () => {
+    if (disabled) return;
+    
     if (textType === "numeric") {
       const numValue = parseInt(tempValue);
       
@@ -504,13 +510,14 @@ function LabelInput({
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, disabled && styles.inputDisabled]}
         value={tempValue}
         onChangeText={setTempValue}
         keyboardType={textType === "numeric" ? "numeric" : "default"}
         returnKeyType="done"
         onSubmitEditing={handleSubmit}
         maxLength={textType === "numeric" ? 3 : undefined}
+        editable={!disabled}
       />
       {textType === "numeric" && (
         <Text style={styles.helperTextInput}>Max value: {maxValue}</Text>
@@ -564,6 +571,10 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 14,
     backgroundColor: "#f9fafb",
+  },
+  inputDisabled: {
+    backgroundColor: "#e2e8f0",
+    color: "#94a3b8",
   },
   helperTextInput: {
     fontSize: 12,
