@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { Button, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Button, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Appbar } from "react-native-paper";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -25,6 +25,7 @@ export default function CreateLotScreen() {
   const [mergeRow1, setMergeRow1] = useState("");
   const [mergeRow2, setMergeRow2] = useState("");
   const [mergedAisles, setMergedAisles] = useState<Set<number>>(new Set());
+  const [isGenerating, setIsGenerating] = useState(false);
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
 
@@ -116,14 +117,22 @@ export default function CreateLotScreen() {
   });
 
   useEffect(() => {
-    let id = 1;
-    const arr: Space[] = [];
-    for (let r = 0; r < rowCount; r++) {
-      for (let c = 0; c < colCount; c++) {
-        arr.push({ id: id++, row: r, col: c, type: "regular" });
+    setIsGenerating(true);
+    
+    // Use setTimeout to defer generation, allowing UI to update
+    const timer = setTimeout(() => {
+      let id = 1;
+      const arr: Space[] = [];
+      for (let r = 0; r < rowCount; r++) {
+        for (let c = 0; c < colCount; c++) {
+          arr.push({ id: id++, row: r, col: c, type: "regular" });
+        }
       }
-    }
-    setSpaces(arr);
+      setSpaces(arr);
+      setIsGenerating(false);
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [rowCount, colCount]);
 
   const updateSpaceType = (id: number, type: SpaceType) => {
@@ -133,7 +142,7 @@ export default function CreateLotScreen() {
   const getSpaceColor = (type: SpaceType) => {
     switch (type) {
       case "visitor":
-        return "#FBC02D"; // Yellow to match theme
+        return "#FBC02D";
       case "handicapped":
         return "#00BFFF";
       case "authorized personnel":
@@ -151,7 +160,6 @@ export default function CreateLotScreen() {
       return;
     }
 
-    // Validate that we have rows and columns
     if (rowCount <= 0 || colCount <= 0) {
       alert("Please enter valid row and column numbers.");
       return;
@@ -161,8 +169,8 @@ export default function CreateLotScreen() {
       name: lotName,
       rows: rowCount,
       cols: colCount,
-      spaces: JSON.stringify(spaces), // Convert to JSON string for PostgreSQL JSONB
-      merged_aisles: JSON.stringify(Array.from(mergedAisles)) // Convert to JSON string for PostgreSQL JSONB
+      spaces: JSON.stringify(spaces),
+      merged_aisles: JSON.stringify(Array.from(mergedAisles))
     };
 
     console.log("Saving parking lot to server:", payload);
@@ -199,8 +207,8 @@ export default function CreateLotScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.controls}>
           <LabelInput label="Lot Name" value={lotName} setValue={setLotName} textType="default" />
-          <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" />
-          <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" />
+          <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" maxValue={20} />
+          <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" maxValue={100} />
         </View>
 
         <View style={styles.controls}>
@@ -242,19 +250,23 @@ export default function CreateLotScreen() {
           </View>
         </View>
 
-        {/* Parking Lot Canvas - FIXED VERSION */}
         {rowCount > 0 && colCount > 0 && (
           <View style={styles.canvasSection}>
             <Text style={styles.sectionTitle}>Parking Lot Preview</Text>
-            <Text style={styles.helperText}>
-              {Platform.OS === 'web'
-                ? 'Tap any space to change its type. Use scrollbars to navigate.'
-                : 'Tap any space to change its type. Pinch to zoom, drag to scroll.'}
-            </Text>
+            {isGenerating ? (
+              <View style={styles.generatingContainer}>
+                <Text style={styles.generatingText}>Generating parking lot...</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.helperText}>
+                  {Platform.OS === 'web'
+                    ? 'Tap any space to change its type. Use scrollbars to navigate.'
+                    : 'Tap any space to change its type. Pinch to zoom, drag to scroll.'}
+                </Text>
 
-            <View style={styles.canvasWrapper}>
+                <View style={styles.canvasWrapper}>
               {Platform.OS === 'web' ? (
-                // Web version - use ScrollView with proper styling
                 <View style={styles.webCanvasContainer}>
                   <ScrollView
                     horizontal
@@ -326,7 +338,6 @@ export default function CreateLotScreen() {
                   </ScrollView>
                 </View>
               ) : (
-                // Mobile version - use ScrollView with proper container
                 <View style={styles.mobileCanvasContainer}>
                   <ScrollView
                     horizontal
@@ -398,6 +409,8 @@ export default function CreateLotScreen() {
                 </View>
               )}
             </View>
+              </>
+            )}
           </View>
         )}
 
@@ -446,21 +459,62 @@ function LabelInput({
   value,
   setValue,
   textType = "numeric",
+  maxValue = 99, // fallback max value
 }: {
   label: string;
   value: string;
   setValue: (t: string) => void;
   textType?: "numeric" | "default";
+  maxValue?: number;
 }) {
+  const [tempValue, setTempValue] = useState(value);
+
+  const handleSubmit = () => {
+    if (textType === "numeric") {
+      const numValue = parseInt(tempValue);
+      
+      if (isNaN(numValue)) {
+        Alert.alert("Invalid Input", "Please enter a valid number.");
+        setTempValue(value);
+        return;
+      }
+
+      if (numValue > maxValue) {
+        Alert.alert(
+          "Value Too Large",
+          `The maximum value allowed is ${maxValue}. Please enter a smaller number.`
+        );
+        setTempValue(value);
+        return;
+      }
+
+      if (numValue < 1) {
+        Alert.alert("Invalid Input", "Please enter a value of at least 1.");
+        setTempValue(value);
+        return;
+      }
+
+      setValue(tempValue);
+    } else {
+      setValue(tempValue);
+    }
+  };
+
   return (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         style={styles.input}
-        value={value}
-        onChangeText={setValue}
+        value={tempValue}
+        onChangeText={setTempValue}
         keyboardType={textType === "numeric" ? "numeric" : "default"}
+        returnKeyType="done"
+        onSubmitEditing={handleSubmit}
+        maxLength={textType === "numeric" ? 3 : undefined}
       />
+      {textType === "numeric" && (
+        <Text style={styles.helperTextInput}>Max value: {maxValue}</Text>
+      )}
     </View>
   );
 }
@@ -510,6 +564,11 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 14,
     backgroundColor: "#f9fafb",
+  },
+  helperTextInput: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 4,
   },
   canvasSection: {
     marginBottom: 20,
@@ -648,5 +707,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#475569",
     marginBottom: 8,
+  },
+  generatingContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f9fafb",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  generatingText: {
+    fontSize: 16,
+    color: "#388E3C",
+    fontWeight: "500",
   },
 });
