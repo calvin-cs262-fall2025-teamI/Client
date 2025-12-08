@@ -2,8 +2,9 @@ import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MD3LightTheme, PaperProvider } from "react-native-paper";
-import LoadingScreen from '../components/LoadingScreen';
-import AuthProvider from "./utils/authContext";
+import AuthProvider from "../utils/authContext";
+import { enGB, registerTranslation } from 'react-native-paper-dates'
+registerTranslation('en-GB', enGB)
 
 // Green and Yellow theme
 const theme = {

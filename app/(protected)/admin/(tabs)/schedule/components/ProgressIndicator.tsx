@@ -1,23 +1,26 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 
 interface ProgressIndicatorProps {
   currentStep: number; // 1, 2, or 3
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export default function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
+export default function ProgressIndicator({ currentStep, setCurrentStep }: ProgressIndicatorProps) {
   const steps = [
-    { number: 1, label: 'User Info' },
-    { number: 2, label: 'Reservation\n& Parking' },
-    { number: 3, label: 'Review & Submit' },
+    { number: 1, label: 'Parking' },
+    { number: 2, label: 'Reservation' },
+    { number: 3, label: 'Review' },
   ];
 
   return (
     <View style={styles.container}>
       {steps.map((step, index) => (
         <React.Fragment key={step.number}>
-          <View style={styles.stepContainer}>
+          <Pressable onPress={() => setCurrentStep(step.number)}  style={styles.stepContainer}>
+       
             <View
+            
               style={[
                 styles.circle,
                 currentStep >= step.number && styles.circleActive,
@@ -33,7 +36,12 @@ export default function ProgressIndicator({ currentStep }: ProgressIndicatorProp
               </Text>
             </View>
             <Text style={styles.label}>{step.label}</Text>
-          </View>
+          </Pressable>
+
+
+
+
+
           {index < steps.length - 1 && (
             <View
               style={[

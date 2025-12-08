@@ -1,4 +1,4 @@
-import { useAuth } from "@/app/utils/authContext";
+import { useAuth } from "@/utils/authContext";
 import { useRouter } from "expo-router";
 import {
   Bell,
