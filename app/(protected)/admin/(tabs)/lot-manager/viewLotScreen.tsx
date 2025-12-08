@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Button, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Appbar } from "react-native-paper";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -27,13 +28,14 @@ interface ParkingLot {
 export default function ViewLotScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
+
   const [lotName, setLotName] = useState("");
   const [rows, setRows] = useState(4);
   const [cols, setCols] = useState(10);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [mergedAisles, setMergedAisles] = useState<Set<number>>(new Set());
-  
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
 
@@ -51,20 +53,17 @@ export default function ViewLotScreen() {
       try {
         const lot: ParkingLot = JSON.parse(params.lotData as string);
         console.log("Loading lot for viewing:", lot);
-        
+
         setLotName(lot.name);
         setRows(lot.rows);
         setCols(lot.cols);
-        
-        // Load spaces with their types
+
         if (lot.spaces && Array.isArray(lot.spaces) && lot.spaces.length > 0) {
           setSpaces(lot.spaces);
         } else {
-          // Generate default spaces if none exist
           generateDefaultSpaces(lot.rows, lot.cols);
         }
-        
-        // Load merged aisles
+
         if (lot.merged_aisles && Array.isArray(lot.merged_aisles)) {
           setMergedAisles(new Set(lot.merged_aisles));
         }
@@ -74,7 +73,6 @@ export default function ViewLotScreen() {
     }
   }, [params.lotData]);
 
-  // Generate default spaces
   const generateDefaultSpaces = (numRows: number, numCols: number) => {
     let id = 1;
     const arr: Space[] = [];
@@ -125,6 +123,18 @@ export default function ViewLotScreen() {
     savedScale.value = 1;
   };
 
+  const handleZoomIn = () => {
+    const newScale = Math.min(savedScale.value * 1.3, 5);
+    scale.value = withSpring(newScale);
+    savedScale.value = newScale;
+  };
+
+  const handleZoomOut = () => {
+    const newScale = Math.max(savedScale.value * 0.7, 0.5);
+    scale.value = withSpring(newScale);
+    savedScale.value = newScale;
+  };
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ scale: scale.value }],
@@ -144,15 +154,75 @@ export default function ViewLotScreen() {
     }
   };
 
-  // Count spaces by type
   const getSpaceTypeCount = (type: SpaceType) => {
     return spaces.filter(s => s.type === type).length;
   };
 
+  const renderParkingLot = () => (
+    <ScrollView horizontal style={styles.canvas}>
+      <GestureDetector gesture={pinchGesture}>
+        <Animated.View
+          style={[
+            {
+              width: lotWidth * baseScaleValue,
+              height: lotHeight * baseScaleValue,
+            },
+            animatedStyle
+          ]}
+        >
+          <Svg
+            viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+            width={lotWidth * baseScaleValue}
+            height={lotHeight * baseScaleValue}
+          >
+            <Rect
+              x={0}
+              y={0}
+              width={lotWidth}
+              height={lotHeight}
+              fill="#e9f0f7"
+              stroke="#64748b"
+              strokeWidth={0.05}
+            />
+            {spaces.map((s) => (
+              <React.Fragment key={s.id}>
+                <Rect
+                  x={s.col * spaceWidth}
+                  y={getRowYPosition(s.row)}
+                  width={spaceWidth}
+                  height={spaceDepth}
+                  fill={getSpaceColor(s.type)}
+                  stroke="#388E3C"
+                  strokeWidth={0.05}
+                />
+                <SvgText
+                  x={s.col * spaceWidth + spaceWidth / 2}
+                  y={getRowYPosition(s.row) + spaceDepth / 2}
+                  fill="#388E3C"
+                  fontSize={0.5}
+                  textAnchor="middle"
+                  alignmentBaseline="middle"
+                >
+                  {`P${s.id}`}
+                </SvgText>
+              </React.Fragment>
+            ))}
+          </Svg>
+        </Animated.View>
+      </GestureDetector>
+    </ScrollView>
+  );
+
   return (
     <View style={styles.safeArea}>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
+        <Appbar.BackAction onPress={() => router.back()} color="#fff" />
         <Appbar.Content title={`View: ${lotName}`} titleStyle={{ color: "#fff" }} />
+        <Appbar.Action
+          icon={() => <Maximize2 color="#fff" size={20} />}
+          onPress={() => setIsFullScreen(true)}
+          color="#fff"
+        />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -169,7 +239,7 @@ export default function ViewLotScreen() {
               <Text style={styles.infoValue}>{rows * cols}</Text>
             </View>
           </View>
-          
+
           {mergedAisles.size > 0 && (
             <View style={styles.mergedAislesInfo}>
               <Text style={styles.mergedAislesText}>
@@ -209,83 +279,114 @@ export default function ViewLotScreen() {
         {/* Zoom Controls */}
         <View style={styles.controls}>
           <Text style={styles.sectionTitle}>Zoom Controls</Text>
-          <Text style={styles.zoomLevel}>Pinch to zoom in/out</Text>
-          <View style={styles.buttonWrapper}>
-            <Button title="Reset Zoom" onPress={handleResetZoom} color="#388E3C" />
+          <View style={styles.zoomButtonsRow}>
+            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
+              <ZoomOut color="#388E3C" size={20} />
+              <Text style={styles.zoomButtonText}>Zoom Out</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.zoomButton} onPress={handleResetZoom}>
+              <RotateCcw color="#388E3C" size={20} />
+              <Text style={styles.zoomButtonText}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
+              <ZoomIn color="#388E3C" size={20} />
+              <Text style={styles.zoomButtonText}>Zoom In</Text>
+            </TouchableOpacity>
           </View>
+          <Text style={styles.zoomHint}>Pinch to zoom • Drag to pan</Text>
         </View>
 
         {/* Parking Lot Visualization */}
         <View style={styles.canvasWrapper}>
-          <Text style={styles.sectionTitle}>Parking Lot Layout</Text>
-          <ScrollView horizontal style={styles.canvas}>
-            <GestureDetector gesture={pinchGesture}>
-              <Animated.View
-                style={[
-                  {
-                    width: lotWidth * baseScaleValue,
-                    height: lotHeight * baseScaleValue,
-                  },
-                  animatedStyle
-                ]}
-              >
-                <Svg
-                  viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-                  width={lotWidth * baseScaleValue}
-                  height={lotHeight * baseScaleValue}
-                >
-                  <Rect
-                    x={0}
-                    y={0}
-                    width={lotWidth}
-                    height={lotHeight}
-                    fill="#e9f0f7"
-                    stroke="#64748b"
-                    strokeWidth={0.05}
-                  />
-                  {spaces.map((s) => (
-                    <React.Fragment key={s.id}>
-                      <Rect
-                        x={s.col * spaceWidth}
-                        y={getRowYPosition(s.row)}
-                        width={spaceWidth}
-                        height={spaceDepth}
-                        fill={getSpaceColor(s.type)}
-                        stroke="#388E3C"
-                        strokeWidth={0.05}
-                      />
-                      <SvgText
-                        x={s.col * spaceWidth + spaceWidth / 2}
-                        y={getRowYPosition(s.row) + spaceDepth / 2}
-                        fill="#388E3C"
-                        fontSize={0.5}
-                        textAnchor="middle"
-                        alignmentBaseline="middle"
-                      >
-                        {`P${s.id}`}
-                      </SvgText>
-                    </React.Fragment>
-                  ))}
-                </Svg>
-              </Animated.View>
-            </GestureDetector>
-          </ScrollView>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={styles.sectionTitle}>Parking Lot Layout</Text>
+
+            <TouchableOpacity
+              onPress={() => setIsFullScreen(true)}
+              style={{
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                backgroundColor: "#388E3C",
+                borderRadius: 6,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>View in Fullscreen</Text>
+            </TouchableOpacity>
+          </View>
+
+          {renderParkingLot()}
         </View>
 
         {/* Legend */}
         <Legend />
       </ScrollView>
+
+      {/* Full Screen Modal */}
+      <Modal
+        visible={isFullScreen}
+        animationType="slide"
+        onRequestClose={() => setIsFullScreen(false)}
+      >
+        <View style={styles.fullScreenContainer}>
+          <View style={styles.fullScreenHeader}>
+            <Text style={styles.fullScreenTitle}>{lotName}</Text>
+            <View style={styles.fullScreenControls}>
+              <TouchableOpacity style={styles.fullScreenButton} onPress={handleZoomOut}>
+                <ZoomOut color="#fff" size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.fullScreenButton} onPress={handleResetZoom}>
+                <RotateCcw color="#fff" size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.fullScreenButton} onPress={handleZoomIn}>
+                <ZoomIn color="#fff" size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.fullScreenButton, styles.closeButton]}
+                onPress={() => setIsFullScreen(false)}
+              >
+                <Minimize2 color="#fff" size={20} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
+            horizontal={false}
+            bounces={false}
+          >
+            {renderParkingLot()}
+          </ScrollView>
+          <View style={styles.fullScreenLegend}>
+            <Legend compact />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-function Legend() {
+function Legend({ compact = false }: { compact?: boolean }) {
   const legendItems: { type: SpaceType; label: string; color: string }[] = [
     { type: "regular", label: "Regular", color: "#fff" },
     { type: "visitor", label: "Visitor", color: "#FBC02D" },
     { type: "handicapped", label: "Handicapped", color: "#00BFFF" },
     { type: "authorized personnel", label: "Authorized Personnel", color: "#FF4500" },
   ];
+
+  if (compact) {
+    return (
+      <View style={styles.legendContainerCompact}>
+        {legendItems.map((item) => (
+          <View key={item.type} style={styles.legendItemCompact}>
+            <View
+              style={[styles.legendColorCompact, { backgroundColor: item.color, borderColor: "#388E3C" }]}
+            />
+            <Text style={styles.legendLabelCompact}>{item.label}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.legendContainer}>
@@ -407,13 +508,33 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: "#0f172a",
   },
-  zoomLevel: {
-    fontSize: 14,
-    color: "#475569",
+  zoomButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
     marginBottom: 8,
   },
-  buttonWrapper: {
-    marginTop: 8,
+  zoomButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    padding: 12,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#388E3C",
+  },
+  zoomButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#388E3C",
+  },
+  zoomHint: {
+    fontSize: 12,
+    color: "#64748b",
+    textAlign: "center",
   },
   canvasWrapper: {
     backgroundColor: "#fff",
@@ -460,6 +581,70 @@ const styles = StyleSheet.create({
   legendLabel: {
     fontSize: 14,
     color: "#0f172a",
+    fontWeight: "500",
+  },
+
+  // Full Screen Styles
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: "#1e293b",
+  },
+  fullScreenHeader: {
+    backgroundColor: "#388E3C",
+    padding: 16,
+    paddingTop: 50,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  fullScreenTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
+    flex: 1,
+  },
+  fullScreenControls: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  fullScreenButton: {
+    padding: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 8,
+  },
+  closeButton: {
+    backgroundColor: "rgba(239, 68, 68, 0.3)",
+  },
+  fullScreenContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1e293b",
+  },
+  fullScreenLegend: {
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    padding: 12,
+  },
+  legendContainerCompact: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 12,
+  },
+  legendItemCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  legendColorCompact: {
+    width: 16,
+    height: 16,
+    borderWidth: 1,
+    borderRadius: 3,
+  },
+  legendLabelCompact: {
+    fontSize: 12,
+    color: "#fff",
     fontWeight: "500",
   },
 });
