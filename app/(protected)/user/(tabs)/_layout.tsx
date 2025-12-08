@@ -10,9 +10,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#388E3C',         // this affects the *label* color
+        tabBarActiveTintColor: '#388E3C',
         tabBarInactiveTintColor: '#A0A0A0',
-        
       }}
     >
       <Tabs.Screen
@@ -33,7 +32,14 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: (props) => tabBarIcon(props, 'account'), // better icon for group
+          tabBarIcon: (props) => tabBarIcon(props, 'account'),
+        }}
+      />
+      <Tabs.Screen
+        name="help"
+        options={{
+          title: 'Help',
+          tabBarIcon: (props) => tabBarIcon(props, 'help-circle'),
         }}
       />
     </Tabs>
