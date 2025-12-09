@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, Button, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Appbar } from "react-native-paper";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withDecay, withSpring } from "react-native-reanimated";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
 type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
@@ -28,6 +28,11 @@ export default function CreateLotScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+  const isPanning = useSharedValue(false);
 
   const baseScaleValue = Platform.OS === "web" ? 40 : 18;
 
@@ -87,9 +92,11 @@ export default function CreateLotScreen() {
 
     const lowerRow = Math.min(r1 - 1, r2 - 1);
     setMergedAisles(prev => new Set(prev).add(lowerRow));
+    alert(`Successfully merged rows ${r1} and ${r2}!`);
+    
+    // Clear input fields after successful merge
     setMergeRow1("");
     setMergeRow2("");
-    alert(`Successfully merged rows ${r1} and ${r2}!`);
   };
 
   const handleResetMerges = () => {
@@ -99,20 +106,94 @@ export default function CreateLotScreen() {
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
-      scale.value = savedScale.value * e.scale;
+      scale.value = Math.max(0.5, Math.min(savedScale.value * e.scale, 5));
     })
     .onEnd(() => {
       savedScale.value = scale.value;
     });
 
+  const panGesture = Gesture.Pan()
+    .minDistance(20) // Require 20px movement before triggering pan
+    .onStart(() => {
+      isPanning.value = true;
+    })
+    .onUpdate((e) => {
+      const canvasWidth = lotWidth * baseScaleValue;
+      const canvasHeight = lotHeight * baseScaleValue;
+      const containerWidth = Platform.OS === 'web' ? 800 : 400;
+      const containerHeight = 400;
+      
+      const scaledWidth = canvasWidth * scale.value;
+      const scaledHeight = canvasHeight * scale.value;
+      
+      const maxTranslateX = Math.max(0, (scaledWidth - containerWidth) / 2);
+      const maxTranslateY = Math.max(0, (scaledHeight - containerHeight) / 2);
+      
+      const newTranslateX = savedTranslateX.value + e.translationX;
+      const newTranslateY = savedTranslateY.value + e.translationY;
+      
+      translateX.value = Math.max(-maxTranslateX, Math.min(maxTranslateX, newTranslateX));
+      translateY.value = Math.max(-maxTranslateY, Math.min(maxTranslateY, newTranslateY));
+    })
+    .onEnd((e) => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+      
+      const canvasWidth = lotWidth * baseScaleValue;
+      const canvasHeight = lotHeight * baseScaleValue;
+      const containerWidth = Platform.OS === 'web' ? 800 : 400;
+      const containerHeight = 400;
+      
+      const scaledWidth = canvasWidth * scale.value;
+      const scaledHeight = canvasHeight * scale.value;
+      
+      const maxTranslateX = Math.max(0, (scaledWidth - containerWidth) / 2);
+      const maxTranslateY = Math.max(0, (scaledHeight - containerHeight) / 2);
+      
+      // Apply momentum with decay and clamp to final position
+      translateX.value = withDecay({
+        velocity: e.velocityX,
+        clamp: [-maxTranslateX, maxTranslateX],
+        deceleration: 0.998,
+      }, (finished) => {
+        if (finished) {
+          savedTranslateX.value = translateX.value;
+          isPanning.value = false;
+        }
+      });
+      
+      translateY.value = withDecay({
+        velocity: e.velocityY,
+        clamp: [-maxTranslateY, maxTranslateY],
+        deceleration: 0.998,
+      }, (finished) => {
+        if (finished) {
+          savedTranslateY.value = translateY.value;
+        }
+      });
+    })
+    .onFinalize(() => {
+      isPanning.value = false;
+    });
+
+  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
+
   const handleResetZoom = () => {
     scale.value = withSpring(1);
     savedScale.value = 1;
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
   };
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ scale: scale.value }],
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value }
+      ],
     };
   });
 
@@ -137,6 +218,13 @@ export default function CreateLotScreen() {
 
   const updateSpaceType = (id: number, type: SpaceType) => {
     setSpaces((prev) => prev.map((s) => (s.id === id ? { ...s, type } : s)));
+  };
+
+  const handleSpacePress = (space: Space) => {
+    // Only open editor if user wasn't panning
+    if (!isPanning.value) {
+      setEditingSpace(space);
+    }
   };
 
   const getSpaceColor = (type: SpaceType) => {
@@ -219,6 +307,8 @@ export default function CreateLotScreen() {
             setValue={setMergeRow1}
             textType="numeric"
             disabled={isGenerating}
+            instantUpdate={true}
+            maxValue={rowCount}
           />
           <LabelInput
             label="Second Row Number"
@@ -226,6 +316,8 @@ export default function CreateLotScreen() {
             setValue={setMergeRow2}
             textType="numeric"
             disabled={isGenerating}
+            instantUpdate={true}
+            maxValue={rowCount}
           />
           <View style={styles.mergeButtons}>
             <View style={styles.buttonWrapper}>
@@ -239,14 +331,14 @@ export default function CreateLotScreen() {
           </View>
           {mergedAisles.size > 0 && (
             <Text style={styles.mergedInfo}>
-              Merged aisles: {Array.from(mergedAisles).sort((a, b) => a - b).map(r => `After row ${r}`).join(", ")}
+              Merged aisles: {Array.from(mergedAisles).sort((a, b) => a - b).map(r => `row ${r + 1} and ${r + 2}`).join(", ")}
             </Text>
           )}
         </View>
 
         <View style={styles.controls}>
           <Text style={styles.sectionTitle}>Zoom Controls</Text>
-          <Text style={styles.zoomLevel}>Pinch to zoom in/out</Text>
+          <Text style={styles.zoomLevel}>Pinch to zoom, drag to pan</Text>
           <View style={styles.buttonWrapper}>
             <Button title="Reset Zoom" onPress={handleResetZoom} color="#388E3C" />
           </View>
@@ -264,7 +356,7 @@ export default function CreateLotScreen() {
                 <Text style={styles.helperText}>
                   {Platform.OS === 'web'
                     ? 'Tap any space to change its type. Use scrollbars to navigate.'
-                    : 'Tap any space to change its type. Pinch to zoom, drag to scroll.'}
+                    : 'Tap any space to change its type. Pinch to zoom, drag to pan and scroll.'}
                 </Text>
 
                 <View style={styles.canvasWrapper}>
@@ -283,7 +375,7 @@ export default function CreateLotScreen() {
                       style={styles.verticalScroll}
                       contentContainerStyle={{ flexGrow: 0 }}
                     >
-                      <GestureDetector gesture={pinchGesture}>
+                      <GestureDetector gesture={composedGesture}>
                         <Animated.View
                           style={[
                             {
@@ -318,7 +410,7 @@ export default function CreateLotScreen() {
                                   fill={getSpaceColor(s.type)}
                                   stroke="#388E3C"
                                   strokeWidth={0.05}
-                                  onPress={() => setEditingSpace(s)}
+                                  onPress={() => handleSpacePress(s)}
                                 />
                                 <SvgText
                                   x={s.col * spaceWidth + spaceWidth / 2}
@@ -327,7 +419,7 @@ export default function CreateLotScreen() {
                                   fontSize={0.5}
                                   textAnchor="middle"
                                   alignmentBaseline="middle"
-                                  onPress={() => setEditingSpace(s)}
+                                  onPress={() => handleSpacePress(s)}
                                 >
                                   {`P${s.id}`}
                                 </SvgText>
@@ -353,7 +445,7 @@ export default function CreateLotScreen() {
                       nestedScrollEnabled={true}
                       style={styles.verticalScroll}
                     >
-                      <GestureDetector gesture={pinchGesture}>
+                      <GestureDetector gesture={composedGesture}>
                         <Animated.View
                           style={[
                             {
@@ -388,7 +480,7 @@ export default function CreateLotScreen() {
                                   fill={getSpaceColor(s.type)}
                                   stroke="#388E3C"
                                   strokeWidth={0.05}
-                                  onPress={() => setEditingSpace(s)}
+                                  onPress={() => handleSpacePress(s)}
                                 />
                                 <SvgText
                                   x={s.col * spaceWidth + spaceWidth / 2}
@@ -397,7 +489,7 @@ export default function CreateLotScreen() {
                                   fontSize={0.5}
                                   textAnchor="middle"
                                   alignmentBaseline="middle"
-                                  onPress={() => setEditingSpace(s)}
+                                  onPress={() => handleSpacePress(s)}
                                 >
                                   {`P${s.id}`}
                                 </SvgText>
@@ -463,6 +555,7 @@ function LabelInput({
   textType = "numeric",
   maxValue = 99,
   disabled = false,
+  instantUpdate = false,
 }: {
   label: string;
   value: string;
@@ -470,11 +563,46 @@ function LabelInput({
   textType?: "numeric" | "default";
   maxValue?: number;
   disabled?: boolean;
+  instantUpdate?: boolean;
 }) {
   const [tempValue, setTempValue] = useState(value);
 
+  // Sync tempValue with value prop when it changes
+  useEffect(() => {
+    setTempValue(value);
+  }, [value]);
+
+  const handleChange = (text: string) => {
+    setTempValue(text);
+    
+    // If instant update is enabled, update parent immediately
+    if (instantUpdate) {
+      if (textType === "numeric") {
+        // For numeric inputs, validate but update immediately
+        const numValue = parseInt(text);
+        
+        // Allow empty string for clearing
+        if (text === "") {
+          setValue("");
+          return;
+        }
+        
+        // Only update if it's a valid number
+        if (!isNaN(numValue)) {
+          setValue(text);
+        }
+      } else {
+        // For text inputs, update immediately
+        setValue(text);
+      }
+    }
+  };
+
   const handleSubmit = () => {
     if (disabled) return;
+    
+    // Skip submission if instant update is enabled
+    if (instantUpdate) return;
     
     if (textType === "numeric") {
       const numValue = parseInt(tempValue);
@@ -512,7 +640,7 @@ function LabelInput({
       <TextInput
         style={[styles.input, disabled && styles.inputDisabled]}
         value={tempValue}
-        onChangeText={setTempValue}
+        onChangeText={handleChange}
         keyboardType={textType === "numeric" ? "numeric" : "default"}
         returnKeyType="done"
         onSubmitEditing={handleSubmit}
