@@ -68,10 +68,9 @@ export default function CreateLotScreen() {
 
   // Predefined location options for parking lots
   const locations = [
-    "North Lot",
-    "South Garage",
-    "East Annex",
-    "West Lot",
+    "Main Campus",
+    "Venema Hall",
+    "Zuidema Fieldhouse",
     "Central Plaza",
     "Visitor Parking",
   ];
@@ -235,7 +234,6 @@ export default function CreateLotScreen() {
       merged_aisles: JSON.stringify(Array.from(mergedAisles)),
     };
 
-    console.log("Saving parking lot to server:", payload);
 
     try {
       const response = await fetch(`${API_URL}/api/parking-lots`, {

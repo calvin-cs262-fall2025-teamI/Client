@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
 import type { ReservationData } from '@/types/global.types';
@@ -16,6 +17,9 @@ export default function ReviewSubmitStep({
   onPrevious,
   onSubmit,
 }: ReviewSubmitStepProps) {
+
+
+  
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Review Your Reservation</Text>
@@ -25,17 +29,11 @@ export default function ReviewSubmitStep({
         <Text style={styles.icon}>👤</Text>
         <View style={styles.infoContent}>
           <Text style={styles.infoLabel}>Employee</Text>
-          <Text style={styles.infoValue}>{reservationData.name}</Text>
+          <Text style={styles.infoValue}>{reservationData.user_name}</Text>
         </View>
       </View>
 
-      {/* <View style={styles.infoRow}>
-        <Text style={styles.icon}>📅</Text>
-        <View style={styles.infoContent}>
-          <Text style={styles.infoLabel}>Date</Text>
-          <Text style={styles.infoValue}>{reservationData.date.toDateString()}</Text>
-        </View>
-      </View> */}
+      
 
       <View style={styles.infoRow}>
         <Text style={styles.icon}>🕐</Text>
@@ -59,7 +57,7 @@ export default function ReviewSubmitStep({
         <Text style={styles.icon}>🅿️</Text>
         <View style={styles.infoContent}>
           <Text style={styles.infoLabel}>Parking</Text>
-          <Text style={styles.infoValue}>{reservationData.parkingLot} - {reservationData.spot}</Text>
+          <Text style={styles.infoValue}>{reservationData.parkingLot} - {`Row: ${reservationData.row}, Col: ${reservationData.col}`}</Text>
         </View>
       </View>
 
@@ -67,7 +65,7 @@ export default function ReviewSubmitStep({
               <Text style={styles.icon}>🔄</Text>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Recurring</Text>
-                 {reservationData.recurringDays.length > 0 && (
+                 {reservationData.recurringDays.length > 0 ? (
                               <View style={styles.recurringSummary}>
                                 <Text style={styles.recurringSummaryTitle}>
                                   Recurring Days
@@ -81,6 +79,8 @@ export default function ReviewSubmitStep({
                                   </Text>
                                 ))}
                               </View>
+                            ) : (
+                              <Text style={styles.infoValue}>No recurring days selected</Text>
                             )}
               </View>
             </View>

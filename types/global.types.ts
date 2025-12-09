@@ -17,16 +17,17 @@ interface GlobalContextType {
 
 interface ReservationData {
     user_id: string | undefined;
-    name: string | undefined;
+    user_name: string | undefined;
     date: Date | undefined;
-    startTime: string;
-    endTime: string;
+    startTime: string | undefined;
+    endTime: string | undefined;
     recurring: boolean;
     recurringDays: string[];
     endDate: Date | undefined;
     location: string;
     parkingLot: string;
-    spot: string;
+    row: number;
+    col: number;
   }
   
 export type { UserType, GlobalContextType, ReservationData };

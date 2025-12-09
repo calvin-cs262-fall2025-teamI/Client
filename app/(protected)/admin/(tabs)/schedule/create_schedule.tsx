@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar } from 'react-native-paper';
@@ -7,6 +6,7 @@ import ReservationParkingStep from './components/ReservationParkingStep';
 import ReviewSubmitStep from './components/ReviewSubmitStep';
 import type { ReservationData } from '@/types/global.types';
 import ParkingStep from './components/ParkingStep';
+import { router } from 'expo-router';
 
 
 
@@ -16,16 +16,17 @@ export default function App() {
   
   const [reservationData, setReservationData] = useState<ReservationData>({
     user_id: undefined,
-    name: undefined,
-    date: new Date('October 22nd, 2025'),
-    startTime: '09:00',
-    endTime: '17:00',
+    user_name: undefined,
+    date: undefined,
+    startTime: undefined,
+    endTime: undefined,
     recurring: false,
     recurringDays: [],
-    endDate: new Date('October 31st, 2025'),
+    endDate: undefined,
     location: '',
     parkingLot: '',
-    spot: '',
+    row: 0,
+    col: 0,
   });
 
   const handleNext = (): void => {
@@ -40,13 +41,14 @@ export default function App() {
   const reservation = {
       user_id: reservationData.user_id,
       date: reservationData.date,
-      spot_number: reservationData.spot,
       start_time: reservationData.startTime,
       end_time: reservationData.endTime,
       is_recurring: reservationData.recurring,
       recurring_days: reservationData.recurringDays,
       location: reservationData.location,
       parking_lot: reservationData.parkingLot,
+      row: reservationData.row,
+      col: reservationData.col,
   }
     try {
       
@@ -59,6 +61,8 @@ export default function App() {
             body: JSON.stringify(reservation),
           }
         );
+
+        router.back();
 
       // maybe navigate away or show success here
     } catch (err) {

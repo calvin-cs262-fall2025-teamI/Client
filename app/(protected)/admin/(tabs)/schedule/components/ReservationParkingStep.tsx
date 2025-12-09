@@ -92,6 +92,11 @@ export default function ReservationParkingStep({
     parseTimeOrDefault(reservationData.endTime, { hours: 9, minutes: 0 })
   );
 
+  const isRservationDetailsComplete = 
+    !!reservationData.date &&
+    !!reservationData.startTime &&
+    !!reservationData.endTime;
+
   // ---- date handlers ----
   const handleDateChange = useCallback(
     (d: Date | undefined) => {
@@ -289,6 +294,7 @@ export default function ReservationParkingStep({
           onPress={onNext}
           style={[styles.button, { marginLeft: 8 }]}
           buttonColor={GREEN}
+          disabled={!isRservationDetailsComplete}
         >
           Next
         </Button>

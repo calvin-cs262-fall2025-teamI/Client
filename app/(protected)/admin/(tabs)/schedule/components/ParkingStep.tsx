@@ -35,7 +35,9 @@ interface ParkingSpace {
 
 interface DropdownOption {
   label: string;
-  value: string;
+  row?: number;
+  col?: number;
+  value?: string;
   id?: number | string;
 }
 
@@ -116,18 +118,21 @@ export default function ParkingStep({
           (space.user_id === null || space.user_id === undefined)
       )
       .map(space => ({
-        id: space.id,
-        label: `Row ${space.row + 1} · Spot ${space.col + 1}`,
-        value: String(space.id),
-      }));
+  id: space.id,
+  label: `Row ${space.row + 1} · Spot ${space.col + 1}`,
+  value: `${space.row}-${space.col}`, // ✅ REQUIRED
+  row: space.row + 1,
+  col: space.col + 1,
+}));
   }, [parkingLots, reservationData.parkingLot, reservationData.location]);
 
   const isFormComplete =
     !!reservationData.user_id &&
-    !!reservationData.name &&
+    !!reservationData.user_name &&
     !!reservationData.location &&
     !!reservationData.parkingLot &&
-    !!reservationData.spot;
+    !!reservationData.row &&
+    !!reservationData.col;
 
   const handleNext = () => {
     setTouched(true);
@@ -136,7 +141,7 @@ export default function ParkingStep({
       return;
     }
 
-    const validation = validateName(reservationData.name || '');
+    const validation = validateName(reservationData.user_name || '');
     if (!validation.isValid) {
       setNameError(validation.error || '');
       return;
@@ -197,7 +202,7 @@ export default function ParkingStep({
               valueField="value"
               placeholder={!userFocus ? 'Select user of your choice' : '...'}
               searchPlaceholder="Search user..."
-              value={reservationData.name}
+              value={reservationData.user_name}
               onFocus={() => setUserFocus(true)}
               onBlur={() => setUserFocus(false)}
               dropdownPosition="auto"
@@ -206,7 +211,7 @@ export default function ParkingStep({
                 setReservationData(prev => ({
                   ...prev,
                   user_id: item.id ? String(item.id) : undefined,
-                  name: item.value,
+                  user_name: item.value,
                 }));
                 setUserFocus(false);
                 setTouched(true);
@@ -245,7 +250,6 @@ export default function ParkingStep({
               inputSearchStyle={styles.inputSearchStyle}
               iconStyle={styles.iconStyle}
               data={locationOptions}
-              search
               maxHeight={300}
               labelField="label"
               valueField="value"
@@ -294,7 +298,6 @@ export default function ParkingStep({
               inputSearchStyle={styles.inputSearchStyle}
               iconStyle={styles.iconStyle}
               data={lotOptions}
-              search
               maxHeight={300}
               labelField="label"
               valueField="value"
@@ -349,7 +352,6 @@ export default function ParkingStep({
               inputSearchStyle={styles.inputSearchStyle}
               iconStyle={styles.iconStyle}
               data={spotOptions}
-              search
               maxHeight={300}
               labelField="label"
               valueField="value"
@@ -361,7 +363,6 @@ export default function ParkingStep({
                   : '...'
               }
               searchPlaceholder="Search spot..."
-              value={reservationData.spot}
               onFocus={() => setSpotFocus(true)}
               onBlur={() => setSpotFocus(false)}
               dropdownPosition="auto"
@@ -370,7 +371,8 @@ export default function ParkingStep({
               onChange={item => {
                 setReservationData(prev => ({
                   ...prev,
-                  spot: item.value,
+                  row: item.row,
+                  col: item.col,
                 }));
                 setSpotFocus(false);
                 setTouched(true);
@@ -391,7 +393,7 @@ export default function ParkingStep({
           <View style={styles.summaryBox}>
             <Text style={styles.summaryTitle}>Selection Summary</Text>
             <Text style={styles.summaryText}>
-              👤 User: {reservationData.name || '-'}
+              👤 User: {reservationData.user_name || '-'}
             </Text>
             <Text style={styles.summaryText}>
               📍 Location: {reservationData.location || '-'}
@@ -400,7 +402,7 @@ export default function ParkingStep({
               🅿️ Lot: {reservationData.parkingLot || '-'}
             </Text>
             <Text style={styles.summaryText}>
-              🔢 Spot: {reservationData.spot || '-'}
+              🔢 Spot: {reservationData.row !== undefined && reservationData.col !== undefined ? `Row: ${reservationData.row}, Col: ${reservationData.col}` : '-'}
             </Text>
           </View>
 

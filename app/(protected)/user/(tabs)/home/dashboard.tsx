@@ -142,7 +142,6 @@ export default function ClientHomeScreen() {
 
 
 
-
   const handleOpenIssueModal = () => {
     setIsIssueModalVisible(true);
     setIssueMessage("");
