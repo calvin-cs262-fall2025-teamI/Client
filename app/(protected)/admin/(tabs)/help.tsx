@@ -1,13 +1,12 @@
-// app/(protected)/admin/(tabs)/help.tsx
 import { useRouter } from "expo-router";
 import { Book, ChevronRight } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Appbar } from "react-native-paper";
 
@@ -41,6 +40,17 @@ export default function AdminHelpScreen() {
         "Select Manage Parking Lots.",
         "Press Edit or Delete to edit or remove a Parking Lot.",
         "Click Save Changes to save edits, or Click Delete to confirm deletion.",
+      ],
+    },
+    {
+      id: "create-schedule",
+      title: "1.3 Create Schedule",
+      steps: [
+        "Select Schedule on the bottom navigation bar.",
+        "Select Create New Schedule.",
+        "Enter user and parking information.",
+        "Enter reservation details.",
+        "Review and submit.",
       ],
     },
   ];
@@ -149,6 +159,16 @@ export default function AdminHelpScreen() {
             }
           >
             <Text style={styles.quickLinkText}>Manage Parking Lots</Text>
+            <ChevronRight color="#388E3C" size={20} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickLinkButton}
+            onPress={() =>
+              router.push("/admin/(tabs)/schedule/create_schedule" as any)
+            }
+          >
+            <Text style={styles.quickLinkText}>Create New Schedule</Text>
             <ChevronRight color="#388E3C" size={20} />
           </TouchableOpacity>
 
