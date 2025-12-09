@@ -1,9 +1,26 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { Alert, Button, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Button,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Appbar } from "react-native-paper";
-import Animated, { useAnimatedStyle, useSharedValue, withDecay, withSpring } from "react-native-reanimated";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDecay,
+  withSpring,
+} from "react-native-reanimated";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
 type SpaceType =
@@ -237,20 +254,15 @@ export default function CreateLotScreen() {
       const arr: Space[] = [];
       for (let r = 0; r < rowCount; r++) {
         for (let c = 0; c < colCount; c++) {
-          arr.push({ id: id++, row: r, col: c, type: "regular" });
+          arr.push({
+            id: id++,
+            row: r,
+            col: c,
+            type: "regular",
+            user_id: null,
+            status: "active",
+          });
         }
-    let id = 1;
-    const arr: Space[] = [];
-    for (let r = 0; r < rowCount; r++) {
-      for (let c = 0; c < colCount; c++) {
-        arr.push({
-          id: id++,
-          row: r,
-          col: c,
-          type: "regular",
-          user_id: null,
-          status: "active",
-        });
       }
       setSpaces(arr);
       setIsGenerating(false);
@@ -272,6 +284,13 @@ export default function CreateLotScreen() {
     setSpaces((prev) =>
       prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
     );
+  };
+
+  const handleSpacePress = (space: Space) => {
+    // Only open editor if user wasn't panning
+    if (!isPanning.value) {
+      setEditingSpace(space);
+    }
   };
 
   const getSpaceColor = (space: Space) => {
@@ -351,14 +370,35 @@ export default function CreateLotScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         {/* Lot details */}
         <View style={styles.controls}>
-          <LabelInput label="Lot Name" value={lotName} setValue={setLotName} textType="default" disabled={isGenerating} />
-          <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" maxValue={20} disabled={isGenerating} />
-          <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" maxValue={100} disabled={isGenerating} />
+          <LabelInput
+            label="Lot Name"
+            value={lotName}
+            setValue={setLotName}
+            textType="default"
+            disabled={isGenerating}
+          />
+          <LabelInput
+            label="Rows"
+            value={rows}
+            setValue={setRows}
+            textType="numeric"
+            maxValue={20}
+            disabled={isGenerating}
+          />
+          <LabelInput
+            label="Columns"
+            value={cols}
+            setValue={setCols}
+            textType="numeric"
+            maxValue={100}
+            disabled={isGenerating}
+          />
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Location</Text>
             <Pressable
               onPress={() => setShowLocationModal(true)}
               style={styles.locationButton}
+              disabled={isGenerating}
             >
               <Text style={styles.locationText}>
                 {selectedLocation ? selectedLocation : "Select location"}
@@ -390,11 +430,21 @@ export default function CreateLotScreen() {
           />
           <View style={styles.mergeButtons}>
             <View style={styles.buttonWrapper}>
-              <Button title="Merge Rows" onPress={handleMergeRows} color="#388E3C" disabled={isGenerating} />
+              <Button
+                title="Merge Rows"
+                onPress={handleMergeRows}
+                color="#388E3C"
+                disabled={isGenerating}
+              />
             </View>
             {mergedAisles.size > 0 && (
               <View style={styles.buttonWrapper}>
-                <Button title="Reset Merges" onPress={handleResetMerges} color="#dc2626" disabled={isGenerating} />
+                <Button
+                  title="Reset Merges"
+                  onPress={handleResetMerges}
+                  color="#dc2626"
+                  disabled={isGenerating}
+                />
               </View>
             )}
           </View>
@@ -418,6 +468,7 @@ export default function CreateLotScreen() {
           </View>
         </View>
 
+        {/* Parking Lot Canvas */}
         {rowCount > 0 && colCount > 0 && (
           <View style={styles.canvasSection}>
             <Text style={styles.sectionTitle}>Parking Lot Preview</Text>
@@ -428,171 +479,171 @@ export default function CreateLotScreen() {
             ) : (
               <>
                 <Text style={styles.helperText}>
-                  {Platform.OS === 'web'
-                    ? 'Tap any space to change its type. Use scrollbars to navigate.'
-                    : 'Tap any space to change its type. Pinch to zoom, drag to pan and scroll.'}
+                  {Platform.OS === "web"
+                    ? "Tap any space to edit. Use scrollbars to navigate."
+                    : "Tap any space to edit. Pinch to zoom, drag to pan and scroll."}
                 </Text>
 
                 <View style={styles.canvasWrapper}>
-              {Platform.OS === 'web' ? (
-                <View style={styles.webCanvasContainer}>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={true}
-                    scrollEnabled={true}
-                    style={styles.horizontalScroll}
-                    contentContainerStyle={{ flexGrow: 0 }}
-                  >
-                    <ScrollView
-                      showsVerticalScrollIndicator={true}
-                      scrollEnabled={true}
-                      style={styles.verticalScroll}
-                      contentContainerStyle={{ flexGrow: 0 }}
-                    >
-                      <GestureDetector gesture={composedGesture}>
-                        <Animated.View
-                          style={[
-                            {
-                              width: lotWidth * baseScaleValue,
-                              height: lotHeight * baseScaleValue,
-                              minHeight: 200,
-                            },
-                            animatedStyle,
-                          ]}
+                  {Platform.OS === "web" ? (
+                    <View style={styles.webCanvasContainer}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={true}
+                        scrollEnabled={true}
+                        style={styles.horizontalScroll}
+                        contentContainerStyle={{ flexGrow: 0 }}
+                      >
+                        <ScrollView
+                          showsVerticalScrollIndicator={true}
+                          scrollEnabled={true}
+                          style={styles.verticalScroll}
+                          contentContainerStyle={{ flexGrow: 0 }}
                         >
-                          <Svg
-                            viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-                            width={lotWidth * baseScaleValue}
-                            height={lotHeight * baseScaleValue}
-                          >
-                            <Rect
-                              x={0}
-                              y={0}
-                              width={lotWidth}
-                              height={lotHeight}
-                              fill="#e9f0f7"
-                              stroke="#64748b"
-                              strokeWidth={0.05}
-                            />
-                            {spaces.map((s) => (
-                              <React.Fragment key={s.id}>
+                          <GestureDetector gesture={composedGesture}>
+                            <Animated.View
+                              style={[
+                                {
+                                  width: lotWidth * baseScaleValue,
+                                  height: lotHeight * baseScaleValue,
+                                  minHeight: 200,
+                                },
+                                animatedStyle,
+                              ]}
+                            >
+                              <Svg
+                                viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+                                width={lotWidth * baseScaleValue}
+                                height={lotHeight * baseScaleValue}
+                              >
                                 <Rect
-                                  x={s.col * spaceWidth}
-                                  y={getRowYPosition(s.row)}
-                                  width={spaceWidth}
-                                  height={spaceDepth}
-                                  fill={getSpaceColor(s)}
-                                  stroke={
-                                    s.status === "inactive"
-                                      ? "#9ca3af"
-                                      : "#388E3C"
-                                  }
+                                  x={0}
+                                  y={0}
+                                  width={lotWidth}
+                                  height={lotHeight}
+                                  fill="#e9f0f7"
+                                  stroke="#64748b"
                                   strokeWidth={0.05}
-                                  onPress={() => handleSpacePress(s)}
                                 />
-                                <SvgText
-                                  x={s.col * spaceWidth + spaceWidth / 2}
-                                  y={getRowYPosition(s.row) + spaceDepth / 2}
-                                  fill={
-                                    s.status === "inactive"
-                                      ? "#6b7280"
-                                      : "#388E3C"
-                                  }
-                                  fontSize={0.5}
-                                  textAnchor="middle"
-                                  alignmentBaseline="middle"
-                                  onPress={() => handleSpacePress(s)}
-                                >
-                                  {`P${s.id}`}
-                                </SvgText>
-                              </React.Fragment>
-                            ))}
-                          </Svg>
-                        </Animated.View>
-                      </GestureDetector>
-                    </ScrollView>
-                  </ScrollView>
-                </View>
-              ) : (
-                <View style={styles.mobileCanvasContainer}>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    scrollEnabled={true}
-                    style={styles.horizontalScroll}
-                  >
-                    <ScrollView
-                      showsVerticalScrollIndicator={false}
-                      scrollEnabled={true}
-                      nestedScrollEnabled={true}
-                      style={styles.verticalScroll}
-                    >
-                      <GestureDetector gesture={composedGesture}>
-                        <Animated.View
-                          style={[
-                            {
-                              width: lotWidth * baseScaleValue,
-                              height: lotHeight * baseScaleValue,
-                              minHeight: 200,
-                            },
-                            animatedStyle,
-                          ]}
+                                {spaces.map((s) => (
+                                  <React.Fragment key={s.id}>
+                                    <Rect
+                                      x={s.col * spaceWidth}
+                                      y={getRowYPosition(s.row)}
+                                      width={spaceWidth}
+                                      height={spaceDepth}
+                                      fill={getSpaceColor(s)}
+                                      stroke={
+                                        s.status === "inactive"
+                                          ? "#9ca3af"
+                                          : "#388E3C"
+                                      }
+                                      strokeWidth={0.05}
+                                      onPress={() => handleSpacePress(s)}
+                                    />
+                                    <SvgText
+                                      x={s.col * spaceWidth + spaceWidth / 2}
+                                      y={getRowYPosition(s.row) + spaceDepth / 2}
+                                      fill={
+                                        s.status === "inactive"
+                                          ? "#6b7280"
+                                          : "#388E3C"
+                                      }
+                                      fontSize={0.5}
+                                      textAnchor="middle"
+                                      alignmentBaseline="middle"
+                                      onPress={() => handleSpacePress(s)}
+                                    >
+                                      {`P${s.id}`}
+                                    </SvgText>
+                                  </React.Fragment>
+                                ))}
+                              </Svg>
+                            </Animated.View>
+                          </GestureDetector>
+                        </ScrollView>
+                      </ScrollView>
+                    </View>
+                  ) : (
+                    <View style={styles.mobileCanvasContainer}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        scrollEnabled={true}
+                        style={styles.horizontalScroll}
+                      >
+                        <ScrollView
+                          showsVerticalScrollIndicator={false}
+                          scrollEnabled={true}
+                          nestedScrollEnabled={true}
+                          style={styles.verticalScroll}
                         >
-                          <Svg
-                            viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-                            width={lotWidth * baseScaleValue}
-                            height={lotHeight * baseScaleValue}
-                          >
-                            <Rect
-                              x={0}
-                              y={0}
-                              width={lotWidth}
-                              height={lotHeight}
-                              fill="#e9f0f7"
-                              stroke="#64748b"
-                              strokeWidth={0.05}
-                            />
-                            {spaces.map((s) => (
-                              <React.Fragment key={s.id}>
+                          <GestureDetector gesture={composedGesture}>
+                            <Animated.View
+                              style={[
+                                {
+                                  width: lotWidth * baseScaleValue,
+                                  height: lotHeight * baseScaleValue,
+                                  minHeight: 200,
+                                },
+                                animatedStyle,
+                              ]}
+                            >
+                              <Svg
+                                viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+                                width={lotWidth * baseScaleValue}
+                                height={lotHeight * baseScaleValue}
+                              >
                                 <Rect
-                                  x={s.col * spaceWidth}
-                                  y={getRowYPosition(s.row)}
-                                  width={spaceWidth}
-                                  height={spaceDepth}
-                                  fill={getSpaceColor(s)}
-                                  stroke={
-                                    s.status === "inactive"
-                                      ? "#9ca3af"
-                                      : "#388E3C"
-                                  }
+                                  x={0}
+                                  y={0}
+                                  width={lotWidth}
+                                  height={lotHeight}
+                                  fill="#e9f0f7"
+                                  stroke="#64748b"
                                   strokeWidth={0.05}
-                                  onPress={() => handleSpacePress(s)}
                                 />
-                                <SvgText
-                                  x={s.col * spaceWidth + spaceWidth / 2}
-                                  y={getRowYPosition(s.row) + spaceDepth / 2}
-                                  fill={
-                                    s.status === "inactive"
-                                      ? "#6b7280"
-                                      : "#388E3C"
-                                  }
-                                  fontSize={0.5}
-                                  textAnchor="middle"
-                                  alignmentBaseline="middle"
-                                  onPress={() => handleSpacePress(s)}
-                                >
-                                  {`P${s.id}`}
-                                </SvgText>
-                              </React.Fragment>
-                            ))}
-                          </Svg>
-                        </Animated.View>
-                      </GestureDetector>
-                    </ScrollView>
-                  </ScrollView>
+                                {spaces.map((s) => (
+                                  <React.Fragment key={s.id}>
+                                    <Rect
+                                      x={s.col * spaceWidth}
+                                      y={getRowYPosition(s.row)}
+                                      width={spaceWidth}
+                                      height={spaceDepth}
+                                      fill={getSpaceColor(s)}
+                                      stroke={
+                                        s.status === "inactive"
+                                          ? "#9ca3af"
+                                          : "#388E3C"
+                                      }
+                                      strokeWidth={0.05}
+                                      onPress={() => handleSpacePress(s)}
+                                    />
+                                    <SvgText
+                                      x={s.col * spaceWidth + spaceWidth / 2}
+                                      y={getRowYPosition(s.row) + spaceDepth / 2}
+                                      fill={
+                                        s.status === "inactive"
+                                          ? "#6b7280"
+                                          : "#388E3C"
+                                      }
+                                      fontSize={0.5}
+                                      textAnchor="middle"
+                                      alignmentBaseline="middle"
+                                      onPress={() => handleSpacePress(s)}
+                                    >
+                                      {`P${s.id}`}
+                                    </SvgText>
+                                  </React.Fragment>
+                                ))}
+                              </Svg>
+                            </Animated.View>
+                          </GestureDetector>
+                        </ScrollView>
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
               </>
             )}
           </View>
@@ -601,7 +652,12 @@ export default function CreateLotScreen() {
         <Legend />
 
         <View style={styles.buttonContainer}>
-          <Button title="Save Parking Lot" onPress={handleSave} color="#388E3C" disabled={isGenerating} />
+          <Button
+            title="Save Parking Lot"
+            onPress={handleSave}
+            color="#388E3C"
+            disabled={isGenerating}
+          />
         </View>
       </ScrollView>
 
@@ -650,8 +706,8 @@ export default function CreateLotScreen() {
           {editingSpace && (
             <View style={styles.modal}>
               <Text style={styles.modalTitle}>
-                Edit space P{editingSpace.id} (row {editingSpace.row}, col{" "}
-                {editingSpace.col})
+                Edit space P{editingSpace.id} (row {editingSpace.row + 1}, col{" "}
+                {editingSpace.col + 1})
               </Text>
 
               {/* Type selection */}
@@ -1071,7 +1127,6 @@ const styles = StyleSheet.create({
     color: "#388E3C",
     fontWeight: "500",
   },
-});
   locationButton: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
