@@ -6,26 +6,47 @@ import { Appbar } from "react-native-paper";
 import Animated, { useAnimatedStyle, useSharedValue, withDecay, withSpring } from "react-native-reanimated";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
-type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
+type SpaceType =
+  | "regular"
+  | "visitor"
+  | "handicapped"
+  | "authorized personnel";
+
+type SpaceStatus = "active" | "inactive";
 
 interface Space {
   id: number;
   row: number;
   col: number;
   type: SpaceType;
+  user_id?: string | null;
+  status: SpaceStatus;
 }
+
+const API_URL =
+  "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
 export default function CreateLotScreen() {
   const navigation = useNavigation();
+
   const [rows, setRows] = useState("4");
   const [cols, setCols] = useState("10");
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
+
+  const [editingUserId, setEditingUserId] = useState<string>("");
+  const [editingStatus, setEditingStatus] = useState<SpaceStatus>("active");
+  const [editingType, setEditingType] = useState<SpaceType>("regular");
+
   const [lotName, setLotName] = useState("");
   const [mergeRow1, setMergeRow1] = useState("");
   const [mergeRow2, setMergeRow2] = useState("");
   const [mergedAisles, setMergedAisles] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [showLocationModal, setShowLocationModal] = useState(false);
+
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -36,6 +57,16 @@ export default function CreateLotScreen() {
 
   const baseScaleValue = Platform.OS === "web" ? 40 : 18;
 
+  // Predefined location options for parking lots
+  const locations = [
+    "North Lot",
+    "South Garage",
+    "East Annex",
+    "West Lot",
+    "Central Plaza",
+    "Visitor Parking",
+  ];
+
   // Standard dimensions (meters)
   const spaceWidth = 2.5;
   const spaceDepth = 5;
@@ -45,9 +76,8 @@ export default function CreateLotScreen() {
   const rowCount = parseInt(rows) || 0;
   const colCount = parseInt(cols) || 0;
 
-  const getAisleWidth = (afterRow: number) => {
-    return mergedAisles.has(afterRow) ? mergedAisleWidth : aisleWidth;
-  };
+  const getAisleWidth = (afterRow: number) =>
+    mergedAisles.has(afterRow) ? mergedAisleWidth : aisleWidth;
 
   const calculateLotHeight = () => {
     let totalHeight = 0;
@@ -197,6 +227,7 @@ export default function CreateLotScreen() {
     };
   });
 
+  // Generate spaces whenever row/col changes
   useEffect(() => {
     setIsGenerating(true);
     
@@ -208,6 +239,18 @@ export default function CreateLotScreen() {
         for (let c = 0; c < colCount; c++) {
           arr.push({ id: id++, row: r, col: c, type: "regular" });
         }
+    let id = 1;
+    const arr: Space[] = [];
+    for (let r = 0; r < rowCount; r++) {
+      for (let c = 0; c < colCount; c++) {
+        arr.push({
+          id: id++,
+          row: r,
+          col: c,
+          type: "regular",
+          user_id: null,
+          status: "active",
+        });
       }
       setSpaces(arr);
       setIsGenerating(false);
@@ -216,19 +259,27 @@ export default function CreateLotScreen() {
     return () => clearTimeout(timer);
   }, [rowCount, colCount]);
 
-  const updateSpaceType = (id: number, type: SpaceType) => {
-    setSpaces((prev) => prev.map((s) => (s.id === id ? { ...s, type } : s)));
-  };
-
-  const handleSpacePress = (space: Space) => {
-    // Only open editor if user wasn't panning
-    if (!isPanning.value) {
-      setEditingSpace(space);
+  // When opening the edit modal, sync local editing state
+  useEffect(() => {
+    if (editingSpace) {
+      setEditingUserId(editingSpace.user_id ?? "");
+      setEditingStatus(editingSpace.status);
+      setEditingType(editingSpace.type);
     }
+  }, [editingSpace]);
+
+  const updateSpace = (id: number, updates: Partial<Space>) => {
+    setSpaces((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
+    );
   };
 
-  const getSpaceColor = (type: SpaceType) => {
-    switch (type) {
+  const getSpaceColor = (space: Space) => {
+    if (space.status === "inactive") {
+      return "#e5e7eb"; // greyed out if not schedulable
+    }
+
+    switch (space.type) {
       case "visitor":
         return "#FBC02D";
       case "handicapped":
@@ -240,11 +291,14 @@ export default function CreateLotScreen() {
     }
   };
 
-  const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
-
   const handleSave = async () => {
     if (!lotName.trim()) {
       alert("Please enter a lot name before saving.");
+      return;
+    }
+
+    if (!selectedLocation) {
+      alert("Please select a location for this parking lot.");
       return;
     }
 
@@ -257,8 +311,10 @@ export default function CreateLotScreen() {
       name: lotName,
       rows: rowCount,
       cols: colCount,
+      location: selectedLocation,
+      capacity: rowCount * colCount,
       spaces: JSON.stringify(spaces),
-      merged_aisles: JSON.stringify(Array.from(mergedAisles))
+      merged_aisles: JSON.stringify(Array.from(mergedAisles)),
     };
 
     console.log("Saving parking lot to server:", payload);
@@ -286,19 +342,32 @@ export default function CreateLotScreen() {
   };
 
   return (
-    <View>
+    <SafeAreaView style={styles.safeArea}>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
         <Appbar.Content title="Create Parking Lot" color="#fff" />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Lot details */}
         <View style={styles.controls}>
           <LabelInput label="Lot Name" value={lotName} setValue={setLotName} textType="default" disabled={isGenerating} />
           <LabelInput label="Rows" value={rows} setValue={setRows} textType="numeric" maxValue={20} disabled={isGenerating} />
           <LabelInput label="Columns" value={cols} setValue={setCols} textType="numeric" maxValue={100} disabled={isGenerating} />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Location</Text>
+            <Pressable
+              onPress={() => setShowLocationModal(true)}
+              style={styles.locationButton}
+            >
+              <Text style={styles.locationText}>
+                {selectedLocation ? selectedLocation : "Select location"}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
+        {/* Merge rows */}
         <View style={styles.controls}>
           <Text style={styles.sectionTitle}>Merge Adjacent Rows</Text>
           <LabelInput
@@ -336,11 +405,16 @@ export default function CreateLotScreen() {
           )}
         </View>
 
+        {/* Zoom controls */}
         <View style={styles.controls}>
           <Text style={styles.sectionTitle}>Zoom Controls</Text>
           <Text style={styles.zoomLevel}>Pinch to zoom, drag to pan</Text>
           <View style={styles.buttonWrapper}>
-            <Button title="Reset Zoom" onPress={handleResetZoom} color="#388E3C" />
+            <Button
+              title="Reset Zoom"
+              onPress={handleResetZoom}
+              color="#388E3C"
+            />
           </View>
         </View>
 
@@ -383,7 +457,7 @@ export default function CreateLotScreen() {
                               height: lotHeight * baseScaleValue,
                               minHeight: 200,
                             },
-                            animatedStyle
+                            animatedStyle,
                           ]}
                         >
                           <Svg
@@ -407,15 +481,23 @@ export default function CreateLotScreen() {
                                   y={getRowYPosition(s.row)}
                                   width={spaceWidth}
                                   height={spaceDepth}
-                                  fill={getSpaceColor(s.type)}
-                                  stroke="#388E3C"
+                                  fill={getSpaceColor(s)}
+                                  stroke={
+                                    s.status === "inactive"
+                                      ? "#9ca3af"
+                                      : "#388E3C"
+                                  }
                                   strokeWidth={0.05}
                                   onPress={() => handleSpacePress(s)}
                                 />
                                 <SvgText
                                   x={s.col * spaceWidth + spaceWidth / 2}
                                   y={getRowYPosition(s.row) + spaceDepth / 2}
-                                  fill="#388E3C"
+                                  fill={
+                                    s.status === "inactive"
+                                      ? "#6b7280"
+                                      : "#388E3C"
+                                  }
                                   fontSize={0.5}
                                   textAnchor="middle"
                                   alignmentBaseline="middle"
@@ -453,7 +535,7 @@ export default function CreateLotScreen() {
                               height: lotHeight * baseScaleValue,
                               minHeight: 200,
                             },
-                            animatedStyle
+                            animatedStyle,
                           ]}
                         >
                           <Svg
@@ -477,15 +559,23 @@ export default function CreateLotScreen() {
                                   y={getRowYPosition(s.row)}
                                   width={spaceWidth}
                                   height={spaceDepth}
-                                  fill={getSpaceColor(s.type)}
-                                  stroke="#388E3C"
+                                  fill={getSpaceColor(s)}
+                                  stroke={
+                                    s.status === "inactive"
+                                      ? "#9ca3af"
+                                      : "#388E3C"
+                                  }
                                   strokeWidth={0.05}
                                   onPress={() => handleSpacePress(s)}
                                 />
                                 <SvgText
                                   x={s.col * spaceWidth + spaceWidth / 2}
                                   y={getRowYPosition(s.row) + spaceDepth / 2}
-                                  fill="#388E3C"
+                                  fill={
+                                    s.status === "inactive"
+                                      ? "#6b7280"
+                                      : "#388E3C"
+                                  }
                                   fontSize={0.5}
                                   textAnchor="middle"
                                   alignmentBaseline="middle"
@@ -513,38 +603,147 @@ export default function CreateLotScreen() {
         <View style={styles.buttonContainer}>
           <Button title="Save Parking Lot" onPress={handleSave} color="#388E3C" disabled={isGenerating} />
         </View>
+      </ScrollView>
 
-        {editingSpace && (
-          <View style={styles.modalOverlay}>
+      {/* Location Modal */}
+      <Modal
+        visible={showLocationModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLocationModal(false)}
+      >
+        <SafeAreaView style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Select Location</Text>
+
+            {locations.map((loc) => (
+              <Pressable
+                key={loc}
+                style={styles.modalButton}
+                onPress={() => {
+                  setSelectedLocation(loc);
+                  setShowLocationModal(false);
+                }}
+              >
+                <Text style={styles.modalButtonText}>{loc}</Text>
+              </Pressable>
+            ))}
+
+            <Pressable
+              style={[styles.modalButton, styles.modalCancelButton]}
+              onPress={() => setShowLocationModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Edit Space Modal */}
+      <Modal
+        visible={!!editingSpace}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingSpace(null)}
+      >
+        <SafeAreaView style={styles.modalOverlay}>
+          {editingSpace && (
             <View style={styles.modal}>
               <Text style={styles.modalTitle}>
-                Change type for space {editingSpace.id}
+                Edit space P{editingSpace.id} (row {editingSpace.row}, col{" "}
+                {editingSpace.col})
               </Text>
-              {(["regular", "visitor", "handicapped", "authorized personnel"] as SpaceType[]).map(
-                (type) => (
+
+              {/* Type selection */}
+              {(
+                [
+                  "regular",
+                  "visitor",
+                  "handicapped",
+                  "authorized personnel",
+                ] as SpaceType[]
+              ).map((type) => (
+                <Pressable
+                  key={type}
+                  style={[
+                    styles.modalButton,
+                    editingType === type && { opacity: 0.7 },
+                  ]}
+                  onPress={() => setEditingType(type)}
+                >
+                  <Text style={styles.modalButtonText}>{type}</Text>
+                </Pressable>
+              ))}
+
+              {/* User ID input */}
+              <View style={[styles.inputGroup, { width: "100%", marginTop: 12 }]}>
+                <Text style={styles.label}>Assigned User ID (optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editingUserId}
+                  onChangeText={setEditingUserId}
+                  placeholder="e.g. user_123 or email"
+                />
+              </View>
+
+              {/* Status toggle */}
+              <View style={[styles.inputGroup, { width: "100%", marginTop: 12 }]}>
+                <Text style={styles.label}>Status for scheduling</Text>
+                <View style={{ flexDirection: "row", gap: 8 }}>
                   <Pressable
-                    key={type}
-                    style={styles.modalButton}
-                    onPress={() => {
-                      updateSpaceType(editingSpace.id, type);
-                      setEditingSpace(null);
-                    }}
+                    style={[
+                      styles.modalButton,
+                      { flex: 1 },
+                      editingStatus === "active" && { opacity: 0.7 },
+                    ]}
+                    onPress={() => setEditingStatus("active")}
                   >
-                    <Text style={styles.modalButtonText}>{type}</Text>
+                    <Text style={styles.modalButtonText}>Active</Text>
                   </Pressable>
-                )
-              )}
+                  <Pressable
+                    style={[
+                      styles.modalButton,
+                      { flex: 1, backgroundColor: "#6b7280" },
+                      editingStatus === "inactive" && { opacity: 0.7 },
+                    ]}
+                    onPress={() => setEditingStatus("inactive")}
+                  >
+                    <Text style={styles.modalButtonText}>Inactive</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Save / Cancel */}
               <Pressable
-                style={[styles.modalButton, { backgroundColor: "#757575" }]}
+                style={[styles.modalButton, { marginTop: 16 }]}
+                onPress={() => {
+                  updateSpace(editingSpace.id, {
+                    type: editingType,
+                    user_id: editingUserId.trim()
+                      ? editingUserId.trim()
+                      : null,
+                    status: editingStatus,
+                  });
+                  setEditingSpace(null);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Save</Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: "#757575", marginTop: 8 },
+                ]}
                 onPress={() => setEditingSpace(null)}
               >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </Pressable>
             </View>
-          </View>
-        )}
-      </ScrollView>
-    </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
@@ -659,7 +858,11 @@ function Legend() {
     { type: "regular", label: "Regular", color: "#fff" },
     { type: "visitor", label: "Visitor", color: "#FBC02D" },
     { type: "handicapped", label: "Handicapped", color: "#00BFFF" },
-    { type: "authorized personnel", label: "Authorized Personnel", color: "#FF4500" },
+    {
+      type: "authorized personnel",
+      label: "Authorized Personnel",
+      color: "#FF4500",
+    },
   ];
 
   return (
@@ -667,18 +870,30 @@ function Legend() {
       {legendItems.map((item) => (
         <View key={item.type} style={styles.legendItem}>
           <View
-            style={[styles.legendColor, { backgroundColor: item.color, borderColor: "#388E3C" }]}
+            style={[
+              styles.legendColor,
+              { backgroundColor: item.color, borderColor: "#388E3C" },
+            ]}
           />
           <Text style={styles.legendLabel}>{item.label}</Text>
         </View>
       ))}
+      <View style={styles.legendItem}>
+        <View
+          style={[
+            styles.legendColor,
+            { backgroundColor: "#e5e7eb", borderColor: "#9ca3af" },
+          ]}
+        />
+        <Text style={styles.legendLabel}>Inactive / Not schedulable</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f3f6f9" },
-  container: { padding: 20 },
+  container: { padding: 20, paddingBottom: 40 },
   controls: {
     backgroundColor: "#fff",
     padding: 16,
@@ -691,7 +906,12 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   inputGroup: { marginBottom: 12 },
-  label: { fontSize: 14, marginBottom: 4, color: "#475569", fontWeight: "500" },
+  label: {
+    fontSize: 14,
+    marginBottom: 4,
+    color: "#475569",
+    fontWeight: "500",
+  },
   input: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -717,7 +937,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   webCanvasContainer: {
     height: 400,
@@ -742,25 +962,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: "center",
   },
-  canvas: {
-    backgroundColor: "#fff",
-    padding: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 20,
-  },
-  buttonContainer: { marginTop: 20, marginBottom: 100 },
+  buttonContainer: { marginTop: 20, marginBottom: 40 },
   modalOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1000,
   },
   modal: {
     backgroundColor: "#fff",
@@ -788,6 +995,9 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     width: "100%",
     alignItems: "center",
+  },
+  modalCancelButton: {
+    backgroundColor: "#757575",
   },
   modalButtonText: {
     color: "#fff",
@@ -860,5 +1070,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#388E3C",
     fontWeight: "500",
+  },
+});
+  locationButton: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: "#f9fafb",
+  },
+  locationText: {
+    fontSize: 14,
+    color: "#0f172a",
   },
 });

@@ -5,43 +5,27 @@ import { Appbar } from 'react-native-paper';
 import ProgressIndicator from './components/ProgressIndicator';
 import ReservationParkingStep from './components/ReservationParkingStep';
 import ReviewSubmitStep from './components/ReviewSubmitStep';
-import UserInfoStep from './components/UserInfoStep';
+import type { ReservationData } from '@/types/global.types';
+import ParkingStep from './components/ParkingStep';
 
-interface UserData {
-  name: string;
-  role: 'employee' | 'admin';
-}
 
-interface ReservationData {
-  date: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  parkingLot: string;
-  spot: string;
-  recurring: boolean;
-  repeatPattern: string;
-  endDate: string;
-}
 
 export default function App() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   
-  const [userData, setUserData] = useState<UserData>({
-    name: 'John Smith',
-    role: 'employee',
-  });
   
   const [reservationData, setReservationData] = useState<ReservationData>({
-    date: 'October 22nd, 2025',
+    user_id: undefined,
+    name: undefined,
+    date: new Date('October 22nd, 2025'),
     startTime: '09:00',
     endTime: '17:00',
-    recurring: true,
-    repeatPattern: 'Weekly',
-    endDate: 'October 31st, 2025',
-    location: 'Main Campus',
-    parkingLot: 'Lot B',
-    spot: 'Spot B3',
+    recurring: false,
+    recurringDays: [],
+    endDate: new Date('October 31st, 2025'),
+    location: '',
+    parkingLot: '',
+    spot: '',
   });
 
   const handleNext = (): void => {
@@ -52,9 +36,36 @@ export default function App() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const handleSubmit = (): void => {
-    router.back();
-};
+ const handleSubmit = async () => {
+  const reservation = {
+      user_id: reservationData.user_id,
+      date: reservationData.date,
+      spot_number: reservationData.spot,
+      start_time: reservationData.startTime,
+      end_time: reservationData.endTime,
+      is_recurring: reservationData.recurring,
+      recurring_days: reservationData.recurringDays,
+      location: reservationData.location,
+      parking_lot: reservationData.parkingLot,
+  }
+    try {
+      
+        // Example: send all occurrences to your API
+        await fetch(
+          'https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/schedules',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reservation),
+          }
+        );
+
+      // maybe navigate away or show success here
+    } catch (err) {
+      console.error('Error submitting reservation', err);
+      // show error toast / dialog if you want
+    }
+  };
 
   return (
     <>
@@ -68,7 +79,7 @@ export default function App() {
         <View style={styles.fixedHeader}>
        
           
-          <ProgressIndicator currentStep={currentStep} />
+          <ProgressIndicator currentStep={currentStep} setCurrentStep={setCurrentStep} />
         </View>
 
         {/* Scrollable Content */}
@@ -78,9 +89,9 @@ export default function App() {
           showsVerticalScrollIndicator={true}
         >
           {currentStep === 1 && (
-            <UserInfoStep
-              userData={userData}
-              setUserData={setUserData}
+            <ParkingStep
+              reservationData={reservationData}
+              setReservationData={setReservationData}
               onNext={handleNext}
             />
           )}
@@ -96,7 +107,6 @@ export default function App() {
 
           {currentStep === 3 && (
             <ReviewSubmitStep
-              userData={userData}
               reservationData={reservationData}
               onPrevious={handlePrevious}
               onSubmit={handleSubmit}

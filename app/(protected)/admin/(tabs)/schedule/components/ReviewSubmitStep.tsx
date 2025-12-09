@@ -1,29 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
+import type { ReservationData } from '@/types/global.types';
 
 interface ReviewSubmitStepProps {
-  userData: {
-    name: string;
-    role: 'employee' | 'admin';
-  };
-  reservationData: {
-    date: string;
-    startTime: string;
-    endTime: string;
-    location: string;
-    parkingLot: string;
-    spot: string;
-    recurring: boolean;
-    repeatPattern: string;
-    endDate: string;
-  };
+ 
+  reservationData: ReservationData;
+
   onPrevious: () => void;
   onSubmit: () => void;
 }
 
 export default function ReviewSubmitStep({
-  userData,
   reservationData,
   onPrevious,
   onSubmit,
@@ -37,18 +25,17 @@ export default function ReviewSubmitStep({
         <Text style={styles.icon}>👤</Text>
         <View style={styles.infoContent}>
           <Text style={styles.infoLabel}>Employee</Text>
-          <Text style={styles.infoValue}>{userData.name}</Text>
-          <Text style={styles.infoSubvalue}>{userData.role}</Text>
+          <Text style={styles.infoValue}>{reservationData.name}</Text>
         </View>
       </View>
 
-      <View style={styles.infoRow}>
+      {/* <View style={styles.infoRow}>
         <Text style={styles.icon}>📅</Text>
         <View style={styles.infoContent}>
           <Text style={styles.infoLabel}>Date</Text>
-          <Text style={styles.infoValue}>{reservationData.date}</Text>
+          <Text style={styles.infoValue}>{reservationData.date.toDateString()}</Text>
         </View>
-      </View>
+      </View> */}
 
       <View style={styles.infoRow}>
         <Text style={styles.icon}>🕐</Text>
@@ -76,14 +63,27 @@ export default function ReviewSubmitStep({
         </View>
       </View>
 
-      <View style={styles.infoRow}>
-        <Text style={styles.icon}>🔄</Text>
-        <View style={styles.infoContent}>
-          <Text style={styles.infoLabel}>Recurring</Text>
-          <Text style={styles.infoValue}>{reservationData.repeatPattern}</Text>
-          <Text style={styles.infoSubvalue}>Until {reservationData.endDate}</Text>
-        </View>
-      </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.icon}>🔄</Text>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Recurring</Text>
+                 {reservationData.recurringDays.length > 0 && (
+                              <View style={styles.recurringSummary}>
+                                <Text style={styles.recurringSummaryTitle}>
+                                  Recurring Days
+                                </Text>
+                                {reservationData.recurringDays.map(d => (
+                                  <Text
+                                    key={d}
+                                    style={styles.recurringSummaryText}
+                                  >
+                                    • {new Date(d).toDateString()}
+                                  </Text>
+                                ))}
+                              </View>
+                            )}
+              </View>
+            </View>
 
       <View style={styles.buttonRow}>
         <Button
@@ -164,5 +164,21 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+  },
+  recurringSummary: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  recurringSummaryTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+    color: '#333',
+  },
+  recurringSummaryText: {
+    fontSize: 13,
+    color: '#555',
   },
 });

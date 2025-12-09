@@ -20,7 +20,7 @@ import {
   validateVehicleModel,
   validateVehicleYear,
   ValidationErrors,
-} from "../../../../../utils/validationUtils";
+} from "../../../../../../utils/validationUtils";
 
 interface VehicleType {
   id: string;

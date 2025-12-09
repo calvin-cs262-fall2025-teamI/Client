@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { Button, HelperText, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { validateEmail } from "./utils/validationUtils";
-import {useAuth} from "./utils/authContext";
+import { validateEmail } from "../utils/validationUtils";
+import {useAuth} from "../utils/authContext";
 
 
 export default function SignInScreen() {

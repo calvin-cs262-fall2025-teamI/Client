@@ -2,6 +2,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
+import { useGlobalData } from "@/utils/GlobalDataContext";
 import {
   Alert,
   FlatList,
@@ -21,18 +22,8 @@ import {
   validateName,
   validatePhoneNumber,
   ValidationErrors,
-} from '../../../../utils/validationUtils';
-
-interface UserType {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  status: string;
-  department: string;
-  avatar: string | null;
-}
+} from '../../../../../utils/validationUtils';
+import { UserType } from "../../../../../types/global.types";
 
 
 export default function UserList() {
@@ -52,24 +43,10 @@ export default function UserList() {
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const [users, setUsers] = useState<UserType[]>([]);
+  const { users, setUsers } = useGlobalData();
 
   
-  // Get Users from API
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users");
-        const data = await response.json();
-        setUsers(data);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-
-    fetchUsers();
-  }, [users]);
-
+ 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -239,7 +216,7 @@ export default function UserList() {
       };
 
       // Update local state
-      setUsers([...users, newUser]);
+      setUsers(prevUsers => [...prevUsers, newUser]);
 
       // Reset form and close modal
       setFormData({
