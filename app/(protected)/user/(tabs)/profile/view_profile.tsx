@@ -1,26 +1,26 @@
 import { useRouter } from "expo-router";
 import {
-  Briefcase,
-  Car,
-  Edit3,
-  IdCard,
-  LogOut,
-  Mail,
-  Phone,
-  User,
-  X,
+    Briefcase,
+    Car,
+    Edit3,
+    IdCard,
+    LogOut,
+    Mail,
+    Phone,
+    User,
+    X,
 } from "lucide-react-native";
 import { useState } from "react";
 import {
-  Alert,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { Appbar } from "react-native-paper";
 
@@ -208,6 +208,7 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <Appbar.Header style={styles.header}>
+        <Appbar.BackAction onPress={() => router.back()} color="#fff" />
         <Appbar.Content
           title="Profile"
           titleStyle={styles.headerTitle}

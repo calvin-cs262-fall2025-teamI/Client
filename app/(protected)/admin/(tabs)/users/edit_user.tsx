@@ -1,9 +1,11 @@
 // CLIENT/app/screens/admin/(tabs)/users/edit_user.tsx
+import { useGlobalData } from '@/utils/GlobalDataContext';
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Trash2 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,12 +13,11 @@ import {
   View,
 } from "react-native";
 import { Appbar } from "react-native-paper";
+import { UserType, VehicleType } from "../../../../../types/admin.types";
 import DeleteUserModal from "./components/DeleteUserModal";
 import ProfileSection from "./components/ProfileSection";
 import VehicleModal from "./components/VehicleModal";
 import VehiclesSection from "./components/VehicleSection";
-import { UserType, VehicleType } from "../../../../../types/admin.types";
-import { useEffect } from "react";
 
 export default function EditUser() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function EditUser() {
   // User state
   const [user, setUser] = useState<UserType | null>(null);
   const [vehicles, setVehicles] = useState<VehicleType[]>([]);
+  const { users, setUsers, refreshUsers } = useGlobalData();
   
   // Vehicle state
   useEffect(() => {
@@ -94,7 +96,7 @@ export default function EditUser() {
           const fileName = uriParts[uriParts.length - 1];
           const fileType = fileName.split(".").pop() || "jpg";
           
-          // Create file object for upload
+          // Create file object for upload (native)
           const file = {
             uri: updates.avatar,
             type: `image/${fileType}`,
@@ -103,6 +105,17 @@ export default function EditUser() {
           
           formData.append("avatar", file);
           console.log("📤 Uploading new avatar:", fileName);
+        } else if (Platform.OS === 'web' || updates.avatar.startsWith('blob:') || updates.avatar.startsWith('data:')) {
+          // For web or blob/data URIs, fetch the blob and append it to FormData with a filename
+          try {
+            const response = await fetch(updates.avatar as string);
+            const blob = await response.blob();
+            const fileName = `avatar_${Date.now()}.jpg`;
+            formData.append('avatar', blob, fileName);
+            console.log("📤 Uploading new avatar (web/blob):", fileName);
+          } catch (error) {
+            console.warn('Failed to append avatar as blob:', error);
+          }
         } else {
           // If it's an existing URL, just send the URL
           formData.append("avatar", updates.avatar);
@@ -240,6 +253,15 @@ export default function EditUser() {
       }
 
       setDeleteUserModalVisible(false);
+      console.log(`User ${userId} deleted — removing from list locally and refreshing if needed`);
+
+      // Update the global users list to remove the deleted user, then navigate back to user list
+      try {
+        setUsers(prev => prev.filter(u => u.id !== userId));
+      } catch (e) {
+        // If anything goes wrong removing locally, refresh the list from the server
+        await refreshUsers();
+      }
 
       Alert.alert("Success", "User deleted successfully!", [
         {
@@ -260,6 +282,7 @@ export default function EditUser() {
   return (
     <View style={styles.container}>
       <Appbar.Header style={styles.header}>
+        <Appbar.BackAction onPress={() => router.back()} color="#fff" />
         <Appbar.Content title="User Details" titleStyle={styles.headerTitle} />
       </Appbar.Header>
 

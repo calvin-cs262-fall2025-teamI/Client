@@ -3,20 +3,20 @@ import * as ImagePicker from "expo-image-picker";
 import { Edit2, Mail, Phone, Save, User } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import {
-  validateEmail,
-  validateName,
-  validatePhoneNumber,
-  ValidationErrors,
+    validateEmail,
+    validateName,
+    validatePhoneNumber,
+    ValidationErrors,
 } from "../../../../../../utils/validationUtils";
 
 interface ProfileSectionProps {
@@ -52,13 +52,19 @@ export default function ProfileSection({ user, onUpdateProfile }: ProfileSection
   const [isSaving, setIsSaving] = useState(false);
 
   const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your photos to upload an avatar.');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
     });
-    if (!result.canceled) {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
       setAvatar(result.assets[0].uri);
     }
   };

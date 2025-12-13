@@ -1,4 +1,4 @@
-import { useGlobalData } from "@/utils/GlobalDataContext";
+import { useGlobalData } from '@/utils/GlobalDataContext';
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
@@ -18,14 +18,18 @@ import {
     View,
 } from "react-native";
 import { Appbar } from "react-native-paper";
-import { UserType } from "../../../../../types/global.types";
-import {
-    validateEmail,
-    validateName,
-    validatePhoneNumber,
-    ValidationErrors,
-} from '../../../../../utils/validationUtils';
 
+// Define User interface
+interface UserType {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  department: string;
+  avatar: string | null;
+}
 
 export default function UserList() {
   const [search, setSearch] = useState("");
@@ -37,192 +41,90 @@ export default function UserList() {
     phone: "",
     role: "",
     department: "",
-    password: "",
   });
-
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+
+  // Use the shared global users state so additions/deletions sync across the app
   const { users, setUsers, refreshUsers } = useGlobalData();
 
-  
- 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow access to your photos to upload an avatar.');
-      return;
-    }
+  // NOTE: This file used to keep a local mock list of users. It now reads from the shared
+  // GlobalDataContext so user creations and deletions are reflected consistently across pages.
 
-    let result = await ImagePicker.launchImageLibraryAsync({
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
     });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
+    if (!result.canceled) {
       setAvatar(result.assets[0].uri);
     }
   };
 
-  const handleFieldChange = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      const newErrors = { ...errors };
-      delete newErrors[field];
-      setErrors(newErrors);
-    }
-  };
-
-  const handleFieldBlur = (field: string) => {
-    setTouched({ ...touched, [field]: true });
-    
-    // Validate field on blur
-    let validation;
-    switch (field) {
-      case "name":
-        validation = validateName(formData.name);
-        break;
-      case "email":
-        validation = validateEmail(formData.email);
-        break;
-      case "phone":
-        validation = validatePhoneNumber(formData.phone);
-        break;
-      default:
-        return;
-    }
-    
-    if (!validation.isValid) {
-      setErrors({ ...errors, [field]: validation.error || "" });
-    }
-  };
-
+  // Function to handle adding a new user
   const handleAddUser = async () => {
-    // Mark all fields as touched
-    const allTouched = {
-      name: true,
-      email: true,
-      phone: true,
-      role: true,
-      department: true,
-      password: true,
-    };
-    setTouched(allTouched);
-
-    // Validate all fields
-    const validationErrors: ValidationErrors = {};
-
-    const nameValidation = validateName(formData.name);
-    if (!nameValidation.isValid) {
-      validationErrors.name = nameValidation.error!;
+    // Validate form data
+    if (!formData.name.trim()) {
+      Alert.alert("Error", "Please enter a name");
+      return;
     }
-
-    const emailValidation = validateEmail(formData.email);
-    if (!emailValidation.isValid) {
-      validationErrors.email = emailValidation.error!;
+    if (!formData.email.trim()) {
+      Alert.alert("Error", "Please enter an email");
+      return;
     }
-
-    const phoneValidation = validatePhoneNumber(formData.phone);
-    if (!phoneValidation.isValid) {
-      validationErrors.phone = phoneValidation.error!;
+    if (!formData.phone.trim()) {
+      Alert.alert("Error", "Please enter a phone number");
+      return;
     }
-
     if (!formData.role) {
-      validationErrors.role = "Role is required";
+      Alert.alert("Error", "Please select a role");
+      return;
     }
-
     if (!formData.department) {
-      validationErrors.department = "Department is required";
-    }
-
-    if (!formData.password || formData.password.length < 8) {
-      validationErrors.password = "Password must be at least 8 characters";
-    }
-
-    // If there are errors, set them and show alert
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      Alert.alert("Validation Error", "Please fix all errors before submitting");
+      Alert.alert("Error", "Please select a department");
       return;
     }
 
     try {
-      setIsSubmitting(true);
-
-      // ============================================================
-      // FIXED: Use FormData instead of JSON
-      // ============================================================
       const formDataToSend = new FormData();
-      
-      // Add all text fields
-      formDataToSend.append("name", formData.name);
-      formDataToSend.append("email", formData.email);
-      formDataToSend.append("phone", formData.phone);
-      formDataToSend.append("password", formData.password);
-      formDataToSend.append("role", formData.role);
-      formDataToSend.append("department", formData.department);
-      formDataToSend.append("status", "active");
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('role', formData.role);
+      formDataToSend.append('department', formData.department);
+      formDataToSend.append('status', 'active');
 
-      // Add avatar if selected
+      // Avatar handling (convert to blob on web)
       if (avatar) {
-        // Extract file information
-        const uriParts = avatar.split("/");
+        const uriParts = avatar.split('/');
         const fileName = uriParts[uriParts.length - 1];
-        const fileType = fileName.split(".").pop() || "jpg";
+        const fileType = fileName.split('.').pop() || 'jpg';
 
         if (Platform.OS === 'web') {
-          try {
-            const response = await fetch(avatar);
-            const blob = await response.blob();
-            formDataToSend.append('avatar', blob, fileName);
-            console.log("📤 Uploading avatar (web):", fileName);
-          } catch (error) {
-            console.warn("Failed to add avatar on web:", error);
-          }
+          const response = await fetch(avatar);
+          const blob = await response.blob();
+          formDataToSend.append('avatar', blob, fileName);
         } else {
-          // Create file object for upload (native)
-          const file = {
-            uri: avatar,
-            type: `image/${fileType}`,
-            name: fileName || `avatar_${Date.now()}.${fileType}`,
-          } as any;
-          
-          formDataToSend.append("avatar", file);
-          console.log("📤 Uploading avatar:", fileName);
+          const file = { uri: avatar, type: `image/${fileType}`, name: fileName } as any;
+          formDataToSend.append('avatar', file);
         }
       }
 
-      // Make POST request with FormData
       const response = await fetch('https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users', {
         method: 'POST',
-        headers: {
-          // ⚠️ CRITICAL: Do NOT set Content-Type header!
-          // Let the browser set it automatically with the boundary
-        },
+        headers: {},
         body: formDataToSend,
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        // Handle specific error cases
-        if (response.status === 409) {
-          Alert.alert("Error", "A user with this email already exists");
-        } else {
-          Alert.alert("Error", data.message || "Failed to create user");
-        }
+        const data = await response.json();
+        Alert.alert('Error', data.message || 'Failed to create user');
         return;
       }
 
-      console.log("✅ User created successfully:", data);
-      console.log("📥 Updating local users and refreshing from server...");
+      const data = await response.json();
 
-      // Create user object from server response
       const newUser: UserType = {
         id: data.id.toString(),
         name: data.name,
@@ -234,8 +136,8 @@ export default function UserList() {
         avatar: data.avatar,
       };
 
-      // Update local state optimistically and also refresh from server to ensure consistent data (avatars, ids)
-      setUsers(prevUsers => [...prevUsers, newUser]);
+      // Update local state and refresh from server
+      setUsers(prev => [...prev, newUser]);
       await refreshUsers();
 
       // Reset form and close modal
@@ -245,22 +147,18 @@ export default function UserList() {
         phone: "",
         role: "",
         department: "",
-        password: "",
       });
       setAvatar(null);
-      setErrors({});
-      setTouched({});
       setModalVisible(false);
 
-      Alert.alert("Success", `${newUser.name} has been added successfully!`);
+      Alert.alert('Success', `${newUser.name} has been added successfully!`);
     } catch (error) {
-      console.error('❌ Error adding user:', error);
-      Alert.alert("Error", "Network error. Please check your connection and try again.");
-    } finally {
-      setIsSubmitting(false);
+      console.error('Error adding user:', error);
+      Alert.alert('Error', 'Failed to add user.');
     }
   };
 
+  // Function to reset form when modal is closed
   const handleCloseModal = () => {
     setFormData({
       name: "",
@@ -268,11 +166,8 @@ export default function UserList() {
       phone: "",
       role: "",
       department: "",
-      password: "",
     });
     setAvatar(null);
-    setErrors({});
-    setTouched({});
     setModalVisible(false);
   };
 
@@ -285,10 +180,16 @@ export default function UserList() {
 
   return (
     <View style={styles.container}>
-      <Appbar.Header style={styles.header}>
-        <Appbar.Content title="Users" titleStyle={styles.headerTitle} />
+      {/* Simple App Header */}
+    <Appbar.Header style={styles.header}>
+        <Appbar.Content
+          title="Users"
+          titleStyle={styles.headerTitle}
+        />
       </Appbar.Header>
 
+
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchWrapper}>
           <Search color="#64748b" size={18} style={{ marginRight: 8 }} />
@@ -302,6 +203,7 @@ export default function UserList() {
         </View>
       </View>
 
+      {/* Add User Button */}
       <View style={styles.addButtonContainer}>
         <TouchableOpacity
           onPress={() => setModalVisible(true)}
@@ -312,6 +214,7 @@ export default function UserList() {
         </TouchableOpacity>
       </View>
 
+      {/* User List */}
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item.id}
@@ -323,10 +226,7 @@ export default function UserList() {
           >
             <View style={styles.scheduleIcon}>
               {item.avatar ? (
-                <Image
-                  source={{ uri: item.avatar }}
-                  style={styles.userAvatar}
-                />
+                <Image source={{ uri: item.avatar }} style={styles.userAvatar} />
               ) : (
                 <User color="#fff" size={24} />
               )}
@@ -346,9 +246,7 @@ export default function UserList() {
                   <Text style={styles.roleTagText}>{item.role}</Text>
                 </View>
                 <View style={[styles.activeTagSmall, styles.departmentTag]}>
-                  <Text style={styles.departmentTagText}>
-                    {item.department}
-                  </Text>
+                  <Text style={styles.departmentTagText}>{item.department}</Text>
                 </View>
               </View>
             </View>
@@ -382,17 +280,16 @@ export default function UserList() {
               <TouchableOpacity
                 onPress={handleCloseModal}
                 style={styles.closeButton}
-                disabled={isSubmitting}
               >
                 <X color="#64748b" size={24} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalBody}>
+              {/* Avatar Upload */}
               <TouchableOpacity
                 onPress={pickImage}
                 style={styles.avatarUpload}
-                disabled={isSubmitting}
               >
                 {avatar ? (
                   <Image source={{ uri: avatar }} style={styles.avatarImage} />
@@ -404,114 +301,60 @@ export default function UserList() {
                 <Text style={styles.uploadText}>Upload Avatar</Text>
               </TouchableOpacity>
 
+              {/* Form Fields */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Full Name *
-                  {touched.name && errors.name && (
-                    <Text style={styles.required}> - {errors.name}</Text>
-                  )}
-                </Text>
+                <Text style={styles.label}>Full Name *</Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    touched.name && errors.name && styles.inputError,
-                  ]}
+                  style={styles.input}
                   placeholder="Enter full name"
                   placeholderTextColor="#94a3b8"
                   value={formData.name}
-                  onChangeText={(text) => handleFieldChange("name", text)}
-                  onBlur={() => handleFieldBlur("name")}
-                  editable={!isSubmitting}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, name: text })
+                  }
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Email Address *
-                  {touched.email && errors.email && (
-                    <Text style={styles.required}> - {errors.email}</Text>
-                  )}
-                </Text>
+                <Text style={styles.label}>Email Address *</Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    touched.email && errors.email && styles.inputError,
-                  ]}
+                  style={styles.input}
                   placeholder="user@parkmaster.com"
                   placeholderTextColor="#94a3b8"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={formData.email}
-                  onChangeText={(text) => handleFieldChange("email", text)}
-                  onBlur={() => handleFieldBlur("email")}
-                  editable={!isSubmitting}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, email: text })
+                  }
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Password *
-                  {touched.password && errors.password && (
-                    <Text style={styles.required}> - {errors.password}</Text>
-                  )}
-                </Text>
+                <Text style={styles.label}>Phone Number *</Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    touched.password && errors.password && styles.inputError,
-                  ]}
-                  placeholder="Enter password"
-                  placeholderTextColor="#94a3b8"
-                  secureTextEntry
-                  value={formData.password}
-                  onChangeText={(text) => handleFieldChange("password", text)}
-                  onBlur={() => handleFieldBlur("password")}
-                  editable={!isSubmitting}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Phone Number *
-                  {touched.phone && errors.phone && (
-                    <Text style={styles.required}> - {errors.phone}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    touched.phone && errors.phone && styles.inputError,
-                  ]}
+                  style={styles.input}
                   placeholder="+1 (555) 123-4567"
                   placeholderTextColor="#94a3b8"
                   keyboardType="phone-pad"
                   value={formData.phone}
-                  onChangeText={(text) => handleFieldChange("phone", text)}
-                  onBlur={() => handleFieldBlur("phone")}
-                  editable={!isSubmitting}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, phone: text })
+                  }
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Role *
-                  {touched.role && errors.role && (
-                    <Text style={styles.required}> - {errors.role}</Text>
-                  )}
-                </Text>
+                <Text style={styles.label}>Role *</Text>
                 <View style={styles.roleContainer}>
-                  {["user", "admin"].map((role) => (
+                  {["client", "admin"].map((role) => (
                     <TouchableOpacity
                       key={role}
                       style={[
                         styles.roleButton,
                         formData.role === role && styles.roleButtonActive,
                       ]}
-                      onPress={() => {
-                        handleFieldChange("role", role);
-                        setTouched({ ...touched, role: true });
-                      }}
-                      disabled={isSubmitting}
+                      onPress={() => setFormData({ ...formData, role })}
                     >
                       <Text
                         style={[
@@ -527,47 +370,35 @@ export default function UserList() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Department *
-                  {touched.department && errors.department && (
-                    <Text style={styles.required}> - {errors.department}</Text>
-                  )}
-                </Text>
+                <Text style={styles.label}>Department *</Text>
                 <View style={styles.roleContainer}>
-                  {["Operations", "Finance", "HR", "IT", "Marketing"].map(
-                    (dept) => (
-                      <TouchableOpacity
-                        key={dept}
+                  {["Operations", "Finance", "HR", "IT", "Marketing"].map((dept) => (
+                    <TouchableOpacity
+                      key={dept}
+                      style={[
+                        styles.departmentButton,
+                        formData.department === dept && styles.roleButtonActive,
+                      ]}
+                      onPress={() => setFormData({ ...formData, department: dept })}
+                    >
+                      <Text
                         style={[
-                          styles.departmentButton,
+                          styles.roleButtonText,
                           formData.department === dept &&
-                            styles.roleButtonActive,
+                            styles.roleButtonTextActive,
                         ]}
-                        onPress={() => {
-                          handleFieldChange("department", dept);
-                          setTouched({ ...touched, department: true });
-                        }}
-                        disabled={isSubmitting}
                       >
-                        <Text
-                          style={[
-                            styles.roleButtonText,
-                            formData.department === dept &&
-                              styles.roleButtonTextActive,
-                          ]}
-                        >
-                          {dept}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  )}
+                        {dept}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
 
               <View style={styles.infoBox}>
                 <Text style={styles.infoText}>
-                  All fields marked with * are required. Please ensure all
-                  information is accurate.
+                  New users will receive a welcome email with login credentials
+                  and onboarding instructions.
                 </Text>
               </View>
             </ScrollView>
@@ -576,21 +407,14 @@ export default function UserList() {
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={handleCloseModal}
-                disabled={isSubmitting}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  isSubmitting && styles.submitButtonDisabled,
-                ]}
+                style={styles.submitButton}
                 onPress={handleAddUser}
-                disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting ? "Adding..." : "Add User"}
-                </Text>
+                <Text style={styles.submitButtonText}>Add User</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -637,7 +461,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   addButton: {
-    backgroundColor: "#388E3C",
+    backgroundColor: "#4CAF50",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -662,7 +486,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#388E3C",
+    borderColor: "#4CAF50",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -670,7 +494,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   scheduleIcon: {
-    backgroundColor: "#388E3C",
+    backgroundColor: "#4CAF50",
     width: 48,
     height: 48,
     borderRadius: 8,
@@ -714,8 +538,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
+  activeTagText: {
+    color: "#78350f",
+    fontSize: 12,
+    fontWeight: "600",
+  },
   roleTag: {
-    backgroundColor: "#388E3C",
+    backgroundColor: "#4CAF50",
   },
   roleTagText: {
     color: "#fff",
@@ -792,7 +621,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: "#388E3C",
+    borderColor: "#4CAF50",
   },
   avatarPlaceholder: {
     width: 100,
@@ -805,7 +634,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
   },
   uploadText: {
-    color: "#388E3C",
+    color: "#4CAF50",
     fontWeight: "600",
     marginTop: 12,
     fontSize: 14,
@@ -819,11 +648,6 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     marginBottom: 8,
   },
-  required: {
-    color: "#F44336",
-    fontSize: 12,
-    fontWeight: "500",
-  },
   input: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -832,11 +656,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0f172a",
     backgroundColor: "#f9fafb",
-  },
-  inputError: {
-    borderColor: "#F44336",
-    borderWidth: 2,
-    backgroundColor: "#fef2f2",
   },
   roleContainer: {
     flexDirection: "row",
@@ -855,8 +674,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   roleButtonActive: {
-    backgroundColor: "#388E3C",
-    borderColor: "#388E3C",
+    backgroundColor: "#4CAF50",
+    borderColor: "#4CAF50",
   },
   roleButtonText: {
     fontSize: 14,
@@ -914,11 +733,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#388E3C",
+    backgroundColor: "#4CAF50",
     alignItems: "center",
-  },
-  submitButtonDisabled: {
-    backgroundColor: "#94a3b8",
   },
   submitButtonText: {
     fontSize: 16,
