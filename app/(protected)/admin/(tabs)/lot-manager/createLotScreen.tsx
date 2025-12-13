@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Button,
   Modal,
   Platform,
@@ -17,6 +18,7 @@ import { Appbar } from "react-native-paper";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withDecay,
   withSpring,
 } from "react-native-reanimated";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
@@ -57,12 +59,18 @@ export default function CreateLotScreen() {
   const [mergeRow1, setMergeRow1] = useState("");
   const [mergeRow2, setMergeRow2] = useState("");
   const [mergedAisles, setMergedAisles] = useState<Set<number>>(new Set());
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [showLocationModal, setShowLocationModal] = useState(false);
 
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+  const isPanning = useSharedValue(false);
 
   const baseScaleValue = Platform.OS === "web" ? 40 : 18;
 
@@ -131,9 +139,11 @@ export default function CreateLotScreen() {
 
     const lowerRow = Math.min(r1 - 1, r2 - 1);
     setMergedAisles(prev => new Set(prev).add(lowerRow));
+    alert(`Successfully merged rows ${r1} and ${r2}!`);
+    
+    // Clear input fields after successful merge
     setMergeRow1("");
     setMergeRow2("");
-    alert(`Successfully merged rows ${r1} and ${r2}!`);
   };
 
   const handleResetMerges = () => {
@@ -143,38 +153,122 @@ export default function CreateLotScreen() {
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
-      scale.value = savedScale.value * e.scale;
+      scale.value = Math.max(0.5, Math.min(savedScale.value * e.scale, 5));
     })
     .onEnd(() => {
       savedScale.value = scale.value;
     });
 
+  const panGesture = Gesture.Pan()
+    .minDistance(20) // Require 20px movement before triggering pan
+    .onStart(() => {
+      isPanning.value = true;
+    })
+    .onUpdate((e) => {
+      const canvasWidth = lotWidth * baseScaleValue;
+      const canvasHeight = lotHeight * baseScaleValue;
+      const containerWidth = Platform.OS === 'web' ? 800 : 400;
+      const containerHeight = 400;
+      
+      const scaledWidth = canvasWidth * scale.value;
+      const scaledHeight = canvasHeight * scale.value;
+      
+      const maxTranslateX = Math.max(0, (scaledWidth - containerWidth) / 2);
+      const maxTranslateY = Math.max(0, (scaledHeight - containerHeight) / 2);
+      
+      const newTranslateX = savedTranslateX.value + e.translationX;
+      const newTranslateY = savedTranslateY.value + e.translationY;
+      
+      translateX.value = Math.max(-maxTranslateX, Math.min(maxTranslateX, newTranslateX));
+      translateY.value = Math.max(-maxTranslateY, Math.min(maxTranslateY, newTranslateY));
+    })
+    .onEnd((e) => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+      
+      const canvasWidth = lotWidth * baseScaleValue;
+      const canvasHeight = lotHeight * baseScaleValue;
+      const containerWidth = Platform.OS === 'web' ? 800 : 400;
+      const containerHeight = 400;
+      
+      const scaledWidth = canvasWidth * scale.value;
+      const scaledHeight = canvasHeight * scale.value;
+      
+      const maxTranslateX = Math.max(0, (scaledWidth - containerWidth) / 2);
+      const maxTranslateY = Math.max(0, (scaledHeight - containerHeight) / 2);
+      
+      // Apply momentum with decay and clamp to final position
+      translateX.value = withDecay({
+        velocity: e.velocityX,
+        clamp: [-maxTranslateX, maxTranslateX],
+        deceleration: 0.998,
+      }, (finished) => {
+        if (finished) {
+          savedTranslateX.value = translateX.value;
+          isPanning.value = false;
+        }
+      });
+      
+      translateY.value = withDecay({
+        velocity: e.velocityY,
+        clamp: [-maxTranslateY, maxTranslateY],
+        deceleration: 0.998,
+      }, (finished) => {
+        if (finished) {
+          savedTranslateY.value = translateY.value;
+        }
+      });
+    })
+    .onFinalize(() => {
+      isPanning.value = false;
+    });
+
+  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
+
   const handleResetZoom = () => {
     scale.value = withSpring(1);
     savedScale.value = 1;
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
   };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value }
+      ],
+    };
+  });
 
   // Generate spaces whenever row/col changes
   useEffect(() => {
-    let id = 1;
-    const arr: Space[] = [];
-    for (let r = 0; r < rowCount; r++) {
-      for (let c = 0; c < colCount; c++) {
-        arr.push({
-          id: id++,
-          row: r,
-          col: c,
-          type: "regular",
-          user_id: null,
-          status: "active",
-        });
+    setIsGenerating(true);
+    
+    // Use setTimeout to defer generation, allowing UI to update
+    const timer = setTimeout(() => {
+      let id = 1;
+      const arr: Space[] = [];
+      for (let r = 0; r < rowCount; r++) {
+        for (let c = 0; c < colCount; c++) {
+          arr.push({
+            id: id++,
+            row: r,
+            col: c,
+            type: "regular",
+            user_id: null,
+            status: "active",
+          });
+        }
       }
-    }
-    setSpaces(arr);
+      setSpaces(arr);
+      setIsGenerating(false);
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [rowCount, colCount]);
 
   // When opening the edit modal, sync local editing state
@@ -192,6 +286,13 @@ export default function CreateLotScreen() {
     );
   };
 
+  const handleSpacePress = (space: Space) => {
+    // Only open editor if user wasn't panning
+    if (!isPanning.value) {
+      setEditingSpace(space);
+    }
+  };
+
   const getSpaceColor = (space: Space) => {
     if (space.status === "inactive") {
       return "#e5e7eb"; // greyed out if not schedulable
@@ -199,7 +300,7 @@ export default function CreateLotScreen() {
 
     switch (space.type) {
       case "visitor":
-        return "#FBC02D"; // Yellow to match theme
+        return "#FBC02D";
       case "handicapped":
         return "#00BFFF";
       case "authorized personnel":
@@ -274,24 +375,30 @@ export default function CreateLotScreen() {
             value={lotName}
             setValue={setLotName}
             textType="default"
+            disabled={isGenerating}
           />
           <LabelInput
             label="Rows"
             value={rows}
             setValue={setRows}
             textType="numeric"
+            maxValue={20}
+            disabled={isGenerating}
           />
           <LabelInput
             label="Columns"
             value={cols}
             setValue={setCols}
             textType="numeric"
+            maxValue={100}
+            disabled={isGenerating}
           />
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Location</Text>
             <Pressable
               onPress={() => setShowLocationModal(true)}
               style={styles.locationButton}
+              disabled={isGenerating}
             >
               <Text style={styles.locationText}>
                 {selectedLocation ? selectedLocation : "Select location"}
@@ -308,12 +415,18 @@ export default function CreateLotScreen() {
             value={mergeRow1}
             setValue={setMergeRow1}
             textType="numeric"
+            disabled={isGenerating}
+            instantUpdate={true}
+            maxValue={rowCount}
           />
           <LabelInput
             label="Second Row Number"
             value={mergeRow2}
             setValue={setMergeRow2}
             textType="numeric"
+            disabled={isGenerating}
+            instantUpdate={true}
+            maxValue={rowCount}
           />
           <View style={styles.mergeButtons}>
             <View style={styles.buttonWrapper}>
@@ -321,6 +434,7 @@ export default function CreateLotScreen() {
                 title="Merge Rows"
                 onPress={handleMergeRows}
                 color="#388E3C"
+                disabled={isGenerating}
               />
             </View>
             {mergedAisles.size > 0 && (
@@ -329,17 +443,14 @@ export default function CreateLotScreen() {
                   title="Reset Merges"
                   onPress={handleResetMerges}
                   color="#dc2626"
+                  disabled={isGenerating}
                 />
               </View>
             )}
           </View>
           {mergedAisles.size > 0 && (
             <Text style={styles.mergedInfo}>
-              Merged aisles:{" "}
-              {Array.from(mergedAisles)
-                .sort((a, b) => a - b)
-                .map((r) => `After row ${r}`)
-                .join(", ")}
+              Merged aisles: {Array.from(mergedAisles).sort((a, b) => a - b).map(r => `row ${r + 1} and ${r + 2}`).join(", ")}
             </Text>
           )}
         </View>
@@ -347,7 +458,7 @@ export default function CreateLotScreen() {
         {/* Zoom controls */}
         <View style={styles.controls}>
           <Text style={styles.sectionTitle}>Zoom Controls</Text>
-          <Text style={styles.zoomLevel}>Pinch to zoom in/out</Text>
+          <Text style={styles.zoomLevel}>Pinch to zoom, drag to pan</Text>
           <View style={styles.buttonWrapper}>
             <Button
               title="Reset Zoom"
@@ -361,172 +472,180 @@ export default function CreateLotScreen() {
         {rowCount > 0 && colCount > 0 && (
           <View style={styles.canvasSection}>
             <Text style={styles.sectionTitle}>Parking Lot Preview</Text>
-            <Text style={styles.helperText}>
-              {Platform.OS === "web"
-                ? "Tap any space to edit. Use scrollbars to navigate."
-                : "Tap any space to edit. Pinch to zoom, drag to scroll."}
-            </Text>
+            {isGenerating ? (
+              <View style={styles.generatingContainer}>
+                <Text style={styles.generatingText}>Generating parking lot...</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.helperText}>
+                  {Platform.OS === "web"
+                    ? "Tap any space to edit. Use scrollbars to navigate."
+                    : "Tap any space to edit. Pinch to zoom, drag to pan and scroll."}
+                </Text>
 
-            <View style={styles.canvasWrapper}>
-              {Platform.OS === "web" ? (
-                <View style={styles.webCanvasContainer}>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={true}
-                    scrollEnabled={true}
-                    style={styles.horizontalScroll}
-                    contentContainerStyle={{ flexGrow: 0 }}
-                  >
-                    <ScrollView
-                      showsVerticalScrollIndicator={true}
-                      scrollEnabled={true}
-                      style={styles.verticalScroll}
-                      contentContainerStyle={{ flexGrow: 0 }}
-                    >
-                      <GestureDetector gesture={pinchGesture}>
-                        <Animated.View
-                          style={[
-                            {
-                              width: lotWidth * baseScaleValue,
-                              height: lotHeight * baseScaleValue,
-                              minHeight: 200,
-                            },
-                            animatedStyle,
-                          ]}
+                <View style={styles.canvasWrapper}>
+                  {Platform.OS === "web" ? (
+                    <View style={styles.webCanvasContainer}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={true}
+                        scrollEnabled={true}
+                        style={styles.horizontalScroll}
+                        contentContainerStyle={{ flexGrow: 0 }}
+                      >
+                        <ScrollView
+                          showsVerticalScrollIndicator={true}
+                          scrollEnabled={true}
+                          style={styles.verticalScroll}
+                          contentContainerStyle={{ flexGrow: 0 }}
                         >
-                          <Svg
-                            viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-                            width={lotWidth * baseScaleValue}
-                            height={lotHeight * baseScaleValue}
-                          >
-                            <Rect
-                              x={0}
-                              y={0}
-                              width={lotWidth}
-                              height={lotHeight}
-                              fill="#e9f0f7"
-                              stroke="#64748b"
-                              strokeWidth={0.05}
-                            />
-                            {spaces.map((s) => (
-                              <React.Fragment key={s.id}>
+                          <GestureDetector gesture={composedGesture}>
+                            <Animated.View
+                              style={[
+                                {
+                                  width: lotWidth * baseScaleValue,
+                                  height: lotHeight * baseScaleValue,
+                                  minHeight: 200,
+                                },
+                                animatedStyle,
+                              ]}
+                            >
+                              <Svg
+                                viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+                                width={lotWidth * baseScaleValue}
+                                height={lotHeight * baseScaleValue}
+                              >
                                 <Rect
-                                  x={s.col * spaceWidth}
-                                  y={getRowYPosition(s.row)}
-                                  width={spaceWidth}
-                                  height={spaceDepth}
-                                  fill={getSpaceColor(s)}
-                                  stroke={
-                                    s.status === "inactive"
-                                      ? "#9ca3af"
-                                      : "#388E3C"
-                                  }
+                                  x={0}
+                                  y={0}
+                                  width={lotWidth}
+                                  height={lotHeight}
+                                  fill="#e9f0f7"
+                                  stroke="#64748b"
                                   strokeWidth={0.05}
-                                  onPress={() => setEditingSpace(s)}
                                 />
-                                <SvgText
-                                  x={s.col * spaceWidth + spaceWidth / 2}
-                                  y={getRowYPosition(s.row) + spaceDepth / 2}
-                                  fill={
-                                    s.status === "inactive"
-                                      ? "#6b7280"
-                                      : "#388E3C"
-                                  }
-                                  fontSize={0.5}
-                                  textAnchor="middle"
-                                  alignmentBaseline="middle"
-                                  onPress={() => setEditingSpace(s)}
-                                >
-                                  {`P${s.id}`}
-                                </SvgText>
-                              </React.Fragment>
-                            ))}
-                          </Svg>
-                        </Animated.View>
-                      </GestureDetector>
-                    </ScrollView>
-                  </ScrollView>
-                </View>
-              ) : (
-                <View style={styles.mobileCanvasContainer}>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    scrollEnabled={true}
-                    style={styles.horizontalScroll}
-                  >
-                    <ScrollView
-                      showsVerticalScrollIndicator={false}
-                      scrollEnabled={true}
-                      nestedScrollEnabled={true}
-                      style={styles.verticalScroll}
-                    >
-                      <GestureDetector gesture={pinchGesture}>
-                        <Animated.View
-                          style={[
-                            {
-                              width: lotWidth * baseScaleValue,
-                              height: lotHeight * baseScaleValue,
-                              minHeight: 200,
-                            },
-                            animatedStyle,
-                          ]}
+                                {spaces.map((s) => (
+                                  <React.Fragment key={s.id}>
+                                    <Rect
+                                      x={s.col * spaceWidth}
+                                      y={getRowYPosition(s.row)}
+                                      width={spaceWidth}
+                                      height={spaceDepth}
+                                      fill={getSpaceColor(s)}
+                                      stroke={
+                                        s.status === "inactive"
+                                          ? "#9ca3af"
+                                          : "#388E3C"
+                                      }
+                                      strokeWidth={0.05}
+                                      onPress={() => handleSpacePress(s)}
+                                    />
+                                    <SvgText
+                                      x={s.col * spaceWidth + spaceWidth / 2}
+                                      y={getRowYPosition(s.row) + spaceDepth / 2}
+                                      fill={
+                                        s.status === "inactive"
+                                          ? "#6b7280"
+                                          : "#388E3C"
+                                      }
+                                      fontSize={0.5}
+                                      textAnchor="middle"
+                                      alignmentBaseline="middle"
+                                      onPress={() => handleSpacePress(s)}
+                                    >
+                                      {`P${s.id}`}
+                                    </SvgText>
+                                  </React.Fragment>
+                                ))}
+                              </Svg>
+                            </Animated.View>
+                          </GestureDetector>
+                        </ScrollView>
+                      </ScrollView>
+                    </View>
+                  ) : (
+                    <View style={styles.mobileCanvasContainer}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        scrollEnabled={true}
+                        style={styles.horizontalScroll}
+                      >
+                        <ScrollView
+                          showsVerticalScrollIndicator={false}
+                          scrollEnabled={true}
+                          nestedScrollEnabled={true}
+                          style={styles.verticalScroll}
                         >
-                          <Svg
-                            viewBox={`0 0 ${lotWidth} ${lotHeight}`}
-                            width={lotWidth * baseScaleValue}
-                            height={lotHeight * baseScaleValue}
-                          >
-                            <Rect
-                              x={0}
-                              y={0}
-                              width={lotWidth}
-                              height={lotHeight}
-                              fill="#e9f0f7"
-                              stroke="#64748b"
-                              strokeWidth={0.05}
-                            />
-                            {spaces.map((s) => (
-                              <React.Fragment key={s.id}>
+                          <GestureDetector gesture={composedGesture}>
+                            <Animated.View
+                              style={[
+                                {
+                                  width: lotWidth * baseScaleValue,
+                                  height: lotHeight * baseScaleValue,
+                                  minHeight: 200,
+                                },
+                                animatedStyle,
+                              ]}
+                            >
+                              <Svg
+                                viewBox={`0 0 ${lotWidth} ${lotHeight}`}
+                                width={lotWidth * baseScaleValue}
+                                height={lotHeight * baseScaleValue}
+                              >
                                 <Rect
-                                  x={s.col * spaceWidth}
-                                  y={getRowYPosition(s.row)}
-                                  width={spaceWidth}
-                                  height={spaceDepth}
-                                  fill={getSpaceColor(s)}
-                                  stroke={
-                                    s.status === "inactive"
-                                      ? "#9ca3af"
-                                      : "#388E3C"
-                                  }
+                                  x={0}
+                                  y={0}
+                                  width={lotWidth}
+                                  height={lotHeight}
+                                  fill="#e9f0f7"
+                                  stroke="#64748b"
                                   strokeWidth={0.05}
-                                  onPress={() => setEditingSpace(s)}
                                 />
-                                <SvgText
-                                  x={s.col * spaceWidth + spaceWidth / 2}
-                                  y={getRowYPosition(s.row) + spaceDepth / 2}
-                                  fill={
-                                    s.status === "inactive"
-                                      ? "#6b7280"
-                                      : "#388E3C"
-                                  }
-                                  fontSize={0.5}
-                                  textAnchor="middle"
-                                  alignmentBaseline="middle"
-                                  onPress={() => setEditingSpace(s)}
-                                >
-                                  {`P${s.id}`}
-                                </SvgText>
-                              </React.Fragment>
-                            ))}
-                          </Svg>
-                        </Animated.View>
-                      </GestureDetector>
-                    </ScrollView>
-                  </ScrollView>
+                                {spaces.map((s) => (
+                                  <React.Fragment key={s.id}>
+                                    <Rect
+                                      x={s.col * spaceWidth}
+                                      y={getRowYPosition(s.row)}
+                                      width={spaceWidth}
+                                      height={spaceDepth}
+                                      fill={getSpaceColor(s)}
+                                      stroke={
+                                        s.status === "inactive"
+                                          ? "#9ca3af"
+                                          : "#388E3C"
+                                      }
+                                      strokeWidth={0.05}
+                                      onPress={() => handleSpacePress(s)}
+                                    />
+                                    <SvgText
+                                      x={s.col * spaceWidth + spaceWidth / 2}
+                                      y={getRowYPosition(s.row) + spaceDepth / 2}
+                                      fill={
+                                        s.status === "inactive"
+                                          ? "#6b7280"
+                                          : "#388E3C"
+                                      }
+                                      fontSize={0.5}
+                                      textAnchor="middle"
+                                      alignmentBaseline="middle"
+                                      onPress={() => handleSpacePress(s)}
+                                    >
+                                      {`P${s.id}`}
+                                    </SvgText>
+                                  </React.Fragment>
+                                ))}
+                              </Svg>
+                            </Animated.View>
+                          </GestureDetector>
+                        </ScrollView>
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
+              </>
+            )}
           </View>
         )}
 
@@ -537,6 +656,7 @@ export default function CreateLotScreen() {
             title="Save Parking Lot"
             onPress={handleSave}
             color="#388E3C"
+            disabled={isGenerating}
           />
         </View>
       </ScrollView>
@@ -586,8 +706,8 @@ export default function CreateLotScreen() {
           {editingSpace && (
             <View style={styles.modal}>
               <Text style={styles.modalTitle}>
-                Edit space P{editingSpace.id} (row {editingSpace.row}, col{" "}
-                {editingSpace.col})
+                Edit space P{editingSpace.id} (row {editingSpace.row + 1}, col{" "}
+                {editingSpace.col + 1})
               </Text>
 
               {/* Type selection */}
@@ -688,21 +808,103 @@ function LabelInput({
   value,
   setValue,
   textType = "numeric",
+  maxValue = 99,
+  disabled = false,
+  instantUpdate = false,
 }: {
   label: string;
   value: string;
   setValue: (t: string) => void;
   textType?: "numeric" | "default";
+  maxValue?: number;
+  disabled?: boolean;
+  instantUpdate?: boolean;
 }) {
+  const [tempValue, setTempValue] = useState(value);
+
+  // Sync tempValue with value prop when it changes
+  useEffect(() => {
+    setTempValue(value);
+  }, [value]);
+
+  const handleChange = (text: string) => {
+    setTempValue(text);
+    
+    // If instant update is enabled, update parent immediately
+    if (instantUpdate) {
+      if (textType === "numeric") {
+        // For numeric inputs, validate but update immediately
+        const numValue = parseInt(text);
+        
+        // Allow empty string for clearing
+        if (text === "") {
+          setValue("");
+          return;
+        }
+        
+        // Only update if it's a valid number
+        if (!isNaN(numValue)) {
+          setValue(text);
+        }
+      } else {
+        // For text inputs, update immediately
+        setValue(text);
+      }
+    }
+  };
+
+  const handleSubmit = () => {
+    if (disabled) return;
+    
+    // Skip submission if instant update is enabled
+    if (instantUpdate) return;
+    
+    if (textType === "numeric") {
+      const numValue = parseInt(tempValue);
+      
+      if (isNaN(numValue)) {
+        Alert.alert("Invalid Input", "Please enter a valid number.");
+        setTempValue(value);
+        return;
+      }
+
+      if (numValue > maxValue) {
+        Alert.alert(
+          "Value Too Large",
+          `The maximum value allowed is ${maxValue}. Please enter a smaller number.`
+        );
+        setTempValue(value);
+        return;
+      }
+
+      if (numValue < 1) {
+        Alert.alert("Invalid Input", "Please enter a value of at least 1.");
+        setTempValue(value);
+        return;
+      }
+
+      setValue(tempValue);
+    } else {
+      setValue(tempValue);
+    }
+  };
+
   return (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={setValue}
+        style={[styles.input, disabled && styles.inputDisabled]}
+        value={tempValue}
+        onChangeText={handleChange}
         keyboardType={textType === "numeric" ? "numeric" : "default"}
+        returnKeyType="done"
+        onSubmitEditing={handleSubmit}
+        maxLength={textType === "numeric" ? 3 : undefined}
+        editable={!disabled}
       />
+      {textType === "numeric" && (
+        <Text style={styles.helperTextInput}>Max value: {maxValue}</Text>
+      )}
     </View>
   );
 }
@@ -773,6 +975,15 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 14,
     backgroundColor: "#f9fafb",
+  },
+  inputDisabled: {
+    backgroundColor: "#e2e8f0",
+    color: "#94a3b8",
+  },
+  helperTextInput: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 4,
   },
   canvasSection: {
     marginBottom: 20,
@@ -901,6 +1112,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#475569",
     marginBottom: 8,
+  },
+  generatingContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f9fafb",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  generatingText: {
+    fontSize: 16,
+    color: "#388E3C",
+    fontWeight: "500",
   },
   locationButton: {
     borderWidth: 1,
