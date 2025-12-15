@@ -1,9 +1,9 @@
 import { Stack } from "expo-router";
-import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MD3LightTheme, PaperProvider } from "react-native-paper";
 import AuthProvider from "../utils/authContext";
 import { enGB, registerTranslation } from 'react-native-paper-dates'
+import { SafeAreaView } from "react-native-safe-area-context";
 registerTranslation('en-GB', enGB)
 
 // Green and Yellow theme
@@ -22,27 +22,12 @@ const theme = {
 };
 
 export default function RootLayout() {
-  const [isReady, setIsReady] = useState(false);
   
 
-  // useEffect(() => {
-  //   async function prepare() {
-  //     try {
-  //       await new Promise(resolve => setTimeout(resolve, 2000));
-  //     } catch (e) {
-  //       console.warn(e);
-  //     } finally {
-  //       setIsReady(true);
-  //     }
-  //   }
-  //   prepare();
-  // }, []);
 
-  // if (!isReady) {
-  //   return <LoadingScreen />;
-  // }
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView >
+       <SafeAreaView style={{ flex:1, backgroundColor: "#2E7D32" }} edges={["top"]}>
       <PaperProvider theme={theme}>
         <AuthProvider>
         <Stack
@@ -55,6 +40,7 @@ export default function RootLayout() {
         </Stack>
         </AuthProvider>
       </PaperProvider>
+      </SafeAreaView>
     </GestureHandlerRootView>
   );
 }

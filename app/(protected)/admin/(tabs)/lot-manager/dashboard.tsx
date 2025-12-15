@@ -1,16 +1,18 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { Bell } from "lucide-react-native";
+import { headerStyles } from "@/utils/globalStyles";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
   Platform,
+  Button,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "../../../../../utils/authContext";
 
@@ -43,7 +45,8 @@ export default function LotManagerScreen() {
   const [issues, setIssues] = useState<Issue[]>([
     {
       id: 1,
-      message: "There's a car parked in my assigned spot. The license plate is XYZ-789. Can someone help?",
+      message:
+        "There's a car parked in my assigned spot. The license plate is XYZ-789. Can someone help?",
       timestamp: "2025-10-11T10:30:00",
       userName: "John",
       spotNumber: "A-24",
@@ -67,9 +70,10 @@ export default function LotManagerScreen() {
     },
   ]);
 
-  const unreadCount = issues.filter(issue => !issue.isRead).length;
+  const unreadCount = issues.filter((issue) => !issue.isRead).length;
 
-  const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
+  const API_URL =
+    "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
   // Fetch parking lots from API on mount
   useEffect(() => {
@@ -90,19 +94,19 @@ export default function LotManagerScreen() {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/api/parking-lots`);
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch parking lots");
       }
-      
+
       const data = await response.json();
-      
+
       // Parse JSONB fields from PostgreSQL
       const parsedLots = data.map((lot: any) => {
-        let spaces = [];
-        let merged_aisles = [];
-        
-        if (typeof lot.spaces === 'string') {
+        let spaces: any[] = [];
+        let merged_aisles: any[] = [];
+
+        if (typeof lot.spaces === "string") {
           try {
             spaces = JSON.parse(lot.spaces);
           } catch (e) {
@@ -111,8 +115,8 @@ export default function LotManagerScreen() {
         } else if (Array.isArray(lot.spaces)) {
           spaces = lot.spaces;
         }
-        
-        if (typeof lot.merged_aisles === 'string') {
+
+        if (typeof lot.merged_aisles === "string") {
           try {
             merged_aisles = JSON.parse(lot.merged_aisles);
           } catch (e) {
@@ -121,17 +125,17 @@ export default function LotManagerScreen() {
         } else if (Array.isArray(lot.merged_aisles)) {
           merged_aisles = lot.merged_aisles;
         }
-        
+
         return {
           id: lot.id,
           name: lot.name,
           rows: lot.rows,
           cols: lot.cols,
           spaces,
-          merged_aisles
+          merged_aisles,
         };
       });
-      
+
       setParkingLots(parsedLots);
     } catch (error) {
       console.error("Error fetching parking lots:", error);
@@ -142,16 +146,9 @@ export default function LotManagerScreen() {
   };
 
   // Calculate stats from actual parking lots
-  const totalSpots = parkingLots.reduce((sum, lot) => sum + (lot.rows * lot.cols), 0);
+  const totalSpots = parkingLots.reduce((sum, lot) => sum + lot.rows * lot.cols, 0);
   const occupiedSpots = 0; // TODO: Get from real occupancy data
   const availableSpots = totalSpots - occupiedSpots;
-
-  //Color of numbers on admin dashboard based on value
-  const getIssueColor = (count: number) => {
-    if (count === 0) return "#4CAF50";
-    if (count < 3) return "#FBC02D";
-    return "#F44336";
-  };
 
   const getOccupiedSpotsColor = (occupied: number, total: number) => {
     if (total === 0) return "#757575";
@@ -169,16 +166,12 @@ export default function LotManagerScreen() {
     return "#F44336";
   };
 
-  const getTotalSpotsColor = () => {
-    return "#4CAF50";
-  };
-
   // Create lot cards from actual data - NO MORE MOCK DATA
-  const lots = parkingLots.map(lot => {
+  const lots = parkingLots.map((lot) => {
     const total = lot.rows * lot.cols;
     const occupied = 0; // TODO: Get from real occupancy data
     let available = total - occupied;
-    
+
     if (available < 0) {
       available = 0;
     } else if (available > total) {
@@ -196,75 +189,51 @@ export default function LotManagerScreen() {
     };
   });
 
-  const stats = [
-    {
-      title: "Total Spots",
-      value: totalSpots.toString(),
-      color: getTotalSpotsColor(),
-    },
-    {
-      title: "Occupied",
-      value: occupiedSpots.toString(),
-      color: getOccupiedSpotsColor(occupiedSpots, totalSpots || 1),
-    },
-    {
-      title: "Available",
-      value: availableSpots.toString(),
-      color: getAvailableSpotsColor(availableSpots, totalSpots || 1),
-    },
-    {
-      title: "Unread Issues",
-      value: unreadCount.toString(),
-      color: getIssueColor(unreadCount),
-    },
-  ];
-
   const handleViewLotDetails = async (lot: any) => {
     try {
-      // Fetch full lot data from backend
       const response = await fetch(`${API_URL}/api/parking-lots/${lot.id}`);
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch lot details");
       }
-      
+
       const fullLotData = await response.json();
-      
+
       // Parse JSONB fields from PostgreSQL
-      let spaces = [];
-      let merged_aisles = [];
-      
-      if (typeof fullLotData.spaces === 'string') {
+      let spaces: any[] = [];
+      let merged_aisles: any[] = [];
+
+      if (typeof fullLotData.spaces === "string") {
         try {
           spaces = JSON.parse(fullLotData.spaces);
         } catch (e) {
-          console.error('Error parsing spaces:', e);
+          console.error("Error parsing spaces:", e);
           spaces = [];
         }
       } else if (Array.isArray(fullLotData.spaces)) {
         spaces = fullLotData.spaces;
       }
-      
-      if (typeof fullLotData.merged_aisles === 'string') {
+
+      if (typeof fullLotData.merged_aisles === "string") {
         try {
           merged_aisles = JSON.parse(fullLotData.merged_aisles);
         } catch (e) {
-          console.error('Error parsing merged_aisles:', e);
+          console.error("Error parsing merged_aisles:", e);
           merged_aisles = [];
         }
       } else if (Array.isArray(fullLotData.merged_aisles)) {
         merged_aisles = fullLotData.merged_aisles;
       }
-      
+
       const parsedLot = {
         ...fullLotData,
         spaces,
-        merged_aisles
+        merged_aisles,
       };
-      
+
       router.push({
         pathname: "/admin/(tabs)/lot-manager/viewLotScreen" as any,
-        params: { lotData: JSON.stringify(parsedLot) }
+        params: { lotData: JSON.stringify(parsedLot) },
       });
     } catch (error) {
       console.error("Error fetching lot data:", error);
@@ -272,54 +241,35 @@ export default function LotManagerScreen() {
     }
   };
 
-  const handleOpenNotifications = () => {
-    setIsNotificationModalVisible(true);
-  };
-
   const handleCloseNotifications = () => {
     setIsNotificationModalVisible(false);
   };
 
   const handleMarkAsRead = (id: number) => {
-    setIssues(prev =>
-      prev.map(issue =>
-        issue.id === id ? { ...issue, isRead: true } : issue
-      )
-    );
+    setIssues((prev) => prev.map((issue) => (issue.id === id ? { ...issue, isRead: true } : issue)));
   };
 
   const handleMarkAllAsRead = () => {
-    setIssues(prev => prev.map(issue => ({ ...issue, isRead: true })));
+    setIssues((prev) => prev.map((issue) => ({ ...issue, isRead: true })));
   };
 
   const handleDeleteIssue = (id: number) => {
-    setIssues(prev => prev.filter(issue => issue.id !== id));
+    setIssues((prev) => prev.filter((issue) => issue.id !== id));
   };
 
   const handleSignOut = () => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       const confirmed = window.confirm("Are you sure you want to sign out?");
-      if (confirmed) {
-        logout();
-      }
+      if (confirmed) logout();
     } else {
-      Alert.alert(
-        "Sign Out",
-        "Are you sure you want to sign out?",
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-          {
-            text: "Sign Out",
-            onPress: () => {
-              logout();
-            },
-            style: "destructive",
-          },
-        ]
-      );
+      Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          onPress: () => logout(),
+          style: "destructive",
+        },
+      ]);
     }
   };
 
@@ -341,55 +291,83 @@ export default function LotManagerScreen() {
       return `${days} days ago`;
     }
   };
+  const getLotStatus = (occupied: number, total: number) => {
+  if (total === 0) return "No capacity";
+  const ratio = occupied / total;
+  if (occupied === 0) return "Empty";
+  if (ratio < 0.5) return "Low";
+  if (ratio < 0.8) return "Busy";
+  return "Near full";
+};
+
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
+    <View style={{ flex: 1 }}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Parkmaster</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={handleOpenNotifications}
-            style={styles.simpleBellButton}
-          >
-            <Bell color="#fff" size={20} />
-            {unreadCount > 0 && <View style={styles.unreadDot} />}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-            <Text style={styles.logoutText}>Sign Out</Text>
-          </TouchableOpacity>
+      <View style={headerStyles.header}>
+        <View>
+          <Text style={headerStyles.headerTitle}>Parkmaster</Text>
+          <Text style={headerStyles.headerSubtitle}>Administration Dashboard</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          {stats.map((stat, index) => (
-            <View key={index} style={styles.statCard}>
-              <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-              <Text style={styles.statTitle}>{stat.title}</Text>
-            </View>
-          ))}
+        {/* System Overview Cards */}
+        <Text style={styles.sectionHeader}>Overview</Text>
+        <View style={styles.statsGrid}>
+          {/* 1) Total Capacity */}
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{totalSpots}</Text>
+            <Text style={styles.statLabel}>Total Capacity</Text>
+          </View>
+
+          {/* 2) Available */}
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{availableSpots}</Text>
+            <Text style={styles.statLabel}>Available Spots</Text>
+          </View>
+
+          {/* 3) Occupied */}
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{occupiedSpots}</Text>
+            <Text style={styles.statLabel}>Occupied Spots</Text>
+          </View>
+
+          {/* 4) Open Issues (charcoal + yellow) */}
+          <View style={[styles.statCard, styles.issueStatCard]}>
+            <Text style={styles.issueStatNumber}>{unreadCount}</Text>
+            <Text style={styles.issueStatLabel}>Open Issues</Text>
+          </View>
         </View>
 
-        {/* Action Buttons */}
+        {/* Action Buttons (text left, icon right) */}
         <View style={styles.actionContainer}>
+            <Text style={styles.sectionHeader}>Quick Actions</Text>
+
           <TouchableOpacity
             style={styles.createButton}
             onPress={() => router.push("/admin/(tabs)/lot-manager/createLotScreen" as any)}
+            activeOpacity={0.85}
           >
-            <Text style={styles.createButtonText}>Create New Parking Lot</Text>
+            <View style={styles.buttonContent}>
+              <Text style={styles.createButtonText}>Create Parking Lot</Text>
+              <Ionicons name="add-outline" size={22} color="#fff" />
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.manageButton}
             onPress={() => router.push("/admin/(tabs)/lot-manager/manage-lots" as any)}
+            activeOpacity={0.85}
           >
-            <Text style={styles.manageButtonText}>Manage Parking Lots</Text>
+            <View style={styles.buttonContent}>
+              <Text style={styles.manageButtonText}>Manage Lots</Text>
+              <Ionicons name="layers-outline" size={22} color="#388E3C" />
+            </View>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Parking Lots</Text>
+        <Text style={styles.sectionHeader}>Parking Lots</Text>
 
         {/* Loading State */}
         {loading ? (
@@ -402,14 +380,20 @@ export default function LotManagerScreen() {
             <Text style={styles.emptyLotsSubtext}>Create your first parking lot to get started</Text>
           </View>
         ) : (
-          /* Lot Cards - Only Real Lots from Database */
           lots.map((lot) => (
-            <View key={lot.id} style={styles.lotCard}>
+            <TouchableOpacity
+  key={lot.id}
+  style={styles.lotCard}
+  activeOpacity={0.9}
+  onPress={() => handleViewLotDetails(lot)}
+>
+
               <View style={styles.lotHeader}>
                 <Text style={styles.lotName}>{lot.name}</Text>
                 <Text style={styles.lotStats}>
-                  {lot.occupied}/{lot.total}
-                </Text>
+  {lot.occupied}/{lot.total} • {getLotStatus(lot.occupied, lot.total)}
+</Text>
+
               </View>
 
               <View style={styles.progressContainer}>
@@ -418,21 +402,22 @@ export default function LotManagerScreen() {
                     style={[
                       styles.progressFill,
                       {
-                        width: lot.total > 0 ? `${(lot.occupied / lot.total) * 100}%` : '0%',
+                        width: lot.total > 0 ? `${(lot.occupied / lot.total) * 100}%` : "0%",
                         backgroundColor:
-                          lot.total === 0 ? "#757575" :
-                          ((lot.total - lot.occupied) / lot.total) > 0.5
+                          lot.total === 0
+                            ? "#757575"
+                            : (lot.total - lot.occupied) / lot.total > 0.5
                             ? "#4CAF50"
-                            : ((lot.total - lot.occupied) / lot.total) > 0.2
-                              ? "#FBC02D"
-                              : "#F44336",
+                            : (lot.total - lot.occupied) / lot.total > 0.2
+                            ? "#FBC02D"
+                            : "#F44336",
                       },
                     ]}
                   />
                 </View>
               </View>
 
-              {/* Individual Parking Lot Details*/}
+              {/* Individual Parking Lot Details */}
               <View style={styles.lotDetails}>
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Available</Text>
@@ -445,16 +430,15 @@ export default function LotManagerScreen() {
               </View>
 
               <View style={styles.buttonRow}>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => handleViewLotDetails(lot)}
-                >
+                <TouchableOpacity style={styles.actionButton} onPress={() => handleViewLotDetails(lot)}>
                   <Text style={styles.actionButtonText}>View Details</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         )}
+
+        <Button onPress={handleSignOut} title="Sign Out" />
       </ScrollView>
 
       {/* Notifications Modal */}
@@ -474,10 +458,7 @@ export default function LotManagerScreen() {
                     <Text style={styles.markAllReadText}>Mark all read</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity
-                  onPress={handleCloseNotifications}
-                  style={styles.closeButton}
-                >
+                <TouchableOpacity onPress={handleCloseNotifications} style={styles.closeButton}>
                   <Text style={styles.closeButtonText}>✕</Text>
                 </TouchableOpacity>
               </View>
@@ -492,10 +473,7 @@ export default function LotManagerScreen() {
                 issues.map((issue) => (
                   <View
                     key={issue.id}
-                    style={[
-                      styles.issueCard,
-                      !issue.isRead && styles.issueCardUnread
-                    ]}
+                    style={[styles.issueCard, !issue.isRead && styles.issueCardUnread]}
                   >
                     <View style={styles.issueHeader}>
                       <View style={styles.issueUserInfo}>
@@ -506,15 +484,17 @@ export default function LotManagerScreen() {
                           </View>
                         )}
                       </View>
-                      <Text style={styles.issueTimestamp}>
-                        {formatTimestamp(issue.timestamp)}
-                      </Text>
+                      <Text style={styles.issueTimestamp}>{formatTimestamp(issue.timestamp)}</Text>
                     </View>
 
-                    <Text style={[
-                      styles.issueMessage,
-                      !issue.isRead && { color: "#0f172a", fontWeight: "700" }
-                    ]}>{issue.message}</Text>
+                    <Text
+                      style={[
+                        styles.issueMessage,
+                        !issue.isRead && { color: "#0f172a", fontWeight: "700" },
+                      ]}
+                    >
+                      {issue.message}
+                    </Text>
 
                     <View style={styles.issueActions}>
                       {!issue.isRead && (
@@ -544,113 +524,124 @@ export default function LotManagerScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    backgroundColor: "#388E3C",
-    padding: 20,
-    paddingTop: 50,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  simpleBellButton: {
-    position: "relative",
-    padding: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  unreadDot: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#F44336",
-  },
-  logoutButton: {
-    padding: 8,
-  },
-  logoutText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
   container: {
-    padding: 16
+    padding: 16,
   },
-  statsContainer: {
+
+  // --- System Overview Cards ---
+  statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 16, // tightened (was 12)
   },
+
   statCard: {
     width: "48%",
-    marginBottom: 12,
     backgroundColor: "#fff",
-    elevation: 2,
-    borderRadius: 10,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  statValue: {
-    fontSize: 32,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  statTitle: {
-    fontSize: 14,
-    color: "#757575",
-    textAlign: "center",
-  },
-  actionContainer: {
-    marginBottom: 24,
-  },
-  createButton: {
-    backgroundColor: "#388E3C",
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     marginBottom: 12,
     alignItems: "center",
   },
-  createButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+
+  statNumber: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#2e7d32",
   },
+
+  statLabel: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#6b7280",
+  },
+
+  // Stats-only issue card (renamed to avoid conflict with modal issueCard)
+  issueStatCard: {
+    backgroundColor: "#1f2937",
+  },
+
+  issueStatNumber: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#fbbf24",
+  },
+
+  issueStatLabel: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#fbbf24",
+  },
+
+  // --- Action Buttons ---
+  actionContainer: {
+    marginBottom: 24, // tightened (was 24)
+  },
+
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+ createButton: {
+  backgroundColor: "#388E3C",
+  borderRadius: 12,          // slightly rounder = confidence
+  padding: 16,
+  paddingHorizontal: 18,
+  minHeight: 52,
+  marginBottom: 12,
+
+  // ADD THESE
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.18,
+  shadowRadius: 4,
+  elevation: 4,
+},
+
+
+  createButtonText: {
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: "700", // was 600
+  flex: 1,
+},
+
+sectionHeader: {
+  fontSize: 22,        // was 20 → stronger anchor
+  fontWeight: "800",   // was 700 → more authority
+  color: "#374151", 
+  marginBottom: 16,
+},
+
+
   manageButton: {
     borderRadius: 10,
     padding: 16,
+    paddingHorizontal: 18,
     borderColor: "#388E3C",
-    borderWidth: 2,
-    alignItems: "center",
-    backgroundColor: "#fff",
+    borderWidth: 2,backgroundColor: "#f8fafc", // very light neutral
+    minHeight: 52,
   },
+
   manageButtonText: {
     color: "#388E3C",
     fontSize: 16,
     fontWeight: "600",
+    flex: 1,
   },
+
+  // --- Section Title ---
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#333",
     marginBottom: 16,
   },
+
   loadingContainer: {
     padding: 40,
     alignItems: "center",
@@ -659,6 +650,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#757575",
   },
+
   emptyLotsContainer: {
     padding: 40,
     alignItems: "center",
@@ -676,6 +668,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#757575",
   },
+
   lotCard: {
     marginBottom: 16,
     backgroundColor: "#fff",
@@ -687,22 +680,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  lotHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
+lotHeader: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "flex-start", // instead of center
+  marginBottom: 12,
+},
   lotName: {
     fontSize: 18,
     fontWeight: "600",
     color: "#333",
   },
-  lotStats: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#388E3C",
-  },
+ lotStats: {
+  fontSize: 14,          // slightly smaller so it fits
+  fontWeight: "600",
+  color: "#388E3C",
+  maxWidth: "55%",       // prevents crowding
+  textAlign: "right",
+},
   progressContainer: {
     marginBottom: 16,
   },
@@ -736,6 +731,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
   },
+
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -753,6 +749,8 @@ const styles = StyleSheet.create({
     color: "#388E3C",
     fontWeight: "600",
   },
+
+  // --- Modal / Issues ---
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -811,14 +809,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#757575",
   },
+
+  // NOTE: this "issueCard" is for the MODAL list items (kept intact)
   issueCard: {
     backgroundColor: "#fff",
-    padding: 16,
     borderRadius: 12,
+    padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#e5e7eb",
   },
+
   issueCardUnread: {
     backgroundColor: "#f0f9ff",
     borderColor: "#388E3C",
