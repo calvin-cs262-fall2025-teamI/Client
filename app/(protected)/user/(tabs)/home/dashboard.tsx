@@ -1,5 +1,6 @@
 import { useAuth } from "@/utils/authContext";
 import { useRouter } from "expo-router";
+import { UserType } from "@/types/global.types";
 import {
   Clock,
   HelpCircle,
@@ -9,7 +10,7 @@ import {
   X
 } from "lucide-react-native";
 import { headerStyles } from "@/utils/globalStyles";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -17,16 +18,13 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-
+import { useGlobalData } from "@/utils/GlobalDataContext";
 
 
 interface Issue {
@@ -39,10 +37,25 @@ interface Issue {
 
 export default function ClientHomeScreen() {
   const router = useRouter();
-  const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
-  const [issueMessage, setIssueMessage] = useState("");
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const { logout } = useAuth();
+const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
+const [issueMessage, setIssueMessage] = useState("");
+const [currentTime, setCurrentTime] = useState(new Date());
+
+const { getCurrentUser } = useGlobalData();
+const { authState } = useAuth();
+
+useEffect(() => {
+  if (!authState.userId) {
+    console.log("No user logged in");
+    return;
+  }
+
+  console.log("User ID from Auth State:", authState.userId);
+
+  const currentUser: UserType | null = getCurrentUser(authState.userId);
+
+  console.log("Current User:", currentUser);
+}, [authState.userId, getCurrentUser]);
 
 
 
@@ -102,41 +115,7 @@ export default function ClientHomeScreen() {
       );
     }
   };
-  // Update current time every second
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
 
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleSignOut = () => {
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm("Are you sure you want to sign out?");
-      if (confirmed) {
-        logout();
-      }
-    } else {
-      Alert.alert(
-        "Sign Out",
-        "Are you sure you want to sign out?",
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-          {
-            text: "Sign Out",
-            onPress: () => {
-              logout();
-            },
-            style: "destructive",
-          },
-        ]
-      );
-    }
-  };
 
 
 
@@ -202,8 +181,7 @@ export default function ClientHomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
+    <View style={styles.container}>
 
       {/* Header */}
       <View style={headerStyles.header}>
@@ -407,7 +385,7 @@ export default function ClientHomeScreen() {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

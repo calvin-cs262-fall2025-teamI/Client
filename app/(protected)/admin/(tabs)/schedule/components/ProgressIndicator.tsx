@@ -1,106 +1,160 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface ProgressIndicatorProps {
-  currentStep: number; // 1, 2, or 3
+  currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export default function ProgressIndicator({ currentStep, setCurrentStep }: ProgressIndicatorProps) {
+const CHARCOAL = "#1F2937";
+const MUTED = "#4B5563";
+const TRACK = "#E5E7EB";
+const GREEN = "#388E3C";
+
+// background tint you were using (#f5f5f0)
+const FADE_BG_SOLID = "rgba(245,245,240,1)";
+const FADE_BG_CLEAR = "rgba(245,245,240,0)";
+
+export default function ProgressIndicator({
+  currentStep,
+  setCurrentStep,
+}: ProgressIndicatorProps) {
   const steps = [
-    { number: 1, label: 'Parking' },
-    { number: 2, label: 'Reservation' },
-    { number: 3, label: 'Review' },
+    { number: 1, label: "Parking" },
+    { number: 2, label: "Reservation" },
+    { number: 3, label: "Review" },
   ];
 
   return (
-    <View style={styles.container}>
-      {steps.map((step, index) => (
-        <React.Fragment key={step.number}>
-          <Pressable onPress={() => setCurrentStep(step.number)}  style={styles.stepContainer}>
-       
-            <View
-            
-              style={[
-                styles.circle,
-                currentStep >= step.number && styles.circleActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.circleText,
-                  currentStep >= step.number && styles.circleTextActive,
-                ]}
+    <View style={styles.wrap}>
+      {/* Steps */}
+      <View style={styles.container}>
+        {steps.map((step, index) => {
+          const active = currentStep >= step.number;
+          const done = currentStep > step.number;
+
+          return (
+            <React.Fragment key={step.number}>
+              <Pressable
+                onPress={() => setCurrentStep(step.number)}
+                style={styles.stepContainer}
+                hitSlop={10}
               >
-                {step.number}
-              </Text>
-            </View>
-            <Text style={styles.label}>{step.label}</Text>
-          </Pressable>
+                <View style={[styles.circle, active && styles.circleActive]}>
+                  <Text style={[styles.circleText, active && styles.circleTextActive]}>
+                    {step.number}
+                  </Text>
+                </View>
 
+                <Text style={[styles.label, active && styles.labelActive]}>
+                  {step.label}
+                </Text>
+              </Pressable>
 
+              {index < steps.length - 1 && (
+                <View style={styles.lineWrap}>
+                  <View style={[styles.line, done && styles.lineActive]} />
+                </View>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </View>
 
-
-
-          {index < steps.length - 1 && (
-            <View
-              style={[
-                styles.line,
-                currentStep > step.number && styles.lineActive,
-              ]}
-            />
-          )}
-        </React.Fragment>
-      ))}
+      {/* Fade overlay (TOP solid → BOTTOM transparent) */}
+      <LinearGradient
+        colors={[FADE_BG_SOLID, FADE_BG_CLEAR]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        pointerEvents="none"
+        style={styles.fadeOverlay}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // ✅ Wrapper that holds content + overlay
+  wrap: {
+    position: "relative",
+    backgroundColor: "transparent",
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+
+  // ✅ Your row of steps
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingHorizontal: 8,
+    flexDirection: "row",
+    backgroundColor: "#f5f5f0",  
+    alignItems: "center",
+    paddingHorizontal: 16,
   },
+
   stepContainer: {
-    alignItems: 'center',
-    flex: 1,
+    alignItems: "center",
+    minWidth: 86, // a bit wider so labels feel less cramped
   },
+
   circle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: TRACK,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
   },
+
   circleActive: {
-    backgroundColor: '#1b5e20',
+    backgroundColor: CHARCOAL, // ✅ charcoal inner bg
   },
+
   circleText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#666',
+    fontSize: 18,
+    fontWeight: "900",
+    color: MUTED,
   },
+
   circleTextActive: {
-    color: '#fff',
+    color: "#FFFFFF",
   },
+
   label: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: "800",
+    color: MUTED, // ✅ better than light gray
+    textAlign: "center",
   },
-  line: {
-    height: 2,
+
+  labelActive: {
+    color: CHARCOAL,
+  },
+
+  lineWrap: {
     flex: 1,
-    backgroundColor: '#e0e0e0',
-    marginHorizontal: 4,
-    marginBottom: 24,
+    alignItems: "center",
   },
+
+  line: {
+    height: 3,
+    width: "100%", // ✅ long line
+    backgroundColor: TRACK,
+    borderRadius: 999,
+    marginBottom: 30, // aligns with label baseline
+  },
+
   lineActive: {
-    backgroundColor: '#1b5e20',
+    backgroundColor: GREEN,
+  },
+
+  // ✅ Overlay that fades EVERYTHING under it
+  fadeOverlay: {
+    position: "absolute",
+    top: 81,
+    zIndex: -1,
+    left: 0,
+    right: 0,
+    height: 40, // tweak: 24–40 depending how strong you want the fade
   },
 });

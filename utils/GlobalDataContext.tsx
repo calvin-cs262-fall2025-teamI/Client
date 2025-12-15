@@ -4,7 +4,7 @@ import { createContext, PropsWithChildren, useContext, useEffect, useState } fro
 
 
 
-const GlobalDataContext = createContext<{users: UserType[], setUsers: React.Dispatch<React.SetStateAction<UserType[]>>}>({ users: [], setUsers: () => {}    });
+const GlobalDataContext = createContext<{users: UserType[], setUsers: React.Dispatch<React.SetStateAction<UserType[]>>, getCurrentUser: (userId: string) => UserType | null}>({ users: [], setUsers: () => {}, getCurrentUser: () => null });
 
 
 export default function GlobalDataProvider({ children }: PropsWithChildren<{}>) {
@@ -16,6 +16,8 @@ export default function GlobalDataProvider({ children }: PropsWithChildren<{}>) 
           const response = await fetch("https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users");
           const data = await response.json();
           setUsers(data);
+
+          
         } catch (error) {
           console.error("Error fetching users:", error);
         }
@@ -25,7 +27,9 @@ export default function GlobalDataProvider({ children }: PropsWithChildren<{}>) 
     }, []);
 
     return (
-        <GlobalDataContext.Provider value={{ users, setUsers }} >
+        <GlobalDataContext.Provider value={{ users, setUsers, getCurrentUser: (userId: string) => {
+          return users.find((u) => String(u.id) === String(userId)) || null;
+        } }} >
             {children}
         </GlobalDataContext.Provider>
 

@@ -17,6 +17,8 @@ import VehicleModal from "./components/VehicleModal";
 import VehiclesSection from "./components/VehicleSection";
 import { UserType, VehicleType } from "../../../../../types/admin.types";
 import { useEffect } from "react";
+import Ionicons from "@expo/vector-icons/build/Ionicons";
+import { headerStyles } from "@/utils/globalStyles";
 
 export default function EditUser() {
   const router = useRouter();
@@ -259,9 +261,20 @@ export default function EditUser() {
 
   return (
     <View style={styles.container}>
-      <Appbar.Header style={styles.header}>
-        <Appbar.Content title="User Details" titleStyle={styles.headerTitle} />
-      </Appbar.Header>
+     <View style={headerStyles.header}>
+  <View style={styles.headerRow}>
+    <Ionicons
+      name="arrow-back"
+      size={22}
+      color="#FFFFFF"
+      onPress={() => router.back()}
+    />
+
+    <Text style={styles.headerTitle}>
+      Edit User
+    </Text>
+  </View>
+</View>
 
       <ScrollView style={styles.content}>
         {user && <ProfileSection user={user} onUpdateProfile={handleUpdateProfile} />}
@@ -312,8 +325,14 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#388E3C",
   },
+   headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10, // clean spacing between arrow and text
+  },
   headerTitle: {
     color: "#fff",
+    fontSize: 20,
     fontWeight: "700",
   },
   content: {

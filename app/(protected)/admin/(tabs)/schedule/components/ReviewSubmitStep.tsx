@@ -109,6 +109,7 @@ export default function ReviewSubmitStep({
 
 const styles = StyleSheet.create({
   card: {
+    marginTop: 16,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,

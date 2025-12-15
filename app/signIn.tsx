@@ -117,7 +117,7 @@ const handleSignIn = async () => {
     // Save user session and redirect to appropriate screen
     login({
       role: data.user.role,
-      userId: data.user.id,
+      userId: String(data.user.id),
     });
 
   } catch (error: any) {
