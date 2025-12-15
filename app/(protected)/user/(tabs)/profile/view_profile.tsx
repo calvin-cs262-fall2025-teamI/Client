@@ -1,3 +1,4 @@
+import { headerStyles } from "@/utils/globalStyles";
 import { useRouter } from "expo-router";
 import {
   Briefcase,
@@ -207,12 +208,12 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <Appbar.Header style={styles.header}>
-        <Appbar.Content
-          title="Profile"
-          titleStyle={styles.headerTitle}
-        />
-      </Appbar.Header>
+  <View style={headerStyles.header}>
+        <View>
+          <Text style={headerStyles.headerTitle}>Profile</Text>
+          <Text style={headerStyles.headerSubtitle}>View your information</Text>
+        </View>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

@@ -1,3 +1,4 @@
+import { headerStyles } from "@/utils/globalStyles";
 import { useRouter } from "expo-router";
 import { Book, ChevronRight } from "lucide-react-native";
 import React, { useState } from "react";
@@ -61,12 +62,12 @@ export default function AdminHelpScreen() {
 
   return (
     <View style={styles.container}>
-      <Appbar.Header style={styles.header}>
-        <Appbar.Content
-          title="Admin Help Guide"
-          titleStyle={styles.headerTitle}
-        />
-      </Appbar.Header>
+       <View style={headerStyles.header}>
+            <View>
+              <Text style={headerStyles.headerTitle}>Admin Help Guide</Text>
+              <Text style={headerStyles.headerSubtitle}>Help guide for administrative tasks</Text>
+            </View>
+          </View>
 
       <ScrollView
         style={styles.content}

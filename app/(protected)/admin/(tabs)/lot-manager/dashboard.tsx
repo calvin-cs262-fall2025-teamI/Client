@@ -304,12 +304,25 @@ export default function LotManagerScreen() {
   return (
     <View style={{ flex: 1 }}>
       {/* Header */}
-      <View style={headerStyles.header}>
-        <View>
-          <Text style={headerStyles.headerTitle}>Parkmaster</Text>
-          <Text style={headerStyles.headerSubtitle}>Administration Dashboard</Text>
-        </View>
-      </View>
+     {/* Header */}
+<View style={headerStyles.header}>
+  <View style={{ flex: 1 }}>
+    <Text style={headerStyles.headerTitle}>Parkmaster</Text>
+    <Text style={headerStyles.headerSubtitle}>Administration Dashboard</Text>
+  </View>
+
+  {/* Right actions */}
+  <TouchableOpacity
+    onPress={handleSignOut}
+    accessibilityRole="button"
+    accessibilityLabel="Sign out"
+    style={styles.headerIconButton}
+    activeOpacity={0.7}
+  >
+    <Ionicons name="log-out-outline" size={28} color="#fff" />
+  </TouchableOpacity>
+</View>
+
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* System Overview Cards */}
@@ -438,7 +451,8 @@ export default function LotManagerScreen() {
           ))
         )}
 
-        <Button onPress={handleSignOut} title="Sign Out" />
+
+
       </ScrollView>
 
       {/* Notifications Modal */}
@@ -686,6 +700,11 @@ lotHeader: {
   alignItems: "flex-start", // instead of center
   marginBottom: 12,
 },
+headerIconButton: {
+  padding: 8,
+  borderRadius: 10,
+},
+
   lotName: {
     fontSize: 18,
     fontWeight: "600",

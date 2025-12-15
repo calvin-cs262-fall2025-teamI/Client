@@ -1,4 +1,5 @@
 // screens/user/EditProfile.tsx
+import { headerStyles } from "@/utils/globalStyles";
 import { useRouter } from "expo-router";
 import {
   ScrollView,
@@ -20,13 +21,12 @@ export default function EditProfile() {
 
   return (
     <View style={{ flex: 1 }}>
-<Appbar.Header style={styles.header}>
-  <Appbar.BackAction color="#fff" onPress={() => router.back()} />
-  <Appbar.Content
-    title="Edit Profile"
-    titleStyle={styles.headerTitle}
-  />
-</Appbar.Header>
+  <View style={headerStyles.header}>
+        <View>
+          <Text style={headerStyles.headerTitle}>Edit Profile</Text>
+          <Text style={headerStyles.headerSubtitle}>Update your information</Text>
+        </View>
+      </View>
 
     <ScrollView style={styles.container}>
 

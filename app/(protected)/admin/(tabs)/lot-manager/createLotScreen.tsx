@@ -1,17 +1,19 @@
+import { headerStyles } from "@/utils/globalStyles";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import {
   Alert,
   Button,
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
+  View,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Appbar } from "react-native-paper";
@@ -50,6 +52,7 @@ export default function CreateLotScreen() {
   const [cols, setCols] = useState("10");
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
+  const router = useRouter();
 
   const [editingUserId, setEditingUserId] = useState<string>("");
   const [editingStatus, setEditingStatus] = useState<SpaceStatus>("active");
@@ -359,11 +362,20 @@ export default function CreateLotScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
-        <Appbar.Content title="Create Parking Lot" color="#fff" />
-      </Appbar.Header>
+    <View >
+        <View style={headerStyles.header}>
+              <View style ={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                 <Ionicons
+      name="arrow-back"
+      size={22}
+      color="#FFFFFF"
+      onPress={() => router.back()}
+    />
+                <Text style={headerStyles.headerTitle}>Create Parking Lot</Text>
+                
+              </View>
+            </View>
+   
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Lot details */}
@@ -667,7 +679,7 @@ export default function CreateLotScreen() {
         animationType="fade"
         onRequestClose={() => setShowLocationModal(false)}
       >
-        <SafeAreaView style={styles.modalOverlay}>
+        <View style={styles.modalOverlay}>
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>Select Location</Text>
 
@@ -691,7 +703,7 @@ export default function CreateLotScreen() {
               <Text style={styles.modalButtonText}>Cancel</Text>
             </Pressable>
           </View>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* Edit Space Modal */}
@@ -701,7 +713,7 @@ export default function CreateLotScreen() {
         animationType="fade"
         onRequestClose={() => setEditingSpace(null)}
       >
-        <SafeAreaView style={styles.modalOverlay}>
+        <View style={styles.modalOverlay}>
           {editingSpace && (
             <View style={styles.modal}>
               <Text style={styles.modalTitle}>
@@ -796,9 +808,9 @@ export default function CreateLotScreen() {
               </Pressable>
             </View>
           )}
-        </SafeAreaView>
+        </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

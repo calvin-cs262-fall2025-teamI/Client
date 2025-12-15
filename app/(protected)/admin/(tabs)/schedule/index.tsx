@@ -453,8 +453,9 @@ export default function SchedulePage() {
   style={styles.stickyBtn}
   contentStyle={{ height: CTA_HEIGHT }}
   labelStyle={styles.stickyLabel}
+  onPress={() => router.push('/(protected)/admin/(tabs)/schedule/create_schedule')}
 >
-  Add New User
+  Create Schedule
 </Button>
 
 

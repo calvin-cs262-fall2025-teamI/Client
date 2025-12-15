@@ -1,3 +1,5 @@
+import { headerStyles } from "@/utils/globalStyles";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Edit2, MapPin, Trash2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
@@ -233,10 +235,18 @@ export default function ManageLotsScreen() {
 
   return (
     <View style={styles.container}>
-      <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
-        <Appbar.Content title="Manage Parking Lots" titleStyle={{ color: "#fff" }} />
-      </Appbar.Header>
+        <View style={headerStyles.header}>
+                    <View style ={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                       <Ionicons
+            name="arrow-back"
+            size={22}
+            color="#FFFFFF"
+            onPress={() => router.back()}
+          />
+                      <Text style={headerStyles.headerTitle}>Manage Parking Lots</Text>
+                      
+                    </View>
+                  </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
