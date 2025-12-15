@@ -1,16 +1,14 @@
 import { useAuth } from "@/utils/authContext";
 import { useRouter } from "expo-router";
 import {
-  Bell,
   Clock,
   HelpCircle,
-  LogOut,
   MapPin,
   MessageSquare,
   Navigation,
-  Search,
   X
 } from "lucide-react-native";
+import { headerStyles } from "@/utils/globalStyles";
 import React, { useState } from "react";
 import {
   Alert,
@@ -142,7 +140,6 @@ export default function ClientHomeScreen() {
 
 
 
-
   const handleOpenIssueModal = () => {
     setIsIssueModalVisible(true);
     setIssueMessage("");
@@ -209,30 +206,21 @@ export default function ClientHomeScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={headerStyles.header}>
         <View>
-          <Text style={styles.headerTitle}>Parkmaster</Text>
-          <Text style={styles.headerSubtitle}>Welcome back, John</Text>
+          <Text style={headerStyles.headerTitle}>Parkmaster</Text>
+          <Text style={headerStyles.headerSubtitle}>Welcome back, John</Text>
         </View>
-        <View style={styles.headerIcons}>
+        <View style={headerStyles.headerIcons}>
           {/* Help Button */}
           <TouchableOpacity
-            style={styles.iconButton}
+            style={headerStyles.iconButton}
             onPress={() => router.push("/user/(tabs)/help" as any)}
           >
             <HelpCircle color="#fff" size={24} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconButton}>
-            <Search color="#fff" size={24} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Bell color="#fff" size={24} />
-            <View style={styles.badge} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={handleSignOut}>
-            <LogOut color="#fff" size={24} />
-          </TouchableOpacity>
+          
         </View>
       </View>
 
@@ -428,31 +416,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8fafc",
   },
-  header: {
-    backgroundColor: "#388E3C",
-    padding: 20,
-    paddingBottom: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  headerSubtitle: {
-    color: "#d1fae5",
-    fontSize: 14,
-    marginTop: 2,
-  },
-  headerIcons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  iconButton: {
-    position: "relative",
-  },
+
+  
   badge: {
     position: "absolute",
     top: 0,

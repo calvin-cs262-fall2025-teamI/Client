@@ -1,5 +1,4 @@
 // CLIENT/app/screens/auth/signInScreen.tsx
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { Button, HelperText, Text, TextInput } from "react-native-paper";
@@ -9,7 +8,7 @@ import {useAuth} from "../utils/authContext";
 
 
 export default function SignInScreen() {
-  const router = useRouter();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
