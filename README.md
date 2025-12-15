@@ -1,8 +1,8 @@
 # Client
 This is the client application for the Ideal Teams application Parkmaster.
 
-# Links:
+## Links:
 
-[Project Repository](https://github.com/calvin-cs262-fall2025-teamI/Project)
+- [Project Repository](https://github.com/calvin-cs262-fall2025-teamI/Project)
 
-[Service Repository](https://github.com/calvin-cs262-fall2025-teamI/Service)
+- [Service Repository](https://github.com/calvin-cs262-fall2025-teamI/Service)
