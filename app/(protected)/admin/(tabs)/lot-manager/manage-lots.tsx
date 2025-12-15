@@ -45,18 +45,18 @@ export default function ManageLotsScreen() {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/api/parking-lots`);
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch parking lots");
       }
-      
+
       const data = await response.json();
-      
+
       // Parse JSONB fields from PostgreSQL - handle both string and already-parsed arrays
       const parsedLots = data.map((lot: any) => {
         let spaces = [];
         let merged_aisles = [];
-        
+
         // Handle spaces
         if (typeof lot.spaces === 'string') {
           try {
@@ -68,7 +68,7 @@ export default function ManageLotsScreen() {
         } else if (Array.isArray(lot.spaces)) {
           spaces = lot.spaces;
         }
-        
+
         // Handle merged_aisles
         if (typeof lot.merged_aisles === 'string') {
           try {
@@ -80,14 +80,14 @@ export default function ManageLotsScreen() {
         } else if (Array.isArray(lot.merged_aisles)) {
           merged_aisles = lot.merged_aisles;
         }
-        
+
         return {
           ...lot,
           spaces,
           merged_aisles
         };
       });
-      
+
       setParkingLots(parsedLots);
     } catch (error) {
       console.error("Error fetching parking lots:", error);
@@ -234,6 +234,7 @@ export default function ManageLotsScreen() {
   return (
     <View style={styles.container}>
       <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
+        <Appbar.BackAction color="#fff" onPress={() => router.back()} />
         <Appbar.Content title="Manage Parking Lots" titleStyle={{ color: "#fff" }} />
       </Appbar.Header>
 

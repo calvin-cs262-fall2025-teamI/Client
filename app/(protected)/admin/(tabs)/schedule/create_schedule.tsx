@@ -1,19 +1,20 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar } from 'react-native-paper';
+import ParkingStep from './components/ParkingStep';
 import ProgressIndicator from './components/ProgressIndicator';
 import ReservationParkingStep from './components/ReservationParkingStep';
 import ReviewSubmitStep from './components/ReviewSubmitStep';
 import type { ReservationData } from '@/types/global.types';
 import ParkingStep from './components/ParkingStep';
-import { router } from 'expo-router';
 
 
 
 export default function App() {
   const [currentStep, setCurrentStep] = useState<number>(1);
-  
-  
+
+
   const [reservationData, setReservationData] = useState<ReservationData>({
     user_id: undefined,
     user_name: undefined,
@@ -37,8 +38,8 @@ export default function App() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
- const handleSubmit = async () => {
-  const reservation = {
+  const handleSubmit = async () => {
+    const reservation = {
       user_id: reservationData.user_id,
       date: reservationData.date,
       start_time: reservationData.startTime,
@@ -47,20 +48,18 @@ export default function App() {
       recurring_days: reservationData.recurringDays,
       location: reservationData.location,
       parking_lot: reservationData.parkingLot,
-      row: reservationData.row,
-      col: reservationData.col,
   }
     try {
-      
-        // Example: send all occurrences to your API
-        await fetch(
-          'https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/schedules',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reservation),
-          }
-        );
+
+      // Example: send all occurrences to your API
+      await fetch(
+        'https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/schedules',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reservation),
+        }
+      );
 
         router.back();
 
@@ -73,21 +72,21 @@ export default function App() {
 
   return (
     <>
-      
+
       <View style={styles.container}>
-         <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-                <Appbar.Content title="Create a new Schedule" titleStyle={{ color: "#fff", fontWeight: "700" }} />
-              
-              </Appbar.Header>
+        <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
+          <Appbar.BackAction color="#fff" onPress={() => router.back()} />
+          <Appbar.Content title="Create a new Schedule" titleStyle={{ color: "#fff", fontWeight: "700" }} />
+        </Appbar.Header>
         {/* Fixed Header */}
         <View style={styles.fixedHeader}>
-       
-          
+
+
           <ProgressIndicator currentStep={currentStep} setCurrentStep={setCurrentStep} />
         </View>
 
         {/* Scrollable Content */}
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
