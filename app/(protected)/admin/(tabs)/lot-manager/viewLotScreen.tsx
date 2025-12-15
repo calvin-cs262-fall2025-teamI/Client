@@ -1,3 +1,5 @@
+import { headerStyles } from "@/utils/globalStyles";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
@@ -215,15 +217,25 @@ export default function ViewLotScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Appbar.Header style={{ backgroundColor: "#388E3C" }}>
-        <Appbar.BackAction onPress={() => router.back()} color="#fff" />
-        <Appbar.Content title={`View: ${lotName}`} titleStyle={{ color: "#fff" }} />
-        <Appbar.Action
+    
+
+        <View style={headerStyles.header}>
+                    <View style ={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                       <Ionicons
+            name="arrow-back"
+            size={22}
+            color="#FFFFFF"
+            onPress={() => router.back()}
+          />
+                      <Text style={headerStyles.headerTitle}>View Parking Lot</Text>
+                      <Appbar.Action
           icon={() => <Maximize2 color="#fff" size={20} />}
           onPress={() => setIsFullScreen(true)}
           color="#fff"
         />
-      </Appbar.Header>
+                      
+                    </View>
+                  </View>
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Lot Information Card */}

@@ -1,3 +1,4 @@
+import { headerStyles } from "@/utils/globalStyles";
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -263,16 +264,12 @@ export default function ReservationRequestScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#388E3C" />
 
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft color="#fff" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reservations</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <View style={headerStyles.header}>
+            <View>
+              <Text style={headerStyles.headerTitle}>Schedule</Text>
+              <Text style={headerStyles.headerSubtitle}>Upcoming Parking Schedule</Text>
+            </View>
+          </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.requestSection}>
