@@ -330,6 +330,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   card: {
+    marginTop: 16,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,

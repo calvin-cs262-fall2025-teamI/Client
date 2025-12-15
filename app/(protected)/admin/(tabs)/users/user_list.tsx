@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useGlobalData } from "@/utils/GlobalDataContext";
 import {
   Alert,
@@ -17,14 +17,22 @@ import {
   View,
 } from "react-native";
 import { Appbar } from "react-native-paper";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   validateEmail,
   validateName,
   validatePhoneNumber,
   ValidationErrors,
-} from '../../../../../utils/validationUtils';
+} from "../../../../../utils/validationUtils";
 import { UserType } from "../../../../../types/global.types";
+import { headerStyles } from "@/utils/globalStyles";
 
+const GREEN = "#388E3C";
+const CHARCOAL = "#1F2937";
+const MUTED = "#4B5563";
+const BG = "#F8FAFC";
+const CARD = "#FFFFFF";
+const BORDER = "rgba(15,23,42,0.08)";
 
 export default function UserList() {
   const [search, setSearch] = useState("");
@@ -42,14 +50,15 @@ export default function UserList() {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const router = useRouter();
   const { users, setUsers } = useGlobalData();
 
-  
- 
+  const CTA_HEIGHT = 56;
+
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
@@ -62,10 +71,10 @@ export default function UserList() {
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
-    
+
     // Clear error when user starts typing
-    if (errors[field]) {
-      const newErrors = { ...errors };
+    if ((errors as any)[field]) {
+      const newErrors = { ...errors } as any;
       delete newErrors[field];
       setErrors(newErrors);
     }
@@ -73,8 +82,7 @@ export default function UserList() {
 
   const handleFieldBlur = (field: string) => {
     setTouched({ ...touched, [field]: true });
-    
-    // Validate field on blur
+
     let validation;
     switch (field) {
       case "name":
@@ -89,7 +97,7 @@ export default function UserList() {
       default:
         return;
     }
-    
+
     if (!validation.isValid) {
       setErrors({ ...errors, [field]: validation.error || "" });
     }
@@ -111,33 +119,20 @@ export default function UserList() {
     const validationErrors: ValidationErrors = {};
 
     const nameValidation = validateName(formData.name);
-    if (!nameValidation.isValid) {
-      validationErrors.name = nameValidation.error!;
-    }
+    if (!nameValidation.isValid) validationErrors.name = nameValidation.error!;
 
     const emailValidation = validateEmail(formData.email);
-    if (!emailValidation.isValid) {
-      validationErrors.email = emailValidation.error!;
-    }
+    if (!emailValidation.isValid) validationErrors.email = emailValidation.error!;
 
     const phoneValidation = validatePhoneNumber(formData.phone);
-    if (!phoneValidation.isValid) {
-      validationErrors.phone = phoneValidation.error!;
-    }
+    if (!phoneValidation.isValid) validationErrors.phone = phoneValidation.error!;
 
-    if (!formData.role) {
-      validationErrors.role = "Role is required";
-    }
-
-    if (!formData.department) {
-      validationErrors.department = "Department is required";
-    }
-
+    if (!formData.role) validationErrors.role = "Role is required";
+    if (!formData.department) validationErrors.department = "Department is required";
     if (!formData.password || formData.password.length < 8) {
       validationErrors.password = "Password must be at least 8 characters";
     }
 
-    // If there are errors, set them and show alert
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       Alert.alert("Validation Error", "Please fix all errors before submitting");
@@ -147,12 +142,7 @@ export default function UserList() {
     try {
       setIsSubmitting(true);
 
-      // ============================================================
-      // FIXED: Use FormData instead of JSON
-      // ============================================================
       const formDataToSend = new FormData();
-      
-      // Add all text fields
       formDataToSend.append("name", formData.name);
       formDataToSend.append("email", formData.email);
       formDataToSend.append("phone", formData.phone);
@@ -161,38 +151,34 @@ export default function UserList() {
       formDataToSend.append("department", formData.department);
       formDataToSend.append("status", "active");
 
-      // Add avatar if selected
       if (avatar) {
-        // Extract file information
         const uriParts = avatar.split("/");
         const fileName = uriParts[uriParts.length - 1];
         const fileType = fileName.split(".").pop() || "jpg";
-        
-        // Create file object for upload
+
         const file = {
           uri: avatar,
           type: `image/${fileType}`,
           name: fileName || `avatar_${Date.now()}.${fileType}`,
         } as any;
-        
+
         formDataToSend.append("avatar", file);
-        console.log("📤 Uploading avatar:", fileName);
       }
 
-      // Make POST request with FormData
-      const response = await fetch('https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users', {
-        method: 'POST',
-        headers: {
-          // ⚠️ CRITICAL: Do NOT set Content-Type header!
-          // Let the browser set it automatically with the boundary
-        },
-        body: formDataToSend,
-      });
+      const response = await fetch(
+        "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users",
+        {
+          method: "POST",
+          headers: {
+            // Do NOT set Content-Type here (FormData boundary)
+          },
+          body: formDataToSend,
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle specific error cases
         if (response.status === 409) {
           Alert.alert("Error", "A user with this email already exists");
         } else {
@@ -201,9 +187,6 @@ export default function UserList() {
         return;
       }
 
-      console.log("✅ User created successfully:", data);
-
-      // Create user object from server response
       const newUser: UserType = {
         id: data.id.toString(),
         name: data.name,
@@ -215,10 +198,8 @@ export default function UserList() {
         avatar: data.avatar,
       };
 
-      // Update local state
-      setUsers(prevUsers => [...prevUsers, newUser]);
+      setUsers((prevUsers) => [...prevUsers, newUser]);
 
-      // Reset form and close modal
       setFormData({
         name: "",
         email: "",
@@ -234,7 +215,7 @@ export default function UserList() {
 
       Alert.alert("Success", `${newUser.name} has been added successfully!`);
     } catch (error) {
-      console.error('❌ Error adding user:', error);
+      console.error("❌ Error adding user:", error);
       Alert.alert("Error", "Network error. Please check your connection and try again.");
     } finally {
       setIsSubmitting(false);
@@ -256,25 +237,33 @@ export default function UserList() {
     setModalVisible(false);
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase()) ||
-      user.phone.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+
+    return users.filter(
+      (user) =>
+        user.name.toLowerCase().includes(q) ||
+        user.email.toLowerCase().includes(q) ||
+        user.phone.toLowerCase().includes(q)
+    );
+  }, [search, users]);
 
   return (
     <View style={styles.container}>
-      <Appbar.Header style={styles.header}>
-        <Appbar.Content title="Users" titleStyle={styles.headerTitle} />
-      </Appbar.Header>
-
+      <View style={headerStyles.header}>
+        <View>
+          <Text style={headerStyles.headerTitle}>Users</Text>
+          <Text style={headerStyles.headerSubtitle}>Manage user accounts and information</Text>
+        </View>
+      </View>
+      {/* Search */}
       <View style={styles.searchContainer}>
         <View style={styles.searchWrapper}>
-          <Search color="#64748b" size={18} style={{ marginRight: 8 }} />
+          <Search color={MUTED} size={18} style={{ marginRight: 8 }} />
           <TextInput
-            placeholder="Search users..."
-            placeholderTextColor="#94a3b8"
+            placeholder="Search by name, email, or phone…"
+            placeholderTextColor="#94A3B8"
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
@@ -282,53 +271,52 @@ export default function UserList() {
         </View>
       </View>
 
-      <View style={styles.addButtonContainer}>
-        <TouchableOpacity
-          onPress={() => setModalVisible(true)}
-          style={styles.addButton}
-        >
-          <Plus color="#fff" size={20} />
-          <Text style={styles.addButtonText}>Add New User</Text>
-        </TouchableOpacity>
-      </View>
-
+      {/* List */}
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: CTA_HEIGHT + 110 }]}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.scheduleCard}
+            style={styles.userCard}
+            activeOpacity={0.85}
             onPress={() => router.push(`/admin/users/edit_user?id=${item.id}`)}
           >
-            <View style={styles.scheduleIcon}>
+            <View style={styles.avatarWrap}>
               {item.avatar ? (
-                <Image
-                  source={{ uri: item.avatar }}
-                  style={styles.userAvatar}
-                />
+                <Image source={{ uri: item.avatar }} style={styles.userAvatar} />
               ) : (
-                <User color="#fff" size={24} />
+                <View style={styles.avatarFallback}>
+                  <User color={CHARCOAL} size={22} />
+                </View>
               )}
             </View>
-            <View style={styles.scheduleInfo}>
-              <Text style={styles.scheduleTitle}>{item.name}</Text>
-              <View style={styles.scheduleTime}>
-                <Phone size={14} color="#64748b" />
-                <Text style={styles.scheduleTimeText}>{item.phone}</Text>
+
+            <View style={styles.userInfo}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {item.name}
+              </Text>
+
+              <View style={styles.metaRow}>
+                <Phone size={14} color={MUTED} />
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {item.phone}
+                </Text>
               </View>
-              <View style={styles.scheduleTime}>
-                <Mail size={14} color="#64748b" />
-                <Text style={styles.scheduleTimeText}>{item.email}</Text>
+
+              <View style={styles.metaRow}>
+                <Mail size={14} color={MUTED} />
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {item.email}
+                </Text>
               </View>
+
               <View style={styles.tagRow}>
-                <View style={[styles.activeTagSmall, styles.roleTag]}>
-                  <Text style={styles.roleTagText}>{item.role}</Text>
+                <View style={styles.tagRole}>
+                  <Text style={styles.tagRoleText}>{item.role}</Text>
                 </View>
-                <View style={[styles.activeTagSmall, styles.departmentTag]}>
-                  <Text style={styles.departmentTagText}>
-                    {item.department}
-                  </Text>
+                <View style={styles.tagDept}>
+                  <Text style={styles.tagDeptText}>{item.department}</Text>
                 </View>
               </View>
             </View>
@@ -336,573 +324,501 @@ export default function UserList() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <User size={48} color="#cbd5e1" />
-            <Text style={styles.emptyStateText}>No users found</Text>
-            <Text style={styles.emptyStateSubtext}>
-              Try adjusting your search criteria
-            </Text>
+            <User size={46} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No users found</Text>
+            <Text style={styles.emptySub}>Try a different search.</Text>
           </View>
         }
       />
 
+      {/* ✅ Sticky Add New (bottom) */}
+      <View style={styles.stickyCta}>
+        <LinearGradient
+          colors={["rgba(248,250,252,1)", "rgba(248,250,252,0)"]}
+          locations={[0, 1]}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 0, y: 0 }}
+          style={styles.ctaFade}
+          pointerEvents="none"
+        />
+
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
+          style={styles.addBtn}
+          activeOpacity={0.9}
+        >
+          <Plus color="#fff" size={20} />
+          <Text style={styles.addBtnText}>Add New User</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Add User Modal */}
-      <Modal
-        animationType="slide"
-        transparent
-        visible={modalVisible}
-        onRequestClose={handleCloseModal}
-      >
-        <Pressable style={styles.modalOverlay} onPress={handleCloseModal}>
-          <Pressable
-            style={styles.modalContent}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New User</Text>
-              <TouchableOpacity
-                onPress={handleCloseModal}
-                style={styles.closeButton}
-                disabled={isSubmitting}
-              >
-                <X color="#64748b" size={24} />
+      <Modal animationType="slide" transparent visible={modalVisible} onRequestClose={handleCloseModal}>
+        {/* Backdrop */}
+        <Pressable style={styles.modalOverlay} onPress={handleCloseModal} />
+
+        {/* Sheet */}
+        <View style={styles.sheetWrap}>
+          <View style={styles.sheet}>
+            {/* Header */}
+            <View style={styles.sheetHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetKicker}>Users</Text>
+                <Text style={styles.sheetTitle}>Add new user</Text>
+              </View>
+
+              <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton} disabled={isSubmitting}>
+                <X color={MUTED} size={22} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
-              <TouchableOpacity
-                onPress={pickImage}
-                style={styles.avatarUpload}
-                disabled={isSubmitting}
-              >
+            {/* Body */}
+            <ScrollView style={styles.sheetBody} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
+              {/* Avatar */}
+              <TouchableOpacity onPress={pickImage} style={styles.avatarUpload} disabled={isSubmitting} activeOpacity={0.9}>
                 {avatar ? (
                   <Image source={{ uri: avatar }} style={styles.avatarImage} />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
-                    <User size={36} color="#94a3b8" />
+                    <User size={34} color="#94A3B8" />
                   </View>
                 )}
-                <Text style={styles.uploadText}>Upload Avatar</Text>
+                <Text style={styles.uploadText}>{avatar ? "Change avatar" : "Upload avatar"}</Text>
               </TouchableOpacity>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Full Name *
-                  {touched.name && errors.name && (
-                    <Text style={styles.required}> - {errors.name}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    touched.name && errors.name && styles.inputError,
-                  ]}
-                  placeholder="Enter full name"
-                  placeholderTextColor="#94a3b8"
-                  value={formData.name}
-                  onChangeText={(text) => handleFieldChange("name", text)}
-                  onBlur={() => handleFieldBlur("name")}
-                  editable={!isSubmitting}
-                />
-              </View>
+              {/* Inputs */}
+              <Field
+                label="Full name"
+                required
+                value={formData.name}
+                placeholder="Enter full name"
+                error={touched.name ? errors.name : undefined}
+                onChangeText={(t) => handleFieldChange("name", t)}
+                onBlur={() => handleFieldBlur("name")}
+                editable={!isSubmitting}
+              />
 
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Email Address *
-                  {touched.email && errors.email && (
-                    <Text style={styles.required}> - {errors.email}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    touched.email && errors.email && styles.inputError,
-                  ]}
-                  placeholder="user@parkmaster.com"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={formData.email}
-                  onChangeText={(text) => handleFieldChange("email", text)}
-                  onBlur={() => handleFieldBlur("email")}
-                  editable={!isSubmitting}
-                />
-              </View>
+              <Field
+                label="Email"
+                required
+                value={formData.email}
+                placeholder="user@parkmaster.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                error={touched.email ? errors.email : undefined}
+                onChangeText={(t) => handleFieldChange("email", t)}
+                onBlur={() => handleFieldBlur("email")}
+                editable={!isSubmitting}
+              />
 
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Password *
-                  {touched.password && errors.password && (
-                    <Text style={styles.required}> - {errors.password}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    touched.password && errors.password && styles.inputError,
-                  ]}
-                  placeholder="Enter password"
-                  placeholderTextColor="#94a3b8"
-                  secureTextEntry
-                  value={formData.password}
-                  onChangeText={(text) => handleFieldChange("password", text)}
-                  onBlur={() => handleFieldBlur("password")}
-                  editable={!isSubmitting}
-                />
-              </View>
+              <Field
+                label="Password"
+                required
+                value={formData.password}
+                placeholder="At least 8 characters"
+                secureTextEntry
+                error={touched.password ? errors.password : undefined}
+                onChangeText={(t) => handleFieldChange("password", t)}
+                onBlur={() => setTouched({ ...touched, password: true })}
+                editable={!isSubmitting}
+              />
 
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Phone Number *
-                  {touched.phone && errors.phone && (
-                    <Text style={styles.required}> - {errors.phone}</Text>
-                  )}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    touched.phone && errors.phone && styles.inputError,
-                  ]}
-                  placeholder="+1 (555) 123-4567"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="phone-pad"
-                  value={formData.phone}
-                  onChangeText={(text) => handleFieldChange("phone", text)}
-                  onBlur={() => handleFieldBlur("phone")}
-                  editable={!isSubmitting}
-                />
-              </View>
+              <Field
+                label="Phone"
+                required
+                value={formData.phone}
+                placeholder="+1 (555) 123-4567"
+                keyboardType="phone-pad"
+                error={touched.phone ? errors.phone : undefined}
+                onChangeText={(t) => handleFieldChange("phone", t)}
+                onBlur={() => handleFieldBlur("phone")}
+                editable={!isSubmitting}
+              />
 
+              {/* Role */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>
-                  Role *
-                  {touched.role && errors.role && (
-                    <Text style={styles.required}> - {errors.role}</Text>
-                  )}
+                  Role <Text style={styles.star}>*</Text>
                 </Text>
-                <View style={styles.roleContainer}>
-                  {["user", "admin"].map((role) => (
-                    <TouchableOpacity
-                      key={role}
-                      style={[
-                        styles.roleButton,
-                        formData.role === role && styles.roleButtonActive,
-                      ]}
-                      onPress={() => {
-                        handleFieldChange("role", role);
-                        setTouched({ ...touched, role: true });
-                      }}
-                      disabled={isSubmitting}
-                    >
-                      <Text
-                        style={[
-                          styles.roleButtonText,
-                          formData.role === role && styles.roleButtonTextActive,
-                        ]}
+
+                {!!(touched.role && errors.role) && <Text style={styles.errorText}>{errors.role}</Text>}
+
+                <View style={styles.pillsRow}>
+                  {["user", "admin"].map((role) => {
+                    const active = formData.role === role;
+                    return (
+                      <TouchableOpacity
+                        key={role}
+                        style={[styles.pillBtn, active && styles.pillBtnActive]}
+                        onPress={() => {
+                          handleFieldChange("role", role);
+                          setTouched({ ...touched, role: true });
+                        }}
+                        disabled={isSubmitting}
+                        activeOpacity={0.85}
                       >
-                        {role.charAt(0).toUpperCase() + role.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text style={[styles.pillText, active && styles.pillTextActive]}>
+                          {role.charAt(0).toUpperCase() + role.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
+              {/* Department */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>
-                  Department *
-                  {touched.department && errors.department && (
-                    <Text style={styles.required}> - {errors.department}</Text>
-                  )}
+                  Department <Text style={styles.star}>*</Text>
                 </Text>
-                <View style={styles.roleContainer}>
-                  {["Operations", "Finance", "HR", "IT", "Marketing"].map(
-                    (dept) => (
+
+                {!!(touched.department && errors.department) && (
+                  <Text style={styles.errorText}>{errors.department}</Text>
+                )}
+
+                <View style={styles.pillsRow}>
+                  {["Operations", "Finance", "HR", "IT", "Marketing"].map((dept) => {
+                    const active = formData.department === dept;
+                    return (
                       <TouchableOpacity
                         key={dept}
-                        style={[
-                          styles.departmentButton,
-                          formData.department === dept &&
-                            styles.roleButtonActive,
-                        ]}
+                        style={[styles.pillBtn, active && styles.pillBtnActive]}
                         onPress={() => {
                           handleFieldChange("department", dept);
                           setTouched({ ...touched, department: true });
                         }}
                         disabled={isSubmitting}
+                        activeOpacity={0.85}
                       >
-                        <Text
-                          style={[
-                            styles.roleButtonText,
-                            formData.department === dept &&
-                              styles.roleButtonTextActive,
-                          ]}
-                        >
-                          {dept}
-                        </Text>
+                        <Text style={[styles.pillText, active && styles.pillTextActive]}>{dept}</Text>
                       </TouchableOpacity>
-                    )
-                  )}
+                    );
+                  })}
                 </View>
               </View>
 
-              <View style={styles.infoBox}>
-                <Text style={styles.infoText}>
-                  All fields marked with * are required. Please ensure all
-                  information is accurate.
-                </Text>
-              </View>
+              <Text style={styles.helper}>
+                Fields marked with <Text style={{ fontWeight: "900" }}>*</Text> are required.
+              </Text>
             </ScrollView>
 
-            <View style={styles.modalFooter}>
+            {/* Footer */}
+            <View style={styles.sheetFooter}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={handleCloseModal}
                 disabled={isSubmitting}
+                activeOpacity={0.9}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  isSubmitting && styles.submitButtonDisabled,
-                ]}
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
                 onPress={handleAddUser}
                 disabled={isSubmitting}
+                activeOpacity={0.9}
               >
                 <Text style={styles.submitButtonText}>
-                  {isSubmitting ? "Adding..." : "Add User"}
+                  {isSubmitting ? "Adding…" : "Add User"}
                 </Text>
               </TouchableOpacity>
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );
 }
 
+/* -----------------------------
+   Small “Field” helper
+----------------------------- */
+function Field(props: {
+  label: string;
+  required?: boolean;
+  value: string;
+  placeholder: string;
+  onChangeText: (t: string) => void;
+  onBlur?: () => void;
+  error?: string;
+  editable?: boolean;
+  keyboardType?: any;
+  autoCapitalize?: any;
+  secureTextEntry?: boolean;
+}) {
+  const {
+    label,
+    required,
+    value,
+    placeholder,
+    onChangeText,
+    onBlur,
+    error,
+    editable = true,
+    keyboardType,
+    autoCapitalize,
+    secureTextEntry,
+  } = props;
+
+  return (
+    <View style={styles.formGroup}>
+      <Text style={styles.label}>
+        {label} {required ? <Text style={styles.star}>*</Text> : null}
+      </Text>
+
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+      <TextInput
+        style={[styles.input, !!error && styles.inputError, !editable && styles.inputDisabled]}
+        placeholder={placeholder}
+        placeholderTextColor="#94A3B8"
+        value={value}
+        onChangeText={onChangeText}
+        onBlur={onBlur}
+        editable={editable}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
+      />
+    </View>
+  );
+}
+
+/* -----------------------------
+   Styles
+----------------------------- */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  header: {
-    backgroundColor: "#388E3C",
-  },
-  headerTitle: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
+  container: { flex: 1, backgroundColor: BG },
+
+  header: { backgroundColor: GREEN },
+  headerTitle: { color: "#fff", fontWeight: "900" },
+
+  searchContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10 },
   searchWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: CARD,
+    borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: BORDER,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#0f172a",
+  searchInput: { flex: 1, fontSize: 14, fontWeight: "700", color: CHARCOAL },
+
+  listContent: { paddingHorizontal: 16, paddingTop: 4 },
+
+  userCard: {
+    backgroundColor: CARD,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: "row",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
   },
-  addButtonContainer: {
+
+  avatarWrap: { width: 52, height: 52 },
+  userAvatar: { width: 52, height: 52, borderRadius: 14, backgroundColor: "#E5E7EB" },
+  avatarFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: "rgba(31,41,55,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  userInfo: { flex: 1, minWidth: 0 },
+  userName: { fontSize: 16, fontWeight: "900", color: CHARCOAL },
+
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  metaText: { fontSize: 13, fontWeight: "700", color: MUTED, flex: 1 },
+
+  tagRow: { flexDirection: "row", gap: 8, marginTop: 10, flexWrap: "wrap" },
+  tagRole: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(56,142,60,0.14)",
+  },
+  tagRoleText: { fontSize: 12, fontWeight: "900", color: GREEN, textTransform: "capitalize" },
+  tagDept: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(31,41,55,0.10)",
+  },
+  tagDeptText: { fontSize: 12, fontWeight: "900", color: CHARCOAL },
+
+  emptyState: { alignItems: "center", justifyContent: "center", paddingVertical: 70 },
+  emptyTitle: { marginTop: 12, fontSize: 18, fontWeight: "900", color: MUTED },
+  emptySub: { marginTop: 4, fontSize: 14, fontWeight: "700", color: "#94A3B8" },
+
+  /* Sticky CTA */
+  stickyCta: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     paddingHorizontal: 16,
+    paddingTop: 10,
     paddingBottom: 12,
   },
-  addButton: {
-    backgroundColor: "#388E3C",
+  ctaFade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 90,
+  },
+  addBtn: {
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: GREEN,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 14,
-    borderRadius: 8,
-    gap: 8,
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-  scheduleCard: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#388E3C",
+    gap: 10,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
-  scheduleIcon: {
-    backgroundColor: "#388E3C",
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-  },
-  userAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-  },
-  scheduleInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  scheduleTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0f172a",
-    marginBottom: 4,
-  },
-  scheduleTime: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 6,
-  },
-  scheduleTimeText: {
-    color: "#64748b",
-    fontSize: 13,
-  },
-  tagRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  activeTagSmall: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  roleTag: {
-    backgroundColor: "#388E3C",
-  },
-  roleTagText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  departmentTag: {
-    backgroundColor: "#fbbf24",
-    borderRadius: 10,
-  },
-  departmentTagText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#475569",
-    marginTop: 12,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: "#94a3b8",
-    marginTop: 4,
-  },
+  addBtnText: { color: "#fff", fontSize: 16, fontWeight: "900" },
+
+  /* Modal */
   modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.40)",
   },
-  modalContent: {
-    backgroundColor: "#fff",
+  sheetWrap: { flex: 1, justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: CARD,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "90%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: "hidden",
+    maxHeight: "92%",
   },
-  modalHeader: {
+
+  sheetHeader: {
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 12,
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: BORDER,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#0f172a",
+  sheetKicker: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: MUTED,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
+  sheetTitle: { marginTop: 2, fontSize: 20, fontWeight: "900", color: CHARCOAL },
   closeButton: {
-    padding: 4,
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: 500,
-  },
-  avatarUpload: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: "center",
-    marginBottom: 24,
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.05)",
   },
+
+  sheetBody: { paddingHorizontal: 18, paddingTop: 14 },
+
+  avatarUpload: { alignItems: "center", marginBottom: 18 },
   avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     borderWidth: 3,
-    borderColor: "#388E3C",
+    borderColor: "rgba(56,142,60,0.35)",
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#f1f5f9",
-    justifyContent: "center",
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#F1F5F9",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: BORDER,
   },
-  uploadText: {
-    color: "#388E3C",
-    fontWeight: "600",
-    marginTop: 12,
-    fontSize: 14,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0f172a",
-    marginBottom: 8,
-  },
-  required: {
-    color: "#F44336",
-    fontSize: 12,
-    fontWeight: "500",
-  },
+  uploadText: { marginTop: 10, color: GREEN, fontWeight: "900", fontSize: 14 },
+
+  formGroup: { marginTop: 12 },
+  label: { fontSize: 13, fontWeight: "900", color: CHARCOAL, marginBottom: 8 },
+  star: { color: "#DC2626" },
+  errorText: { fontSize: 12, fontWeight: "800", color: "#DC2626", marginBottom: 8 },
+
   input: {
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
-    color: "#0f172a",
-    backgroundColor: "#f9fafb",
-  },
-  inputError: {
-    borderColor: "#F44336",
-    borderWidth: 2,
-    backgroundColor: "#fef2f2",
-  },
-  roleContainer: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  roleButton: {
-    flex: 1,
-    minWidth: "45%",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#fff",
-    alignItems: "center",
-  },
-  roleButtonActive: {
-    backgroundColor: "#388E3C",
-    borderColor: "#388E3C",
-  },
-  roleButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  roleButtonTextActive: {
-    color: "#fff",
-  },
-  departmentButton: {
-    minWidth: "30%",
-    paddingVertical: 12,
+    borderColor: BORDER,
+    borderRadius: 14,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: "800",
+    color: CHARCOAL,
+    backgroundColor: "#F9FAFB",
+  },
+  inputError: { borderColor: "rgba(220,38,38,0.55)", backgroundColor: "rgba(254,242,242,1)" },
+  inputDisabled: { opacity: 0.7 },
+
+  pillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  pillBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#fff",
-    alignItems: "center",
-    marginBottom: 8,
+    borderColor: BORDER,
+    backgroundColor: CARD,
   },
-  infoBox: {
-    backgroundColor: "#f0f9ff",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
-    marginTop: 4,
-  },
-  infoText: {
-    fontSize: 13,
-    color: "#1e40af",
-    lineHeight: 18,
-  },
-  modalFooter: {
+  pillBtnActive: { backgroundColor: CHARCOAL, borderColor: CHARCOAL },
+  pillText: { fontSize: 13, fontWeight: "900", color: MUTED },
+  pillTextActive: { color: "#fff" },
+
+  helper: { marginTop: 14, marginBottom: 10, fontSize: 13, fontWeight: "700", color: MUTED },
+
+  sheetFooter: {
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 14,
     flexDirection: "row",
-    padding: 20,
-    gap: 12,
+    gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
+    borderTopColor: BORDER,
+    backgroundColor: CARD,
   },
   cancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
+    height: 52,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#cbd5e1",
+    borderColor: BORDER,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: CARD,
   },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#475569",
-  },
+  cancelButtonText: { fontSize: 15, fontWeight: "900", color: CHARCOAL },
+
   submitButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    backgroundColor: "#388E3C",
+    height: 52,
+    borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: GREEN,
   },
-  submitButtonDisabled: {
-    backgroundColor: "#94a3b8",
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-  },
+  submitButtonDisabled: { opacity: 0.6 },
+  submitButtonText: { fontSize: 15, fontWeight: "900", color: "#fff" },
 });

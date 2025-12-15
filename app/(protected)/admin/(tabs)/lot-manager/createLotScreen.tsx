@@ -373,6 +373,7 @@ export default function CreateLotScreen() {
             value={lotName}
             setValue={setLotName}
             textType="default"
+            instantUpdate={true}
             disabled={isGenerating}
           />
           <LabelInput
