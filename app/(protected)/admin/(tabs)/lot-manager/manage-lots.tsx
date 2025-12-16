@@ -372,18 +372,18 @@ export default function ManageLotsScreen() {
 
   return (
     <View style={styles.container}>
-        <View style={headerStyles.header}>
-                    <View style ={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                       <Ionicons
+      <View style={headerStyles.header}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Ionicons
             name="arrow-back"
             size={22}
             color="#FFFFFF"
             onPress={() => router.back()}
           />
-                      <Text style={headerStyles.headerTitle}>Manage Parking Lots</Text>
-                      
-                    </View>
-                  </View>
+          <Text style={headerStyles.headerTitle}>Manage Parking Lots</Text>
+
+        </View>
+      </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>

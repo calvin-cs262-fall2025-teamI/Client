@@ -161,12 +161,12 @@ export default function ParkingStep({
           (space.user_id === null || space.user_id === undefined)
       )
       .map(space => ({
-  id: space.id,
-  label: `Row ${space.row + 1} · Spot ${space.col + 1}`,
-  value: `${space.row}-${space.col}`, // ✅ REQUIRED
-  row: space.row + 1,
-  col: space.col + 1,
-}));
+        id: space.id,
+        label: `Row ${space.row + 1} · Spot ${space.col + 1}`,
+        value: `${space.row}-${space.col}`, // ✅ REQUIRED
+        row: space.row + 1,
+        col: space.col + 1,
+      }));
   }, [parkingLots, reservationData.parkingLot, reservationData.location]);
 
   /**
@@ -356,8 +356,8 @@ export default function ParkingStep({
                 !reservationData.location
                   ? 'Select location first'
                   : !lotFocus
-                  ? 'Select parking lot'
-                  : '...'
+                    ? 'Select parking lot'
+                    : '...'
               }
               searchPlaceholder="Search lot..."
               value={reservationData.parkingLot}
@@ -410,8 +410,8 @@ export default function ParkingStep({
                 !reservationData.parkingLot
                   ? 'Select parking lot first'
                   : !spotFocus
-                  ? 'Select available spot'
-                  : '...'
+                    ? 'Select available spot'
+                    : '...'
               }
               searchPlaceholder="Search spot..."
               onFocus={() => setSpotFocus(true)}

@@ -96,7 +96,7 @@ export default function App() {
       col: reservationData.col,
 
       parking_lot: reservationData.parkingLot,
-  }
+    }
     try {
 
       // Example: send all occurrences to your API
@@ -109,7 +109,7 @@ export default function App() {
         }
       );
 
-        router.back();
+      router.back();
 
       // maybe navigate away or show success here
     } catch (err) {
@@ -122,29 +122,29 @@ export default function App() {
     <>
 
       <View style={styles.container}>
-       
-         <View style={headerStyles.header}>
-  <View style={styles.headerRow}>
-    <Ionicons
-      name="arrow-back"
-      size={22}
-      color="#FFFFFF"
-      onPress={() => router.back()}
-    />
 
-    <Text style={styles.headerTitle}>
-      Create Schedule
-    </Text>
-  </View>
-</View>
+        <View style={headerStyles.header}>
+          <View style={styles.headerRow}>
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color="#FFFFFF"
+              onPress={() => router.back()}
+            />
+
+            <Text style={styles.headerTitle}>
+              Create Schedule
+            </Text>
+          </View>
+        </View>
 
         {/* Fixed Header */}
-   <View style={styles.fixedHeader}>
-  <ProgressIndicator
-    currentStep={currentStep}
-    setCurrentStep={setCurrentStep}
-  />
-</View>
+        <View style={styles.fixedHeader}>
+          <ProgressIndicator
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+          />
+        </View>
 
 
         {/* Scrollable Content */}
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f0',
   },
-    headerRow: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10, // clean spacing between arrow and text
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-    headerTitle: {
+  headerTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#FFFFFF",

@@ -60,25 +60,25 @@ interface Issue {
  */
 export default function ClientHomeScreen() {
   const router = useRouter();
-const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
-const [issueMessage, setIssueMessage] = useState("");
-const [currentTime, setCurrentTime] = useState(new Date());
+  const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
+  const [issueMessage, setIssueMessage] = useState("");
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-const { getCurrentUser } = useGlobalData();
-const { authState } = useAuth();
+  const { getCurrentUser } = useGlobalData();
+  const { authState } = useAuth();
 
-useEffect(() => {
-  if (!authState.userId) {
-    console.log("No user logged in");
-    return;
-  }
+  useEffect(() => {
+    if (!authState.userId) {
+      console.log("No user logged in");
+      return;
+    }
 
-  console.log("User ID from Auth State:", authState.userId);
+    console.log("User ID from Auth State:", authState.userId);
 
-  const currentUser: UserType | null = getCurrentUser(authState.userId);
+    const currentUser: UserType | null = getCurrentUser(authState.userId);
 
-  console.log("Current User:", currentUser);
-}, [authState.userId, getCurrentUser]);
+    console.log("Current User:", currentUser);
+  }, [authState.userId, getCurrentUser]);
 
 
   /**
@@ -167,12 +167,12 @@ useEffect(() => {
     setIssueMessage("");
   };
 
-    /**
-   * Closes the issue report modal and clears the input field
-   * 
-   * @function handleCloseIssueModal
-   * @returns {void}
-   */
+  /**
+ * Closes the issue report modal and clears the input field
+ * 
+ * @function handleCloseIssueModal
+ * @returns {void}
+ */
   const handleCloseIssueModal = () => {
     setIsIssueModalVisible(false);
     setIssueMessage("");
@@ -263,7 +263,7 @@ useEffect(() => {
             <HelpCircle color="#fff" size={24} />
           </TouchableOpacity>
 
-          
+
         </View>
       </View>
 
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
 
-  
+
   badge: {
     position: "absolute",
     top: 0,

@@ -221,17 +221,17 @@ export default function LotManagerScreen() {
     return "#F44336";
   };
 
-    /**
-   * Determines color for available spots indicator
-   * Inverse of occupied spots logic:
-   * - Green: > 50% available (plenty of space)
-   * - Yellow: 20-50% available (moderate availability)
-   * - Red: < 20% available (low availability)
-   * 
-   * @param available - Number of available spots
-   * @param total - Total capacity
-   * @returns Hex color code
-   */
+  /**
+ * Determines color for available spots indicator
+ * Inverse of occupied spots logic:
+ * - Green: > 50% available (plenty of space)
+ * - Yellow: 20-50% available (moderate availability)
+ * - Red: < 20% available (low availability)
+ * 
+ * @param available - Number of available spots
+ * @param total - Total capacity
+ * @returns Hex color code
+ */
   const getAvailableSpotsColor = (available: number, total: number) => {
     if (total === 0) return "#757575";
     const ratio = available / total;
