@@ -11,6 +11,14 @@ import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
 type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
 
+/**
+ * Represents a single parking space in the lot
+ * @interface Space
+ * @property {number} id - Unique identifier for the space
+ * @property {number} row - Row index (0-based)
+ * @property {number} col - Column index (0-based)
+ * @property {SpaceType} type - Type of parking space
+ */
 interface Space {
   id: number;
   row: number;
@@ -18,6 +26,16 @@ interface Space {
   type: SpaceType;
 }
 
+/**
+ * Represents a complete parking lot structure
+ * @interface ParkingLot
+ * @property {number} id - Unique identifier for the parking lot
+ * @property {string} name - Display name of the parking lot
+ * @property {number} rows - Number of rows in the lot
+ * @property {number} cols - Number of columns in the lot
+ * @property {Space[]} spaces - Array of all parking spaces
+ * @property {number[]} merged_aisles - Array of row indices where aisles are merged
+ */
 interface ParkingLot {
   id: number;
   name: string;
@@ -27,6 +45,31 @@ interface ParkingLot {
   merged_aisles: number[];
 }
 
+/**
+ * ViewLotScreen - Read-only visualization screen for parking lot layouts
+ * 
+ * This component provides a comprehensive view of a parking lot including:
+ * - Interactive visual representation with SVG rendering
+ * - Zoom and pan controls (pinch gestures and buttons)
+ * - Full-screen viewing mode
+ * - Space type statistics and distribution
+ * - Color-coded space types with legend
+ * - Merged aisle information display
+ * 
+ * The screen is intended for viewing purposes only - no editing capabilities.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered view lot screen
+ * 
+ * @example
+ * ```tsx
+ * // Navigate with lot data
+ * router.push({
+ *   pathname: '/view-lot',
+ *   params: { lotData: JSON.stringify(parkingLotObject) }
+ * });
+ * ```
+ */
 export default function ViewLotScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -75,6 +118,16 @@ export default function ViewLotScreen() {
     }
   }, [params.lotData]);
 
+  /**
+   * Generates default parking spaces for a given grid size
+   * All spaces are initialized as "regular" type
+   * Fallback when lot data doesn't include space information
+   * 
+   * @function generateDefaultSpaces
+   * @param {number} numRows - Number of rows to generate
+   * @param {number} numCols - Number of columns to generate
+   * @returns {void}
+   */
   const generateDefaultSpaces = (numRows: number, numCols: number) => {
     let id = 1;
     const arr: Space[] = [];
@@ -86,10 +139,25 @@ export default function ViewLotScreen() {
     setSpaces(arr);
   };
 
+  /**
+   * Gets the aisle width after a specific row
+   * Returns merged width if the aisle has been merged, standard width otherwise
+   * 
+   * @function getAisleWidth
+   * @param {number} afterRow - The row index to check after
+   * @returns {number} The width of the aisle in meters
+   */
   const getAisleWidth = (afterRow: number) => {
     return mergedAisles.has(afterRow) ? mergedAisleWidth : aisleWidth;
   };
 
+  /**
+   * Calculates the total height of the parking lot
+   * Accounts for all rows and aisles (both standard and merged)
+   * 
+   * @function calculateLotHeight
+   * @returns {number} Total height in meters
+   */
   const calculateLotHeight = () => {
     let totalHeight = 0;
     for (let r = 0; r < rows; r++) {
@@ -101,6 +169,14 @@ export default function ViewLotScreen() {
     return totalHeight;
   };
 
+  /**
+   * Calculates the Y position for a given row
+   * Takes into account all previous rows and their aisles
+   * 
+   * @function getRowYPosition
+   * @param {number} row - The row index to calculate position for
+   * @returns {number} Y coordinate in meters
+   */
   const getRowYPosition = (row: number) => {
     let y = 0;
     for (let r = 0; r < row; r++) {
@@ -112,6 +188,11 @@ export default function ViewLotScreen() {
   const lotWidth = cols * spaceWidth;
   const lotHeight = calculateLotHeight();
 
+  /**
+   * Pinch gesture handler for zooming the parking lot view
+   * Updates the scale value based on pinch gesture
+   * Saves scale state when gesture ends
+   */
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
       scale.value = savedScale.value * e.scale;
@@ -120,17 +201,40 @@ export default function ViewLotScreen() {
       savedScale.value = scale.value;
     });
 
+  /**
+ * Resets the zoom level to default (1x)
+ * Animates the transition with a spring animation
+ * 
+ * @function handleResetZoom
+ * @returns {void}
+ */
   const handleResetZoom = () => {
     scale.value = withSpring(1);
     savedScale.value = 1;
   };
 
+  /**
+   * Increases zoom level by 30%
+   * Maximum zoom is capped at 5x
+   * Animates the transition smoothly
+   * 
+   * @function handleZoomIn
+   * @returns {void}
+   */
   const handleZoomIn = () => {
     const newScale = Math.min(savedScale.value * 1.3, 5);
     scale.value = withSpring(newScale);
     savedScale.value = newScale;
   };
 
+  /**
+   * Decreases zoom level by 30%
+   * Minimum zoom is capped at 0.5x
+   * Animates the transition smoothly
+   * 
+   * @function handleZoomOut
+   * @returns {void}
+   */
   const handleZoomOut = () => {
     const newScale = Math.max(savedScale.value * 0.7, 0.5);
     scale.value = withSpring(newScale);
@@ -143,6 +247,18 @@ export default function ViewLotScreen() {
     };
   });
 
+  /**
+   * Gets the color code for a parking space based on its type
+   * 
+   * @function getSpaceColor
+   * @param {SpaceType} type - The type of parking space
+   * @returns {string} Hex color code
+   * 
+   * @example
+   * ```tsx
+   * const color = getSpaceColor("visitor"); // Returns "#FBC02D"
+   * ```
+   */
   const getSpaceColor = (type: SpaceType) => {
     switch (type) {
       case "visitor":
@@ -156,10 +272,33 @@ export default function ViewLotScreen() {
     }
   };
 
+  /**
+   * Counts the number of spaces of a specific type in the parking lot
+   * 
+   * @function getSpaceTypeCount
+   * @param {SpaceType} type - The space type to count
+   * @returns {number} The number of spaces of the specified type
+   * 
+   * @example
+   * ```tsx
+   * const handicappedCount = getSpaceTypeCount("handicapped");
+   * console.log(`Handicapped spaces: ${handicappedCount}`);
+   * ```
+   */
   const getSpaceTypeCount = (type: SpaceType) => {
     return spaces.filter(s => s.type === type).length;
   };
 
+  /**
+   * Renders the parking lot visualization
+   * Creates an SVG representation of the lot with:
+   * - Color-coded spaces
+   * - Space IDs
+   * - Interactive gestures (pinch to zoom, drag to pan)
+   * 
+   * @function renderParkingLot
+   * @returns {JSX.Element} The rendered parking lot SVG wrapped in gesture handlers
+   */
   const renderParkingLot = () => (
     <ScrollView horizontal style={styles.canvas}>
       <GestureDetector gesture={pinchGesture}>
@@ -217,25 +356,25 @@ export default function ViewLotScreen() {
 
   return (
     <View style={styles.safeArea}>
-    
 
-        <View style={headerStyles.header}>
-                    <View style ={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                       <Ionicons
+
+      <View style={headerStyles.header}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Ionicons
             name="arrow-back"
             size={22}
             color="#FFFFFF"
             onPress={() => router.back()}
           />
-                      <Text style={headerStyles.headerTitle}>View Parking Lot</Text>
-                      <Appbar.Action
-          icon={() => <Maximize2 color="#fff" size={20} />}
-          onPress={() => setIsFullScreen(true)}
-          color="#fff"
-        />
-                      
-                    </View>
-                  </View>
+          <Text style={headerStyles.headerTitle}>View Parking Lot</Text>
+          <Appbar.Action
+            icon={() => <Maximize2 color="#fff" size={20} />}
+            onPress={() => setIsFullScreen(true)}
+            color="#fff"
+          />
+
+        </View>
+      </View>
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Lot Information Card */}
@@ -377,6 +516,27 @@ export default function ViewLotScreen() {
   );
 }
 
+/**
+ * Legend - Displays color-coded legend for parking space types
+ * 
+ * Can be rendered in two modes:
+ * - Standard: Vertical list with larger elements
+ * - Compact: Horizontal row with smaller elements (for full-screen mode)
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {boolean} [props.compact=false] - Whether to render in compact mode
+ * @returns {JSX.Element} The rendered legend component
+ * 
+ * @example
+ * ```tsx
+ * // Standard legend
+ * <Legend />
+ * 
+ * // Compact legend for full-screen
+ * <Legend compact />
+ * ```
+ */
 function Legend({ compact = false }: { compact?: boolean }) {
   const legendItems: { type: SpaceType; label: string; color: string }[] = [
     { type: "regular", label: "Regular", color: "#fff" },

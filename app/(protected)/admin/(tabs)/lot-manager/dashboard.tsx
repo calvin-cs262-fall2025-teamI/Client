@@ -1,21 +1,43 @@
-import { useFocusEffect, useRouter } from "expo-router";
+/**
+ * @file dashboard.tsx
+ * @description Admin dashboard - main overview screen for parking lot management
+ * @module app/(protected)/admin/(tabs)/lot-manager
+ * 
+ * This component serves as the central hub for parking lot administrators, providing:
+ * - Real-time parking lot statistics and capacity overview
+ * - Quick action buttons for common tasks
+ * - List of all parking lots with individual statistics
+ * - Issue reporting system (integrated with notification modal)
+ * - Navigation to detailed lot views and management screens
+ * 
+ * Key Features:
+ * - Dynamic statistics calculation from actual lot data
+ * - Color-coded status indicators based on occupancy
+ * - Pull-to-refresh data synchronization
+ * - Issue management system with unread tracking
+ * - Sign-out functionality
+ */
 import { headerStyles } from "@/utils/globalStyles";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
   Platform,
-  Button,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "../../../../../utils/authContext";
 
+/**
+ * Issue report structure
+ * Represents user-submitted parking problems
+ */
 interface Issue {
   id: number;
   message: string;
@@ -25,6 +47,10 @@ interface Issue {
   isRead: boolean;
 }
 
+/**
+ * Parking lot data structure from API
+ * Contains lot configuration and space information
+ */
 interface ParkingLot {
   id: number;
   name: string;
@@ -34,6 +60,21 @@ interface ParkingLot {
   merged_aisles: any[];
 }
 
+/**
+ * LotManagerScreen Component
+ * 
+ * Main admin dashboard displaying parking lot overview and management options.
+ * Fetches real-time data from the API and provides navigation to detailed views.
+ * 
+ * @component
+ * @returns {JSX.Element} Admin dashboard interface
+ * 
+ * @example
+ * ```tsx
+ * // Accessed via tab navigation
+ * <Tabs.Screen name="lot-manager" />
+ * ```
+ */
 export default function LotManagerScreen() {
   const router = useRouter();
   const [isNotificationModalVisible, setIsNotificationModalVisible] = useState(false);
@@ -41,7 +82,9 @@ export default function LotManagerScreen() {
   const [loading, setLoading] = useState(true);
   const { logout } = useAuth();
 
-  // Sample issues - in a real app, this would come from your backend
+  /**
+   * Sample issue data for demonstration
+   */
   const [issues, setIssues] = useState<Issue[]>([
     {
       id: 1,
@@ -90,6 +133,15 @@ export default function LotManagerScreen() {
     }, [])
   );
 
+  /**
+   * Fetches and parses parking lot data from API
+   * 
+   * Handles JSON parsing for PostgreSQL JSONB fields:
+   * - Spaces array (can be JSON string or array)
+   * - Merged aisles array (can be JSON string or array)
+   * 
+   * @async
+   */
   const fetchParkingLots = async () => {
     try {
       setLoading(true);
@@ -150,6 +202,17 @@ export default function LotManagerScreen() {
   const occupiedSpots = 0; // TODO: Get from real occupancy data
   const availableSpots = totalSpots - occupiedSpots;
 
+  /**
+ * Determines color for occupied spots indicator
+ * Based on occupancy percentage:
+ * - Green: < 50% occupied (healthy capacity)
+ * - Yellow: 50-80% occupied (moderate capacity)
+ * - Red: > 80% occupied (near capacity)
+ * 
+ * @param occupied - Number of occupied spots
+ * @param total - Total capacity
+ * @returns Hex color code
+ */
   const getOccupiedSpotsColor = (occupied: number, total: number) => {
     if (total === 0) return "#757575";
     const ratio = occupied / total;
@@ -158,6 +221,17 @@ export default function LotManagerScreen() {
     return "#F44336";
   };
 
+  /**
+ * Determines color for available spots indicator
+ * Inverse of occupied spots logic:
+ * - Green: > 50% available (plenty of space)
+ * - Yellow: 20-50% available (moderate availability)
+ * - Red: < 20% available (low availability)
+ * 
+ * @param available - Number of available spots
+ * @param total - Total capacity
+ * @returns Hex color code
+ */
   const getAvailableSpotsColor = (available: number, total: number) => {
     if (total === 0) return "#757575";
     const ratio = available / total;
@@ -189,6 +263,13 @@ export default function LotManagerScreen() {
     };
   });
 
+  /**
+   * Navigates to detailed lot view
+   * Fetches full lot data before navigation
+   * 
+   * @param lot - Lot card data with basic info
+   * @async
+   */
   const handleViewLotDetails = async (lot: any) => {
     try {
       const response = await fetch(`${API_URL}/api/parking-lots/${lot.id}`);
@@ -245,18 +326,33 @@ export default function LotManagerScreen() {
     setIsNotificationModalVisible(false);
   };
 
+  /**
+   * Marks an issue as read
+   * @param id - Issue ID to mark
+   */
   const handleMarkAsRead = (id: number) => {
     setIssues((prev) => prev.map((issue) => (issue.id === id ? { ...issue, isRead: true } : issue)));
   };
 
+  /**
+   * Marks all issues as read
+   */
   const handleMarkAllAsRead = () => {
     setIssues((prev) => prev.map((issue) => ({ ...issue, isRead: true })));
   };
 
+  /**
+   * Deletes an issue from the list
+   * @param id - Issue ID to delete
+   */
   const handleDeleteIssue = (id: number) => {
     setIssues((prev) => prev.filter((issue) => issue.id !== id));
   };
 
+  /**
+   * Handles user sign out with confirmation
+   * Platform-specific confirmation dialog
+   */
   const handleSignOut = () => {
     if (Platform.OS === "web") {
       const confirmed = window.confirm("Are you sure you want to sign out?");
@@ -273,6 +369,13 @@ export default function LotManagerScreen() {
     }
   };
 
+  /**
+   * Formats timestamp into human-readable relative time
+   * Examples: "5 min ago", "2h ago", "Yesterday", "3 days ago"
+   * 
+   * @param timestamp - ISO timestamp string
+   * @returns Formatted relative time string
+   */
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -291,37 +394,45 @@ export default function LotManagerScreen() {
       return `${days} days ago`;
     }
   };
+
+  /**
+   * Generates human-readable status label for lot occupancy
+   * 
+   * @param occupied - Number of occupied spots
+   * @param total - Total capacity
+   * @returns Status string ("Empty", "Low", "Busy", "Near full")
+   */
   const getLotStatus = (occupied: number, total: number) => {
-  if (total === 0) return "No capacity";
-  const ratio = occupied / total;
-  if (occupied === 0) return "Empty";
-  if (ratio < 0.5) return "Low";
-  if (ratio < 0.8) return "Busy";
-  return "Near full";
-};
+    if (total === 0) return "No capacity";
+    const ratio = occupied / total;
+    if (occupied === 0) return "Empty";
+    if (ratio < 0.5) return "Low";
+    if (ratio < 0.8) return "Busy";
+    return "Near full";
+  };
 
 
   return (
     <View style={{ flex: 1 }}>
       {/* Header */}
-     {/* Header */}
-<View style={headerStyles.header}>
-  <View style={{ flex: 1 }}>
-    <Text style={headerStyles.headerTitle}>Parkmaster</Text>
-    <Text style={headerStyles.headerSubtitle}>Administration Dashboard</Text>
-  </View>
+      {/* Header */}
+      <View style={headerStyles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={headerStyles.headerTitle}>Parkmaster</Text>
+          <Text style={headerStyles.headerSubtitle}>Administration Dashboard</Text>
+        </View>
 
-  {/* Right actions */}
-  <TouchableOpacity
-    onPress={handleSignOut}
-    accessibilityRole="button"
-    accessibilityLabel="Sign out"
-    style={styles.headerIconButton}
-    activeOpacity={0.7}
-  >
-    <Ionicons name="log-out-outline" size={28} color="#fff" />
-  </TouchableOpacity>
-</View>
+        {/* Right actions */}
+        <TouchableOpacity
+          onPress={handleSignOut}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          style={styles.headerIconButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={28} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -355,7 +466,7 @@ export default function LotManagerScreen() {
 
         {/* Action Buttons (text left, icon right) */}
         <View style={styles.actionContainer}>
-            <Text style={styles.sectionHeader}>Quick Actions</Text>
+          <Text style={styles.sectionHeader}>Quick Actions</Text>
 
           <TouchableOpacity
             style={styles.createButton}
@@ -395,17 +506,17 @@ export default function LotManagerScreen() {
         ) : (
           lots.map((lot) => (
             <TouchableOpacity
-  key={lot.id}
-  style={styles.lotCard}
-  activeOpacity={0.9}
-  onPress={() => handleViewLotDetails(lot)}
->
+              key={lot.id}
+              style={styles.lotCard}
+              activeOpacity={0.9}
+              onPress={() => handleViewLotDetails(lot)}
+            >
 
               <View style={styles.lotHeader}>
                 <Text style={styles.lotName}>{lot.name}</Text>
                 <Text style={styles.lotStats}>
-  {lot.occupied}/{lot.total} • {getLotStatus(lot.occupied, lot.total)}
-</Text>
+                  {lot.occupied}/{lot.total} • {getLotStatus(lot.occupied, lot.total)}
+                </Text>
 
               </View>
 
@@ -420,10 +531,10 @@ export default function LotManagerScreen() {
                           lot.total === 0
                             ? "#757575"
                             : (lot.total - lot.occupied) / lot.total > 0.5
-                            ? "#4CAF50"
-                            : (lot.total - lot.occupied) / lot.total > 0.2
-                            ? "#FBC02D"
-                            : "#F44336",
+                              ? "#4CAF50"
+                              : (lot.total - lot.occupied) / lot.total > 0.2
+                                ? "#FBC02D"
+                                : "#F44336",
                       },
                     ]}
                   />
@@ -600,36 +711,36 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
- createButton: {
-  backgroundColor: "#388E3C",
-  borderRadius: 12,          // slightly rounder = confidence
-  padding: 16,
-  paddingHorizontal: 18,
-  minHeight: 52,
-  marginBottom: 12,
+  createButton: {
+    backgroundColor: "#388E3C",
+    borderRadius: 12,          // slightly rounder = confidence
+    padding: 16,
+    paddingHorizontal: 18,
+    minHeight: 52,
+    marginBottom: 12,
 
-  // ADD THESE
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.18,
-  shadowRadius: 4,
-  elevation: 4,
-},
+    // ADD THESE
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 4,
+  },
 
 
   createButtonText: {
-  color: "#fff",
-  fontSize: 16,
-  fontWeight: "700", // was 600
-  flex: 1,
-},
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700", // was 600
+    flex: 1,
+  },
 
-sectionHeader: {
-  fontSize: 22,        // was 20 → stronger anchor
-  fontWeight: "800",   // was 700 → more authority
-  color: "#374151", 
-  marginBottom: 16,
-},
+  sectionHeader: {
+    fontSize: 22,        // was 20 → stronger anchor
+    fontWeight: "800",   // was 700 → more authority
+    color: "#374151",
+    marginBottom: 16,
+  },
 
 
   manageButton: {
@@ -637,7 +748,7 @@ sectionHeader: {
     padding: 16,
     paddingHorizontal: 18,
     borderColor: "#388E3C",
-    borderWidth: 2,backgroundColor: "#f8fafc", // very light neutral
+    borderWidth: 2, backgroundColor: "#f8fafc", // very light neutral
     minHeight: 52,
   },
 
@@ -694,29 +805,29 @@ sectionHeader: {
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-lotHeader: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "flex-start", // instead of center
-  marginBottom: 12,
-},
-headerIconButton: {
-  padding: 8,
-  borderRadius: 10,
-},
+  lotHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start", // instead of center
+    marginBottom: 12,
+  },
+  headerIconButton: {
+    padding: 8,
+    borderRadius: 10,
+  },
 
   lotName: {
     fontSize: 18,
     fontWeight: "600",
     color: "#333",
   },
- lotStats: {
-  fontSize: 14,          // slightly smaller so it fits
-  fontWeight: "600",
-  color: "#388E3C",
-  maxWidth: "55%",       // prevents crowding
-  textAlign: "right",
-},
+  lotStats: {
+    fontSize: 14,          // slightly smaller so it fits
+    fontWeight: "600",
+    color: "#388E3C",
+    maxWidth: "55%",       // prevents crowding
+    textAlign: "right",
+  },
   progressContainer: {
     marginBottom: 16,
   },

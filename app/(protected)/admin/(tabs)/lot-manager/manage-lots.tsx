@@ -12,10 +12,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Appbar } from "react-native-paper";
 
 const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
+/**
+ * Represents a single parking space in the lot
+ * @interface Space
+ * @property {number} id - Unique identifier for the space
+ * @property {number} row - Row index (0-based)
+ * @property {number} col - Column index (0-based)
+ * @property {"regular" | "visitor" | "handicapped" | "authorized personnel"} type - Type of parking space
+ */
 interface Space {
   id: number;
   row: number;
@@ -23,6 +30,18 @@ interface Space {
   type: "regular" | "visitor" | "handicapped" | "authorized personnel";
 }
 
+/**
+ * Represents a complete parking lot structure
+ * @interface ParkingLot
+ * @property {number} id - Unique identifier for the parking lot
+ * @property {string} name - Display name of the parking lot
+ * @property {number} rows - Number of rows in the lot
+ * @property {number} cols - Number of columns in the lot
+ * @property {Space[]} spaces - Array of all parking spaces with their configurations
+ * @property {number[]} merged_aisles - Array of row indices where aisles have been merged
+ * @property {string} [created_at] - ISO timestamp of creation
+ * @property {string} [updated_at] - ISO timestamp of last update
+ */
 interface ParkingLot {
   id: number;
   name: string;
@@ -34,6 +53,27 @@ interface ParkingLot {
   updated_at?: string;
 }
 
+/**
+ * ManageLotsScreen - Administrative screen for managing parking lots
+ * 
+ * This component provides a comprehensive interface for administrators to:
+ * - View all parking lots in a list format
+ * - See detailed statistics for each lot (total spaces, space type breakdown)
+ * - Edit existing parking lot configurations
+ * - Delete parking lots with confirmation
+ * - Pull to refresh the parking lot list
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered manage lots screen
+ * 
+ * @example
+ * ```tsx
+ * // Navigate to manage lots screen
+ * <TouchableOpacity onPress={() => router.push('/admin/manage-lots')}>
+ *   <Text>Manage Parking Lots</Text>
+ * </TouchableOpacity>
+ * ```
+ */
 export default function ManageLotsScreen() {
   const router = useRouter();
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
@@ -43,6 +83,24 @@ export default function ManageLotsScreen() {
     fetchParkingLots();
   }, []);
 
+  /**
+   * Fetches all parking lots from the API
+   * 
+   * Handles parsing of JSONB fields from PostgreSQL database.
+   * Safely parses spaces and merged_aisles fields which may come
+   * as strings or already-parsed arrays from the backend.
+   * 
+   * @async
+   * @function fetchParkingLots
+   * @returns {Promise<void>}
+   * @throws {Error} If the API request fails or data parsing fails
+   * 
+   * @example
+   * ```tsx
+   * // Manually refresh the lot list
+   * await fetchParkingLots();
+   * ```
+   */
   const fetchParkingLots = async () => {
     try {
       setLoading(true);
@@ -102,6 +160,21 @@ export default function ManageLotsScreen() {
     }
   };
 
+  /**
+   * Navigates to the edit screen for a specific parking lot
+   * Passes the complete lot data as a parameter
+   * 
+   * @function handleEditLot
+   * @param {ParkingLot} lot - The parking lot to edit
+   * @returns {void}
+   * 
+   * @example
+   * ```tsx
+   * <TouchableOpacity onPress={() => handleEditLot(selectedLot)}>
+   *   <Text>Edit Lot</Text>
+   * </TouchableOpacity>
+   * ```
+   */
   const handleEditLot = (lot: ParkingLot) => {
     // Navigate to edit screen with lot data
     router.push({
@@ -113,6 +186,28 @@ export default function ManageLotsScreen() {
     });
   };
 
+  /**
+   * Deletes a parking lot after user confirmation
+   * 
+   * Displays platform-appropriate confirmation dialog:
+   * - Web: Uses native browser confirm dialog
+   * - Mobile: Uses React Native Alert with Cancel/Delete options
+   * 
+   * After successful deletion, refreshes the parking lot list.
+   * 
+   * @async
+   * @function handleDeleteLot
+   * @param {ParkingLot} lot - The parking lot to delete
+   * @returns {void}
+   * @throws {Error} If the delete API request fails
+   * 
+   * @example
+   * ```tsx
+   * <TouchableOpacity onPress={() => handleDeleteLot(selectedLot)}>
+   *   <Text>Delete Lot</Text>
+   * </TouchableOpacity>
+   * ```
+   */
   const handleDeleteLot = (lot: ParkingLot) => {
     const confirmDelete = async () => {
       try {
@@ -155,6 +250,20 @@ export default function ManageLotsScreen() {
     }
   };
 
+  /**
+   * Counts the number of spaces of a specific type in a parking lot
+   * 
+   * @function getSpaceTypeCount
+   * @param {ParkingLot} lot - The parking lot to analyze
+   * @param {"regular" | "visitor" | "handicapped" | "authorized personnel"} type - The space type to count
+   * @returns {number} The number of spaces of the specified type
+   * 
+   * @example
+   * ```tsx
+   * const visitorCount = getSpaceTypeCount(lot, "visitor");
+   * console.log(`Visitor spaces: ${visitorCount}`);
+   * ```
+   */
   const getSpaceTypeCount = (
     lot: ParkingLot,
     type: "regular" | "visitor" | "handicapped" | "authorized personnel"
@@ -163,10 +272,38 @@ export default function ManageLotsScreen() {
     return lot.spaces.filter((space) => space.type === type).length;
   };
 
+  /**
+   * Calculates the total number of parking spaces in a lot
+   * Based on rows × columns grid dimensions
+   * 
+   * @function getTotalSpaces
+   * @param {ParkingLot} lot - The parking lot to calculate for
+   * @returns {number} Total number of spaces (rows × cols)
+   * 
+   * @example
+   * ```tsx
+   * const total = getTotalSpaces(lot);
+   * console.log(`Total capacity: ${total} spaces`);
+   * ```
+   */
   const getTotalSpaces = (lot: ParkingLot) => {
     return lot.rows * lot.cols;
   };
 
+  /**
+   * Renders a single parking lot card in the list
+   * 
+   * Displays:
+   * - Lot name and dimensions
+   * - Statistics breakdown (total, regular, visitor, handicapped spaces)
+   * - Merged aisle information (if applicable)
+   * - Edit and Delete action buttons
+   * 
+   * @function renderLotCard
+   * @param {Object} params - Render parameters
+   * @param {ParkingLot} params.item - The parking lot to render
+   * @returns {JSX.Element} The rendered lot card component
+   */
   const renderLotCard = ({ item: lot }: { item: ParkingLot }) => (
     <View style={styles.lotCard}>
       <View style={styles.lotHeader}>
@@ -235,18 +372,18 @@ export default function ManageLotsScreen() {
 
   return (
     <View style={styles.container}>
-        <View style={headerStyles.header}>
-                    <View style ={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                       <Ionicons
+      <View style={headerStyles.header}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Ionicons
             name="arrow-back"
             size={22}
             color="#FFFFFF"
             onPress={() => router.back()}
           />
-                      <Text style={headerStyles.headerTitle}>Manage Parking Lots</Text>
-                      
-                    </View>
-                  </View>
+          <Text style={headerStyles.headerTitle}>Manage Parking Lots</Text>
+
+        </View>
+      </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>

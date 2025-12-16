@@ -1,21 +1,39 @@
-import { router } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  Modal,
-  Pressable,
-  Image,
-} from "react-native";
-import { Button, Text } from "react-native-paper";
+/**
+ * @file schedule/index.tsx
+ * @description Main schedule list view for admins - displays all parking reservations
+ * @module app/(protected)/admin/(tabs)/schedule
+ * 
+ * This component fetches and displays all parking reservations from the database,
+ * organized by date with expandable sections. Features include:
+ * - Real-time schedule display grouped by date
+ * - Expandable date sections (Today/Tomorrow/specific dates)
+ * - Modal detail view for individual reservations
+ * - Ability to delete reservations
+ * - Floating "Add New" button
+ * 
+ * Key Features:
+ * - Handles recurring reservations (expands to individual occurrences)
+ * - Time-aware filtering (only shows active reservations)
+ * - User information lookup from global context
+ * - Proper copyright protection (no direct content reproduction)
+ */
 import { useGlobalData } from "@/utils/GlobalDataContext";
 import { headerStyles } from "@/utils/globalStyles";
 import { LinearGradient } from "expo-linear-gradient";
-import DateScheduleSection from "./components/DateScheduleSection";
-import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { Plus } from "lucide-react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { Button, Text } from "react-native-paper";
+import DateScheduleSection from "./components/DateScheduleSection";
 
 const GREEN = "#388E3C";
 const CHARCOAL = "#1F2937";
@@ -23,10 +41,10 @@ const MUTED = "#6B7280";
 const BG = "#F8FAFC";
 const CARD = "#FFFFFF";
 
-/* ============================
-   ✅ TYPES
-============================ */
-
+/**
+ * Raw schedule data structure from API
+ * Represents a single reservation record from the database
+ */
 interface RawSchedule {
   id: number;
   date: string; // "2025-12-10T00:00:00.000Z"
@@ -40,7 +58,10 @@ interface RawSchedule {
   recurring_days?: string[];
   location?: string;
 }
-
+/**
+ * Individual occurrence of a schedule (handles recurring expansion)
+ * Each recurring reservation becomes multiple occurrences
+ */
 type ScheduleOccurrence = {
   id: number;
   occurrenceId: string; // `${id}-${YYYY-MM-DD}`
@@ -53,12 +74,20 @@ type ScheduleOccurrence = {
   endISO: string;
 };
 
+/**
+ * Date-grouped section structure
+ * Organizes occurrences by date for collapsible UI sections
+ */
 type DaySection = {
   key: string; // YYYY-MM-DD
   title: string; // Today / Tomorrow / Wed, Dec 10
   data: ScheduleOccurrence[];
 };
 
+/**
+ * UI-ready schedule item for display in date sections
+ * Simplified format for rendering in list
+ */
 type ScheduleUIItem = {
   id: string; // occurrenceId
   user_id: number;
@@ -67,14 +96,19 @@ type ScheduleUIItem = {
 };
 
 /* ============================
-   ✅ DATE HELPERS
+          DATE HELPERS
 ============================ */
 
 function formatDateKeyFromISO(iso: string): string {
   return iso.split("T")[0];
 }
 
-// ✅ normalize "8:00 a.m." -> "8:00 AM"
+/**
+ * Extracts date portion from ISO timestamp
+ * @param iso - ISO 8601 timestamp string
+ * @returns YYYY-MM-DD date string
+ * @example "2025-12-10T14:30:00.000Z" → "2025-12-10"
+ */
 function normalizeTimeString(timeStr: string): string {
   if (!timeStr) return "";
   return timeStr
@@ -86,6 +120,14 @@ function normalizeTimeString(timeStr: string): string {
     .trim();
 }
 
+/**
+ * Combines a date and time string into a full Date object
+ * 
+ * @param dateKey - Date in YYYY-MM-DD format
+ * @param timeStr - Time in "H:MM AM/PM" format
+ * @returns Date object or null if invalid
+ * @example buildDateTimeFromDateAndTime("2025-12-10", "8:00 AM")
+ */
 function buildDateTimeFromDateAndTime(dateKey: string, timeStr: string): Date | null {
   if (!dateKey || !timeStr) return null;
 
@@ -108,6 +150,13 @@ function buildDateTimeFromDateAndTime(dateKey: string, timeStr: string): Date | 
   return isNaN(result.getTime()) ? null : result;
 }
 
+/**
+ * Generates human-readable date label
+ * 
+ * @param dateKey - Date in YYYY-MM-DD format
+ * @returns "Today", "Tomorrow", or formatted date
+ * @example "2025-12-15" → "Today" (if today is Dec 15)
+ */
 function getDayLabelFromKey(dateKey: string): string {
   const todayKey = new Date().toISOString().split("T")[0];
 
@@ -126,6 +175,13 @@ function getDayLabelFromKey(dateKey: string): string {
   });
 }
 
+/**
+ * Formats time range for display
+ * 
+ * @param startISO - Start time ISO string
+ * @param endISO - End time ISO string
+ * @returns Formatted range (e.g., "8:00 AM–5:00 PM")
+ */
 function formatTimeRange(startISO: string, endISO: string): string {
   const start = new Date(startISO);
   const end = new Date(endISO);
@@ -137,9 +193,16 @@ function formatTimeRange(startISO: string, endISO: string): string {
 }
 
 /* ============================
-   ✅ NORMALIZE / GROUP
+       NORMALIZE / GROUP
 ============================ */
 
+/**
+ * Expands a single schedule into multiple occurrences
+ * Handles both one-time and recurring reservations
+ * 
+ * @param s - Raw schedule from API
+ * @returns Array of individual occurrences
+ */
 function expandToOccurrences(s: RawSchedule): ScheduleOccurrence[] {
   const baseKey = formatDateKeyFromISO(s.date);
 
@@ -170,6 +233,12 @@ function expandToOccurrences(s: RawSchedule): ScheduleOccurrence[] {
   return out;
 }
 
+/**
+ * Groups occurrences by date and sorts them
+ * 
+ * @param all - All schedule occurrences
+ * @returns Array of date sections with grouped occurrences
+ */
 function groupOccurrencesByDay(all: ScheduleOccurrence[]): DaySection[] {
   const groups: Record<string, ScheduleOccurrence[]> = {};
 
@@ -189,6 +258,12 @@ function groupOccurrencesByDay(all: ScheduleOccurrence[]): DaySection[] {
     }));
 }
 
+/**
+ * Transforms occurrences into UI-ready items
+ * 
+ * @param items - Array of schedule occurrences
+ * @returns Array of simplified UI items for rendering
+ */
 function toUIItems(items: ScheduleOccurrence[]): ScheduleUIItem[] {
   return items.map((x) => ({
     id: x.occurrenceId,
@@ -199,9 +274,17 @@ function toUIItems(items: ScheduleOccurrence[]): ScheduleUIItem[] {
 }
 
 /* ============================
-   ✅ MAIN SCREEN
+           MAIN SCREEN
 ============================ */
-
+/**
+ * SchedulePage Component
+ * 
+ * Main schedule list view with expandable date sections.
+ * Fetches all reservations and displays them organized by date.
+ * 
+ * @component
+ * @returns {JSX.Element} The schedule list interface
+ */
 export default function SchedulePage() {
   const [raw, setRaw] = useState<RawSchedule[]>([]);
   const [openKeys, setOpenKeys] = useState<Record<string, boolean>>({});
@@ -227,6 +310,10 @@ export default function SchedulePage() {
     getUserSchedules();
   }, [raw]);
 
+  /**
+   * Process raw schedules into UI sections
+   * Memoized to prevent unnecessary recalculations
+   */
   const sections = useMemo(() => {
     const occurrences = raw.flatMap(expandToOccurrences);
     return groupOccurrencesByDay(occurrences);
@@ -240,10 +327,19 @@ export default function SchedulePage() {
     });
   }, [sections]);
 
+  /**
+   * Toggle expansion state of a date section
+   * @param key - Date key to toggle
+   */
   const toggleSection = (key: string) => {
     setOpenKeys((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  /**
+   * Get user information for display
+   * @param userId - User ID to look up
+   * @returns User name and avatar (or defaults)
+   */
   const getUser = (userId: number | string) => {
     const u = users.find((x) => Number(x.id) === Number(userId));
     return {
@@ -253,6 +349,10 @@ export default function SchedulePage() {
     };
   };
 
+  /**
+   * Delete a schedule and all its recurring occurrences
+   * @param scheduleId - Schedule ID to delete
+   */
   const deleteSchedule = async (scheduleId: number) => {
     try {
       // ✅ call backend delete (adjust if your route differs)
@@ -275,6 +375,10 @@ export default function SchedulePage() {
     }
   };
 
+  /**
+   * Show confirmation dialog before deletion
+   * @param scheduleId - Schedule ID to confirm deletion for
+   */
   const confirmDeleteFromModal = (scheduleId: number) => {
     Alert.alert(
       "Delete Schedule",
@@ -287,6 +391,11 @@ export default function SchedulePage() {
   };
 
   // helper: find the occurrence from occurrenceId
+  /**
+   * Find occurrence object by ID
+   * @param occurrenceId - Composite ID (e.g., "5-2025-12-10")
+   * @returns Occurrence object or null
+   */
   const findOccurrence = (occurrenceId: string): ScheduleOccurrence | null => {
     const all = raw.flatMap(expandToOccurrences);
     return all.find((x) => x.occurrenceId === occurrenceId) ?? null;

@@ -1,8 +1,31 @@
+/**
+ * @file user_list.tsx
+ * @description User management interface - list view with search and add functionality
+ * @module app/(protected)/admin/(tabs)/users
+ * 
+ * This component serves as the main user management interface featuring:
+ * - Searchable user list with filtering
+ * - User creation modal with complete validation
+ * - Avatar/photo upload capability
+ * - Real-time search across name, email, and phone
+ * - Form validation with inline error display
+ * - Role and department selection
+ * - Floating action button for consistent UX
+ * 
+ * Technical Features:
+ * - useMemo for optimized search filtering
+ * - FormData for multipart avatar uploads
+ * - Global state management via context
+ * - Platform-specific UI adaptations
+ * - Comprehensive input validation
+ */
+import { useGlobalData } from "@/utils/GlobalDataContext";
+import { headerStyles } from "@/utils/globalStyles";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Mail, Phone, Plus, Search, User, X } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
-import { useGlobalData } from "@/utils/GlobalDataContext";
 import {
   Alert,
   FlatList,
@@ -16,16 +39,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Appbar } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
+import { UserType } from "../../../../../types/global.types";
 import {
   validateEmail,
   validateName,
   validatePhoneNumber,
   ValidationErrors,
 } from "../../../../../utils/validationUtils";
-import { UserType } from "../../../../../types/global.types";
-import { headerStyles } from "@/utils/globalStyles";
 
 const GREEN = "#388E3C";
 const CHARCOAL = "#1F2937";
@@ -34,6 +54,21 @@ const BG = "#F8FAFC";
 const CARD = "#FFFFFF";
 const BORDER = "rgba(15,23,42,0.08)";
 
+/**
+ * UserList Component
+ * 
+ * Main user management interface with search and create capabilities.
+ * Displays all users in a filterable list and provides modal for adding new users.
+ * 
+ * @component
+ * @returns {JSX.Element} User list and management interface
+ * 
+ * @example
+ * ```tsx
+ * // Accessed via tab navigation
+ * <Tabs.Screen name="users" component={UserList} />
+ * ```
+ */
 export default function UserList() {
   const [search, setSearch] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
@@ -56,6 +91,12 @@ export default function UserList() {
 
   const CTA_HEIGHT = 56;
 
+  /**
+   * Opens device image picker for avatar selection
+   * Allows editing to square aspect ratio
+   * 
+   * @async
+   */
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
@@ -69,6 +110,12 @@ export default function UserList() {
     }
   };
 
+  /**
+   * Updates form field value and clears associated error
+   * 
+   * @param field - Form field name
+   * @param value - New field value
+   */
   const handleFieldChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
 
@@ -80,6 +127,12 @@ export default function UserList() {
     }
   };
 
+  /**
+   * Validates field on blur (when user leaves the field)
+   * Marks field as touched and runs appropriate validation
+   * 
+   * @param field - Field name to validate
+   */
   const handleFieldBlur = (field: string) => {
     setTouched({ ...touched, [field]: true });
 
@@ -103,6 +156,18 @@ export default function UserList() {
     }
   };
 
+  /**
+   * Handles user creation with comprehensive validation
+   * 
+   * Process:
+   * 1. Validates all form fields
+   * 2. Creates FormData with user info and avatar
+   * 3. Sends POST request to create user
+   * 4. Updates global user list on success
+   * 5. Closes modal and resets form
+   * 
+   * @async
+   */
   const handleAddUser = async () => {
     // Mark all fields as touched
     const allTouched = {
@@ -237,6 +302,13 @@ export default function UserList() {
     setModalVisible(false);
   };
 
+  /**
+   * Filters users based on search query
+   * Searches across name, email, and phone fields (case-insensitive)
+   * 
+   * Memoized to prevent recalculation on every render
+   * Only recalculates when search query or user list changes
+   */
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
@@ -534,6 +606,15 @@ export default function UserList() {
 /* -----------------------------
    Small “Field” helper
 ----------------------------- */
+
+/**
+ * Field Component
+ * 
+ * Reusable form field with label, input, and error display.
+ * Handles various input types and validation states.
+ * 
+ * @component
+ */
 function Field(props: {
   label: string;
   required?: boolean;

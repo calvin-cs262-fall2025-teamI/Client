@@ -8,8 +8,20 @@ import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
 const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
+/**
+ * Available parking space types
+ * @typedef {"regular" | "visitor" | "handicapped" | "authorized personnel"} SpaceType
+ */
 type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
 
+/**
+ * Represents a single parking space in the lot
+ * @interface Space
+ * @property {number} id - Unique identifier for the space
+ * @property {number} row - Row index (0-based)
+ * @property {number} col - Column index (0-based)
+ * @property {SpaceType} type - Type of parking space
+ */
 interface Space {
   id: number;
   row: number;
@@ -17,6 +29,16 @@ interface Space {
   type: SpaceType;
 }
 
+/**
+ * Represents a complete parking lot structure
+ * @interface ParkingLot
+ * @property {number} id - Unique identifier for the parking lot
+ * @property {string} name - Display name of the parking lot
+ * @property {number} rows - Number of rows in the lot
+ * @property {number} cols - Number of columns in the lot
+ * @property {Space[]} spaces - Array of all parking spaces
+ * @property {number[]} merged_aisles - Array of row indices where aisles are merged
+ */
 interface ParkingLot {
   id: number;
   name: string;
@@ -26,10 +48,31 @@ interface ParkingLot {
   merged_aisles: number[];
 }
 
+/**
+ * EditLotScreen - Screen for editing existing parking lot configurations
+ * 
+ * This component allows administrators to modify parking lot layouts including:
+ * - Changing lot dimensions (rows and columns)
+ * - Updating individual space types
+ * - Merging adjacent rows to remove aisles
+ * - Visual editing with zoom and pan capabilities
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered edit lot screen
+ * 
+ * @example
+ * ```tsx
+ * // Navigate with lot data
+ * router.push({
+ *   pathname: '/edit-lot',
+ *   params: { lotData: JSON.stringify(parkingLotObject) }
+ * });
+ * ```
+ */
 export default function EditLotScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
+
   const [lotName, setLotName] = useState("");
   const [rows, setRows] = useState("4");
   const [cols, setCols] = useState("10");
@@ -40,7 +83,7 @@ export default function EditLotScreen() {
   const [mergedAisles, setMergedAisles] = useState<Set<number>>(new Set());
   const [lotId, setLotId] = useState<number | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
-  
+
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
 
@@ -61,12 +104,12 @@ export default function EditLotScreen() {
       try {
         const lot: ParkingLot = JSON.parse(params.lotData as string);
         console.log("Loading lot data:", lot);
-        
+
         setLotId(lot.id);
         setLotName(lot.name);
         setRows(lot.rows.toString());
         setCols(lot.cols.toString());
-        
+
         // Load spaces with their types
         if (lot.spaces && Array.isArray(lot.spaces) && lot.spaces.length > 0) {
           setSpaces(lot.spaces);
@@ -74,12 +117,12 @@ export default function EditLotScreen() {
           // Generate default spaces if none exist
           generateDefaultSpaces(lot.rows, lot.cols);
         }
-        
+
         // Load merged aisles
         if (lot.merged_aisles && Array.isArray(lot.merged_aisles)) {
           setMergedAisles(new Set(lot.merged_aisles));
         }
-        
+
         setDataLoaded(true);
       } catch (error) {
         console.error("Error parsing lot data:", error);
@@ -88,7 +131,15 @@ export default function EditLotScreen() {
     }
   }, [params.lotData, dataLoaded]);
 
-  // Generate default spaces
+  /**
+ * Generates default parking spaces for a given grid size
+ * All spaces are initialized as "regular" type
+ * 
+ * @function generateDefaultSpaces
+ * @param {number} numRows - Number of rows to generate
+ * @param {number} numCols - Number of columns to generate
+ * @returns {void}
+ */
   const generateDefaultSpaces = (numRows: number, numCols: number) => {
     let id = 1;
     const arr: Space[] = [];
@@ -100,10 +151,15 @@ export default function EditLotScreen() {
     setSpaces(arr);
   };
 
+  /**
+   * Effect to load existing parking lot data on component mount
+   * Parses lot data from route params and initializes state
+   * Only runs once when data is first loaded
+   */
   // Update spaces when dimensions change (only after initial load)
   useEffect(() => {
     if (!dataLoaded) return;
-    
+
     let id = 1;
     const arr: Space[] = [];
     for (let r = 0; r < rowCount; r++) {
@@ -117,10 +173,25 @@ export default function EditLotScreen() {
     setSpaces(arr);
   }, [rowCount, colCount, dataLoaded]);
 
+  /**
+   * Gets the aisle width after a specific row
+   * Returns merged width if the aisle has been merged, standard width otherwise
+   * 
+   * @function getAisleWidth
+   * @param {number} afterRow - The row index to check after
+   * @returns {number} The width of the aisle in meters
+   */
   const getAisleWidth = (afterRow: number) => {
     return mergedAisles.has(afterRow) ? mergedAisleWidth : aisleWidth;
   };
 
+  /**
+   * Calculates the total height of the parking lot
+   * Accounts for all rows and aisles (both standard and merged)
+   * 
+   * @function calculateLotHeight
+   * @returns {number} Total height in meters
+   */
   const calculateLotHeight = () => {
     let totalHeight = 0;
     for (let r = 0; r < rowCount; r++) {
@@ -132,6 +203,14 @@ export default function EditLotScreen() {
     return totalHeight;
   };
 
+  /**
+   * Calculates the Y position for a given row
+   * Takes into account all previous rows and their aisles
+   * 
+   * @function getRowYPosition
+   * @param {number} row - The row index to calculate position for
+   * @returns {number} Y coordinate in meters
+   */
   const getRowYPosition = (row: number) => {
     let y = 0;
     for (let r = 0; r < row; r++) {
@@ -143,6 +222,21 @@ export default function EditLotScreen() {
   const lotWidth = colCount * spaceWidth;
   const lotHeight = calculateLotHeight();
 
+  /**
+   * Merges two adjacent rows by removing the aisle between them
+   * Validates that rows are adjacent and within valid range
+   * 
+   * @function handleMergeRows
+   * @returns {void}
+   * 
+   * @example
+   * ```tsx
+   * // Merge rows 2 and 3
+   * setMergeRow1("2");
+   * setMergeRow2("3");
+   * handleMergeRows();
+   * ```
+   */
   const handleMergeRows = () => {
     const r1 = parseInt(mergeRow1);
     const r2 = parseInt(mergeRow2);
@@ -182,6 +276,13 @@ export default function EditLotScreen() {
       savedScale.value = scale.value;
     });
 
+  /**
+ * Resets the zoom level to default (1x)
+ * Animates the transition with a spring animation
+ * 
+ * @function handleResetZoom
+ * @returns {void}
+ */
   const handleResetZoom = () => {
     scale.value = withSpring(1);
     savedScale.value = 1;
@@ -193,6 +294,14 @@ export default function EditLotScreen() {
     };
   });
 
+  /**
+   * Updates the type of a specific parking space
+   * 
+   * @function updateSpaceType
+   * @param {number} id - The ID of the space to update
+   * @param {SpaceType} type - The new type to assign
+   * @returns {void}
+   */
   const updateSpaceType = (id: number, type: SpaceType) => {
     setSpaces((prev) => prev.map((s) => (s.id === id ? { ...s, type } : s)));
   };
@@ -210,6 +319,21 @@ export default function EditLotScreen() {
     }
   };
 
+  /**
+   * Saves the updated parking lot configuration to the server
+   * Validates lot name and ID before saving
+   * Makes PUT request to update existing lot
+   * 
+   * @async
+   * @function handleSave
+   * @returns {Promise<void>}
+   * @throws {Error} If the API request fails
+   * 
+   * @example
+   * ```tsx
+   * <Button title="Save Changes" onPress={handleSave} />
+   * ```
+   */
   const handleSave = async () => {
     if (!lotName.trim()) {
       Alert.alert("Error", "Please enter a lot name before saving.");
@@ -235,12 +359,12 @@ export default function EditLotScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to update lot");
       }
-      
+
       Alert.alert("Success", "Parking lot updated successfully!");
       router.back();
     } catch (err: any) {

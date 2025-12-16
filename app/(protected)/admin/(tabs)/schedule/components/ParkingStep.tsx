@@ -1,13 +1,26 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Text } from 'react-native-paper';
+/**
+ * @file ParkingStep.tsx
+ * @description Step 1 of the admin schedule creation wizard - handles parking selection
+ * @module app/(protected)/admin/(tabs)/schedule/components
+ * 
+ * This component manages the initial form step where admins select:
+ * - User to reserve for
+ * - Location of parking facility
+ * - Specific parking lot
+ * - Individual parking spot
+ * 
+ * Features cascading dropdowns with automatic filtering based on selections.
+ */
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { ScrollView } from 'react-native-gesture-handler';
+import { Button, Text } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { validateName } from '../../../../../../utils/validationUtils';
-import { useGlobalData } from '@/utils/GlobalDataContext';
 import type { ReservationData } from '@/types/global.types';
+import { useGlobalData } from '@/utils/GlobalDataContext';
+import { validateName } from '../../../../../../utils/validationUtils';
 
 interface ParkingStepProps {
   reservationData: ReservationData;
@@ -41,6 +54,27 @@ interface DropdownOption {
   id?: number | string;
 }
 
+/**
+ * ParkingStep Component
+ * 
+ * First step in the admin schedule creation flow. Implements cascading
+ * dropdown logic where each selection filters subsequent options:
+ * 
+ * User → Location → Parking Lot → Available Spot
+ * 
+ * @component
+ * @param {ParkingStepProps} props - Component props
+ * @returns {JSX.Element} Rendered component
+ * 
+ * @example
+ * ```tsx
+ * <ParkingStep
+ *   reservationData={formData}
+ *   setReservationData={setFormData}
+ *   onNext={handleNextStep}
+ * />
+ * ```
+ */
 export default function ParkingStep({
   reservationData,
   setReservationData,
@@ -89,6 +123,15 @@ export default function ParkingStep({
     [parkingLots, reservationData.location]
   );
 
+  /**
+   * Memoized list of available parking spots in selected lot
+   * 
+   * Filters spots by:
+   * - Active status
+   * - Not already reserved (user_id is null)
+   * 
+   * Formats spots as "Row X · Spot Y" for display
+   */
   const spotOptions: DropdownOption[] = useMemo(() => {
     if (!reservationData.parkingLot) return [];
 
@@ -118,14 +161,18 @@ export default function ParkingStep({
           (space.user_id === null || space.user_id === undefined)
       )
       .map(space => ({
-  id: space.id,
-  label: `Row ${space.row + 1} · Spot ${space.col + 1}`,
-  value: `${space.row}-${space.col}`, // ✅ REQUIRED
-  row: space.row + 1,
-  col: space.col + 1,
-}));
+        id: space.id,
+        label: `Row ${space.row + 1} · Spot ${space.col + 1}`,
+        value: `${space.row}-${space.col}`, // ✅ REQUIRED
+        row: space.row + 1,
+        col: space.col + 1,
+      }));
   }, [parkingLots, reservationData.parkingLot, reservationData.location]);
 
+  /**
+   * Validates if all required form fields are filled
+   * Used to enable/disable the Next button
+   */
   const isFormComplete =
     !!reservationData.user_id &&
     !!reservationData.user_name &&
@@ -151,6 +198,10 @@ export default function ParkingStep({
     onNext();
   };
 
+  /**
+   * Fetches parking lots from API on component mount
+   * Populates the parking lots state for dropdown options
+   */
   useEffect(() => {
     const fetchParkingLots = async () => {
       try {
@@ -305,8 +356,8 @@ export default function ParkingStep({
                 !reservationData.location
                   ? 'Select location first'
                   : !lotFocus
-                  ? 'Select parking lot'
-                  : '...'
+                    ? 'Select parking lot'
+                    : '...'
               }
               searchPlaceholder="Search lot..."
               value={reservationData.parkingLot}
@@ -359,8 +410,8 @@ export default function ParkingStep({
                 !reservationData.parkingLot
                   ? 'Select parking lot first'
                   : !spotFocus
-                  ? 'Select available spot'
-                  : '...'
+                    ? 'Select available spot'
+                    : '...'
               }
               searchPlaceholder="Search spot..."
               onFocus={() => setSpotFocus(true)}

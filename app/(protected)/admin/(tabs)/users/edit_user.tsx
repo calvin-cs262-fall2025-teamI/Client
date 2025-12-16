@@ -1,7 +1,25 @@
-// CLIENT/app/screens/admin/(tabs)/users/edit_user.tsx
+/**
+ * @file edit_user.tsx
+ * @description User profile and vehicle management interface for administrators
+ * @module app/(protected)/admin/(tabs)/users
+ * 
+ * This component provides comprehensive user management functionality including:
+ * - Profile information editing (name, email, phone, department)
+ * - Avatar/photo management with upload capability
+ * - Vehicle registration and management (add, edit, delete)
+ * - User account deletion with confirmation
+ * - Form validation for all input fields
+ * - Multi-part form data handling for file uploads
+ * 
+ * Key Features:
+ * - Real-time validation with error display
+ * - Separation of concerns with dedicated section components
+ * - API integration for CRUD operations
+ * - Platform-specific UI adaptations
+ */
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Trash2 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -10,16 +28,33 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Appbar } from "react-native-paper";
+import { UserType, VehicleType } from "../../../../../types/admin.types";
 import DeleteUserModal from "./components/DeleteUserModal";
 import ProfileSection from "./components/ProfileSection";
 import VehicleModal from "./components/VehicleModal";
 import VehiclesSection from "./components/VehicleSection";
-import { UserType, VehicleType } from "../../../../../types/admin.types";
-import { useEffect } from "react";
-import Ionicons from "@expo/vector-icons/build/Ionicons";
-import { headerStyles } from "@/utils/globalStyles";
 
+import { headerStyles } from "@/utils/globalStyles";
+import Ionicons from "@expo/vector-icons/build/Ionicons";
+
+/**
+ * EditUser Component
+ * 
+ * Main user editing interface accessed by administrators.
+ * Combines profile management and vehicle registration in a single screen.
+ * 
+ * @component
+ * @returns {JSX.Element} User editing interface
+ * 
+ * @example
+ * ```tsx
+ * // Navigated to via router with user ID
+ * router.push({
+ *   pathname: '/admin/(tabs)/users/edit_user',
+ *   params: { id: '123' }
+ * })
+ * ```
+ */
 export default function EditUser() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -68,6 +103,25 @@ export default function EditUser() {
   // PROFILE HANDLERS
   // ============================================================================
 
+  /**
+   * Updates user profile information including avatar
+   * 
+   * Handles both profile data and avatar uploads using FormData.
+   * Supports both new file uploads and existing URLs.
+   * 
+   * @param updates - Partial user object with updated fields
+   * @async
+   * @throws {Error} If update fails or network error occurs
+   * 
+   * @example
+   * ```tsx
+   * await handleUpdateProfile({
+   *   name: "John Doe",
+   *   email: "john@example.com",
+   *   avatar: "file:///path/to/image.jpg"
+   * })
+   * ```
+   */
   const handleUpdateProfile = async (updates: {
     name: string;
     email: string;
@@ -176,6 +230,26 @@ export default function EditUser() {
     setVehicleModalVisible(true);
   };
 
+  /**
+   * Saves vehicle data (create or update)
+   * 
+   * Handles both new vehicle creation and updates to existing vehicles.
+   * Creates new vehicle records in the database with user association.
+   * 
+   * @param vehicleData - Vehicle form data without ID
+   * @async
+   * 
+   * @example
+   * ```tsx
+   * await handleSaveVehicle({
+   *   make: "Toyota",
+   *   model: "Camry",
+   *   year: "2022",
+   *   color: "Silver",
+   *   license_plate: "ABC-123"
+   * })
+   * ```
+   */
   const handleSaveVehicle = async (vehicleData: Omit<VehicleType, "id">) => {
     if (editingVehicle) {
       // Update existing vehicle
@@ -218,6 +292,12 @@ export default function EditUser() {
     setEditingVehicle(null);
   };
 
+  /**
+   * Deletes a vehicle from the user's registration
+   * 
+   * @param vehicleId - ID of vehicle to delete
+   * @todo Implement actual API call to delete vehicle
+   */
   const handleDeleteVehicle = (vehicleId: string) => {
     
     Alert.alert("Success", "Vehicle deleted successfully!");
@@ -231,6 +311,18 @@ export default function EditUser() {
     setDeleteUserModalVisible(true);
   };
 
+  /**
+   * Permanently deletes a user account
+   * 
+   * Removes user from database along with all associated data:
+   * - Profile information
+   * - Registered vehicles
+   * - Parking reservations
+   * - Activity history
+   * 
+   * @param userId - ID of user to delete
+   * @async
+   */
   const handleDeleteUser = async (userId: string) => {
     try {
       const response = await fetch(`https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net/api/users/${userId}`, {

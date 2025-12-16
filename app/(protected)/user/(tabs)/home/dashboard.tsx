@@ -1,6 +1,8 @@
-import { useAuth } from "@/utils/authContext";
-import { useRouter } from "expo-router";
 import { UserType } from "@/types/global.types";
+import { useAuth } from "@/utils/authContext";
+import { useGlobalData } from "@/utils/GlobalDataContext";
+import { headerStyles } from "@/utils/globalStyles";
+import { useRouter } from "expo-router";
 import {
   Clock,
   HelpCircle,
@@ -9,7 +11,6 @@ import {
   Navigation,
   X
 } from "lucide-react-native";
-import { headerStyles } from "@/utils/globalStyles";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -24,9 +25,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useGlobalData } from "@/utils/GlobalDataContext";
 
-
+/**
+ * Represents a parking issue report
+ * @typedef {Object} Issue
+ * @property {number} id - Unique identifier for the issue
+ * @property {string} message - Description of the issue
+ * @property {string} timestamp - ISO string timestamp when the issue was created
+ * @property {string} userName - Name of the user who reported the issue
+ * @property {string} [spotNumber] - Optional parking spot number associated with the issue
+ */
 interface Issue {
   id: number;
   message: string;
@@ -35,30 +43,62 @@ interface Issue {
   spotNumber?: string;
 }
 
+/**
+ * ClientHomeScreen - Main home screen for parking lot clients
+ * 
+ * This component displays the user's assigned parking spot, schedule, and provides
+ * quick actions for navigation and issue reporting. It serves as the primary dashboard
+ * for parking lot users.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered client home screen
+ * 
+ * @example
+ * ```tsx
+ * <ClientHomeScreen />
+ * ```
+ */
 export default function ClientHomeScreen() {
   const router = useRouter();
-const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
-const [issueMessage, setIssueMessage] = useState("");
-const [currentTime, setCurrentTime] = useState(new Date());
+  const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
+  const [issueMessage, setIssueMessage] = useState("");
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-const { getCurrentUser } = useGlobalData();
-const { authState } = useAuth();
+  const { getCurrentUser } = useGlobalData();
+  const { authState } = useAuth();
 
-useEffect(() => {
-  if (!authState.userId) {
-    console.log("No user logged in");
-    return;
-  }
+  useEffect(() => {
+    if (!authState.userId) {
+      console.log("No user logged in");
+      return;
+    }
 
-  console.log("User ID from Auth State:", authState.userId);
+    console.log("User ID from Auth State:", authState.userId);
 
-  const currentUser: UserType | null = getCurrentUser(authState.userId);
+    const currentUser: UserType | null = getCurrentUser(authState.userId);
 
-  console.log("Current User:", currentUser);
-}, [authState.userId, getCurrentUser]);
+    console.log("Current User:", currentUser);
+  }, [authState.userId, getCurrentUser]);
 
 
-
+  /**
+   * Opens the native maps application with directions to the parking lot
+   * 
+   * Handles platform-specific map URLs for iOS, Android, and web browsers.
+   * Falls back to Google Maps in browser if native maps app is unavailable.
+   * 
+   * @async
+   * @function openMaps
+   * @returns {Promise<void>}
+   * @throws {Error} Logs error if unable to open maps
+   * 
+   * @example
+   * ```tsx
+   * <TouchableOpacity onPress={openMaps}>
+   *   <Text>Get Directions</Text>
+   * </TouchableOpacity>
+   * ```
+   */
   const openMaps = async () => {
     const address = 'Calvin University, Grand Rapids, MI'; // Replace with your office address
 
@@ -116,19 +156,44 @@ useEffect(() => {
     }
   };
 
-
-
-
+  /**
+   * Opens the issue report modal and resets the input field
+   * 
+   * @function handleOpenIssueModal
+   * @returns {void}
+   */
   const handleOpenIssueModal = () => {
     setIsIssueModalVisible(true);
     setIssueMessage("");
   };
 
+  /**
+ * Closes the issue report modal and clears the input field
+ * 
+ * @function handleCloseIssueModal
+ * @returns {void}
+ */
   const handleCloseIssueModal = () => {
     setIsIssueModalVisible(false);
     setIssueMessage("");
   };
 
+  /**
+   * Submits a parking issue report
+   * 
+   * Validates the issue message, creates a new issue object with timestamp,
+   * stores it in global storage for admin review, and displays a success alert.
+   * 
+   * @function handleSubmitIssue
+   * @returns {void}
+   * 
+   * @example
+   * ```tsx
+   * <TouchableOpacity onPress={handleSubmitIssue}>
+   *   <Text>Submit Report</Text>
+   * </TouchableOpacity>
+   * ```
+   */
   const handleSubmitIssue = () => {
     if (!issueMessage.trim()) {
       Alert.alert("Error", "Please describe the issue");
@@ -198,7 +263,7 @@ useEffect(() => {
             <HelpCircle color="#fff" size={24} />
           </TouchableOpacity>
 
-          
+
         </View>
       </View>
 
@@ -395,7 +460,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
 
-  
+
   badge: {
     position: "absolute",
     top: 0,
