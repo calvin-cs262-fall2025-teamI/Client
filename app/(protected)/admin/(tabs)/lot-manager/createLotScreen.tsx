@@ -1,22 +1,42 @@
+/**
+ * @file createLotScreen.tsx
+ * @description Interactive parking lot creation interface with SVG visualization
+ * @module app/(protected)/admin/(tabs)/lot-manager
+ * 
+ * This component provides a comprehensive parking lot design tool featuring:
+ * - Visual SVG-based lot layout with real-time preview
+ * - Configurable dimensions (rows × columns)
+ * - Row merging capability for removing aisles
+ * - Individual space type customization (regular, visitor, handicapped, authorized)
+ * - Space status management (active/inactive for scheduling)
+ * - User assignment capability
+ * - Pinch-to-zoom and pan gestures for navigation
+ * - Platform-specific rendering (web vs mobile)
+ * 
+ * Technical Features:
+ * - Reactive SVG rendering with accurate spacing calculations
+ * - Reanimated 2 for smooth gesture handling
+ * - React Native Gesture Handler for cross-platform touch support
+ * - Deferred space generation to prevent UI freezing
+ */
 import { headerStyles } from "@/utils/globalStyles";
-import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Button,
   Modal,
   Platform,
   Pressable,
-  View,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Appbar } from "react-native-paper";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -25,14 +45,26 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
+/**
+ * Available parking space types
+ * Each type has distinct visual styling and functional purpose
+ */
 type SpaceType =
   | "regular"
   | "visitor"
   | "handicapped"
   | "authorized personnel";
 
+/**
+ * Space scheduling availability status
+ * Determines if space can be reserved through the system
+ */
 type SpaceStatus = "active" | "inactive";
 
+/**
+ * Individual parking space data structure
+ * Represents a single space in the lot grid
+ */
 interface Space {
   id: number;
   row: number;
@@ -45,6 +77,25 @@ interface Space {
 const API_URL =
   "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
+/**
+* CreateLotScreen Component
+* 
+* Main parking lot creation interface. Allows administrators to:
+* 1. Define lot dimensions
+* 2. Merge adjacent rows to eliminate aisles
+* 3. Customize individual spaces (type, status, assignment)
+* 4. Visualize layout in real-time
+* 5. Save to database
+* 
+* @component
+* @returns {JSX.Element} Interactive parking lot designer
+* 
+* @example
+* ```tsx
+* // Navigated to via router
+* router.push('/admin/(tabs)/lot-manager/createLotScreen')
+* ```
+*/
 export default function CreateLotScreen() {
   const navigation = useNavigation();
 
@@ -75,6 +126,10 @@ export default function CreateLotScreen() {
   const savedTranslateY = useSharedValue(0);
   const isPanning = useSharedValue(false);
 
+  /**
+   * Base scale multiplier for SVG rendering
+   * Larger on web for better visibility, smaller on mobile for performance
+   */
   const baseScaleValue = Platform.OS === "web" ? 40 : 18;
 
   // Predefined location options for parking lots
@@ -86,7 +141,12 @@ export default function CreateLotScreen() {
     "Visitor Parking",
   ];
 
-  // Standard dimensions (meters)
+  // ==================== PARKING LOT DIMENSIONS ====================
+
+  /**
+   * Standard parking space dimensions in meters
+   * Based on typical parking lot specifications
+   */
   const spaceWidth = 2.5;
   const spaceDepth = 5;
   const aisleWidth = 6;
@@ -95,9 +155,20 @@ export default function CreateLotScreen() {
   const rowCount = parseInt(rows) || 0;
   const colCount = parseInt(cols) || 0;
 
+  /**
+   * Determines aisle width based on merge status
+   * @param afterRow - Row index to check (0-indexed)
+   * @returns Width of aisle after specified row
+   */
   const getAisleWidth = (afterRow: number) =>
     mergedAisles.has(afterRow) ? mergedAisleWidth : aisleWidth;
 
+  /**
+ * Calculates total lot height including all aisles
+ * Accounts for merged aisles with reduced width
+ * 
+ * @returns Total height in meters
+ */
   const calculateLotHeight = () => {
     let totalHeight = 0;
     for (let r = 0; r < rowCount; r++) {
@@ -109,6 +180,13 @@ export default function CreateLotScreen() {
     return totalHeight;
   };
 
+  /**
+   * Calculates Y-position for a specific row
+   * Sums all previous row heights and aisle widths
+   * 
+   * @param row - Target row index (0-indexed)
+   * @returns Y-coordinate in meters
+   */
   const getRowYPosition = (row: number) => {
     let y = 0;
     for (let r = 0; r < row; r++) {
@@ -120,6 +198,12 @@ export default function CreateLotScreen() {
   const lotWidth = colCount * spaceWidth;
   const lotHeight = calculateLotHeight();
 
+  // ==================== ROW MERGING ====================
+
+  /**
+   * Merges two adjacent rows by eliminating the aisle between them
+   * Validates that rows are adjacent and within bounds
+   */
   const handleMergeRows = () => {
     const r1 = parseInt(mergeRow1);
     const r2 = parseInt(mergeRow2);
@@ -142,17 +226,26 @@ export default function CreateLotScreen() {
     const lowerRow = Math.min(r1 - 1, r2 - 1);
     setMergedAisles(prev => new Set(prev).add(lowerRow));
     alert(`Successfully merged rows ${r1} and ${r2}!`);
-    
+
     // Clear input fields after successful merge
     setMergeRow1("");
     setMergeRow2("");
   };
 
+  /**
+   * Removes all row merges, restoring standard aisles
+   */
   const handleResetMerges = () => {
     setMergedAisles(new Set());
     alert("All row merges have been reset.");
   };
 
+  // ==================== ZOOM/PAN GESTURES ====================
+
+  /**
+   * Pinch gesture handler for zoom functionality
+   * Updates scale based on pinch factor, clamped between 0.5x and 5x
+   */
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
       scale.value = Math.max(0.5, Math.min(savedScale.value * e.scale, 5));
@@ -161,6 +254,10 @@ export default function CreateLotScreen() {
       savedScale.value = scale.value;
     });
 
+  /**
+   * Pan gesture handler for dragging the lot view
+   * Includes momentum scrolling with decay and boundary clamping
+   */
   const panGesture = Gesture.Pan()
     .minDistance(20) // Require 20px movement before triggering pan
     .onStart(() => {
@@ -171,34 +268,34 @@ export default function CreateLotScreen() {
       const canvasHeight = lotHeight * baseScaleValue;
       const containerWidth = Platform.OS === 'web' ? 800 : 400;
       const containerHeight = 400;
-      
+
       const scaledWidth = canvasWidth * scale.value;
       const scaledHeight = canvasHeight * scale.value;
-      
+
       const maxTranslateX = Math.max(0, (scaledWidth - containerWidth) / 2);
       const maxTranslateY = Math.max(0, (scaledHeight - containerHeight) / 2);
-      
+
       const newTranslateX = savedTranslateX.value + e.translationX;
       const newTranslateY = savedTranslateY.value + e.translationY;
-      
+
       translateX.value = Math.max(-maxTranslateX, Math.min(maxTranslateX, newTranslateX));
       translateY.value = Math.max(-maxTranslateY, Math.min(maxTranslateY, newTranslateY));
     })
     .onEnd((e) => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
-      
+
       const canvasWidth = lotWidth * baseScaleValue;
       const canvasHeight = lotHeight * baseScaleValue;
       const containerWidth = Platform.OS === 'web' ? 800 : 400;
       const containerHeight = 400;
-      
+
       const scaledWidth = canvasWidth * scale.value;
       const scaledHeight = canvasHeight * scale.value;
-      
+
       const maxTranslateX = Math.max(0, (scaledWidth - containerWidth) / 2);
       const maxTranslateY = Math.max(0, (scaledHeight - containerHeight) / 2);
-      
+
       // Apply momentum with decay and clamp to final position
       translateX.value = withDecay({
         velocity: e.velocityX,
@@ -210,7 +307,7 @@ export default function CreateLotScreen() {
           isPanning.value = false;
         }
       });
-      
+
       translateY.value = withDecay({
         velocity: e.velocityY,
         clamp: [-maxTranslateY, maxTranslateY],
@@ -236,6 +333,10 @@ export default function CreateLotScreen() {
     savedTranslateY.value = 0;
   };
 
+  /**
+   * Animated style for SVG container
+   * Applies current zoom and pan transformations
+   */
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -245,11 +346,17 @@ export default function CreateLotScreen() {
       ],
     };
   });
+  // ==================== SPACE GENERATION ====================
+
+  /**
+   * Generates parking spaces whenever dimensions change
+   * Uses setTimeout to defer generation and prevent UI blocking
+   */
 
   // Generate spaces whenever row/col changes
   useEffect(() => {
     setIsGenerating(true);
-    
+
     // Use setTimeout to defer generation, allowing UI to update
     const timer = setTimeout(() => {
       let id = 1;
@@ -282,12 +389,25 @@ export default function CreateLotScreen() {
     }
   }, [editingSpace]);
 
+  // ==================== SPACE MANAGEMENT ====================
+
+  /**
+   * Updates a specific space's properties
+   * @param id - Space ID to update
+   * @param updates - Partial space object with new values
+   */
   const updateSpace = (id: number, updates: Partial<Space>) => {
     setSpaces((prev) =>
       prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
     );
   };
 
+  /**
+ * Handles space click/tap for editing
+ * Only opens editor if user wasn't panning (prevents accidental opens)
+ * 
+ * @param space - Space that was clicked
+ */
   const handleSpacePress = (space: Space) => {
     // Only open editor if user wasn't panning
     if (!isPanning.value) {
@@ -295,6 +415,13 @@ export default function CreateLotScreen() {
     }
   };
 
+  /**
+ * Determines space color based on type and status
+ * Inactive spaces are always grey, active spaces use type colors
+ * 
+ * @param space - Space to get color for
+ * @returns Hex color string
+ */
   const getSpaceColor = (space: Space) => {
     if (space.status === "inactive") {
       return "#e5e7eb"; // greyed out if not schedulable
@@ -312,6 +439,14 @@ export default function CreateLotScreen() {
     }
   };
 
+  // ==================== SAVE FUNCTIONALITY ====================
+
+  /**
+   * Saves the parking lot to the database
+   * Validates required fields before submission
+   * 
+   * @async
+   */
   const handleSave = async () => {
     if (!lotName.trim()) {
       alert("Please enter a lot name before saving.");
@@ -363,19 +498,19 @@ export default function CreateLotScreen() {
 
   return (
     <View >
-        <View style={headerStyles.header}>
-              <View style ={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                 <Ionicons
-      name="arrow-back"
-      size={22}
-      color="#FFFFFF"
-      onPress={() => router.back()}
-    />
-                <Text style={headerStyles.headerTitle}>Create Parking Lot</Text>
-                
-              </View>
-            </View>
-   
+      <View style={headerStyles.header}>
+        <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Ionicons
+            name="arrow-back"
+            size={22}
+            color="#FFFFFF"
+            onPress={() => router.back()}
+          />
+          <Text style={headerStyles.headerTitle}>Create Parking Lot</Text>
+
+        </View>
+      </View>
+
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Lot details */}
@@ -840,19 +975,19 @@ function LabelInput({
 
   const handleChange = (text: string) => {
     setTempValue(text);
-    
+
     // If instant update is enabled, update parent immediately
     if (instantUpdate) {
       if (textType === "numeric") {
         // For numeric inputs, validate but update immediately
         const numValue = parseInt(text);
-        
+
         // Allow empty string for clearing
         if (text === "") {
           setValue("");
           return;
         }
-        
+
         // Only update if it's a valid number
         if (!isNaN(numValue)) {
           setValue(text);
@@ -866,13 +1001,13 @@ function LabelInput({
 
   const handleSubmit = () => {
     if (disabled) return;
-    
+
     // Skip submission if instant update is enabled
     if (instantUpdate) return;
-    
+
     if (textType === "numeric") {
       const numValue = parseInt(tempValue);
-      
+
       if (isNaN(numValue)) {
         Alert.alert("Invalid Input", "Please enter a valid number.");
         setTempValue(value);

@@ -16,9 +16,29 @@ import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
 const API_URL = "https://parkmaster-amhpdpftb4hqcfc9.canadacentral-01.azurewebsites.net";
 
+/**
+ * Available parking space types
+ * @typedef {"regular" | "visitor" | "handicapped" | "authorized personnel"} SpaceType
+ */
 type SpaceType = "regular" | "visitor" | "handicapped" | "authorized personnel";
+
+/**
+ * Current availability status of a parking space
+ * @typedef {"available" | "occupied"} SpaceStatus
+ */
 type SpaceStatus = "available" | "occupied";
 
+/**
+ * Represents a single parking space with real-time occupancy information
+ * @interface Space
+ * @property {number} id - Unique identifier for the space
+ * @property {number} row - Row index (0-based)
+ * @property {number} col - Column index (0-based)
+ * @property {SpaceType} type - Type of parking space
+ * @property {SpaceStatus} status - Current occupancy status
+ * @property {string} [occupiedBy] - Name of user currently occupying the space
+ * @property {string} [occupiedUntil] - Time string when occupation ends
+ */
 interface Space {
   id: number;
   row: number;
@@ -29,6 +49,18 @@ interface Space {
   occupiedUntil?: string;
 }
 
+/**
+ * Represents a parking reservation
+ * @interface Reservation
+ * @property {number} id - Unique identifier for the reservation
+ * @property {number} user_id - ID of the user who made the reservation
+ * @property {number} parking_lot_id - ID of the parking lot
+ * @property {number} space_id - ID of the reserved space
+ * @property {string} start_time - ISO timestamp when reservation starts
+ * @property {string} end_time - ISO timestamp when reservation ends
+ * @property {string} status - Current status of the reservation (e.g., 'active', 'completed')
+ * @property {string} [user_name] - Display name of the user
+ */
 interface Reservation {
   id: number;
   user_id: number;
@@ -40,6 +72,19 @@ interface Reservation {
   user_name?: string;
 }
 
+/**
+ * Represents a parking lot with real-time availability statistics
+ * @interface ParkingLot
+ * @property {number} id - Unique identifier for the parking lot
+ * @property {string} name - Display name of the parking lot
+ * @property {number} rows - Number of rows in the lot
+ * @property {number} cols - Number of columns in the lot
+ * @property {Space[]} spaces - Array of all parking spaces with current status
+ * @property {number[]} merged_aisles - Array of row indices where aisles are merged
+ * @property {number} totalSpots - Total number of parking spaces
+ * @property {number} availableSpots - Number of currently available spaces
+ * @property {number} occupiedSpots - Number of currently occupied spaces
+ */
 interface ParkingLot {
   id: number;
   name: string;
@@ -52,6 +97,32 @@ interface ParkingLot {
   occupiedSpots: number;
 }
 
+/**
+ * ViewParkingLotsScreen - Real-time parking availability viewer for clients
+ * 
+ * This component provides users with a comprehensive view of parking lot availability:
+ * - Real-time occupancy status for all parking lots
+ * - Live countdown clock showing current time
+ * - Visual parking lot layouts with color-coded availability
+ * - Interactive modal for detailed lot viewing
+ * - Full-screen mode for better visualization
+ * - Occupancy statistics and progress indicators
+ * - List of currently occupied spaces with user information
+ * - Automatic refresh of reservation data
+ * 
+ * The screen integrates with the reservation system to show which spaces
+ * are currently occupied and by whom, updating the display based on
+ * reservation time ranges.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered parking lots viewer screen
+ * 
+ * @example
+ * ```tsx
+ * // Navigate to view parking lots
+ * router.push('/user/view-parking-lots');
+ * ```
+ */
 export default function ViewParkingLotsScreen() {
   const router = useRouter();
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
@@ -76,6 +147,30 @@ export default function ViewParkingLotsScreen() {
     fetchParkingData();
   }, []);
 
+  /**
+ * Fetches parking lots and reservation data from the server
+ * 
+ * Makes parallel API calls to retrieve:
+ * 1. All parking lot configurations
+ * 2. All active reservations
+ * 
+ * Processes the data to:
+ * - Parse JSONB fields from PostgreSQL
+ * - Match reservations with parking spaces
+ * - Calculate real-time occupancy status
+ * - Compute availability statistics
+ * 
+ * @async
+ * @function fetchParkingData
+ * @returns {Promise<void>}
+ * @throws {Error} If the API requests fail
+ * 
+ * @example
+ * ```tsx
+ * // Manually refresh parking data
+ * await fetchParkingData();
+ * ```
+ */
   const fetchParkingData = async () => {
     try {
       setLoading(true);
@@ -182,6 +277,22 @@ export default function ViewParkingLotsScreen() {
     }
   };
 
+  /**
+   * Checks if the current time falls within a reservation's time range
+   * 
+   * @function isTimeInReservationRange
+   * @param {string} startTime - ISO timestamp of reservation start
+   * @param {string} endTime - ISO timestamp of reservation end
+   * @returns {boolean} True if current time is within the range
+   * 
+   * @example
+   * ```tsx
+   * const isActive = isTimeInReservationRange(
+   *   "2024-01-15T08:00:00Z",
+   *   "2024-01-15T17:00:00Z"
+   * );
+   * ```
+   */
   const isTimeInReservationRange = (startTime: string, endTime: string): boolean => {
     const now = new Date();
     const start = new Date(startTime);
@@ -189,26 +300,76 @@ export default function ViewParkingLotsScreen() {
     return now >= start && now <= end;
   };
 
+  /**
+   * Opens the detailed view modal for a specific parking lot
+   * 
+   * @function handleViewLot
+   * @param {ParkingLot} lot - The parking lot to view
+   * @returns {void}
+   */
   const handleViewLot = (lot: ParkingLot) => {
     setSelectedLot(lot);
     setIsModalVisible(true);
     setIsFullscreen(false);
   };
 
+  /**
+   * Closes the lot detail modal and resets state
+   * 
+   * @function handleCloseModal
+   * @returns {void}
+   */
   const handleCloseModal = () => {
     setIsModalVisible(false);
     setSelectedLot(null);
     setIsFullscreen(false);
   };
 
+  /**
+   * Enters full-screen viewing mode for the selected lot
+   * 
+   * @function handleFullscreen
+   * @returns {void}
+   */
   const handleFullscreen = () => {
     setIsFullscreen(true);
   };
 
+  /**
+   * Exits full-screen viewing mode
+   * 
+   * @function handleExitFullscreen
+   * @returns {void}
+   */
   const handleExitFullscreen = () => {
     setIsFullscreen(false);
   };
 
+  /**
+   * Determines the display color for a parking space
+   * 
+   * Priority logic:
+   * 1. If occupied → Red (#ef4444)
+   * 2. Otherwise, color based on space type:
+   *    - Visitor → Yellow (#FBC02D)
+   *    - Handicapped → Sky Blue (#00BFFF)
+   *    - Authorized Personnel → Orange-Red (#FF4500)
+   *    - Regular → Green (#388E3C)
+   * 
+   * @function getSpaceColor
+   * @param {Space} space - The parking space to get color for
+   * @returns {string} Hex color code
+   * 
+   * @example
+   * ```tsx
+   * const color = getSpaceColor({ 
+   *   id: 1, 
+   *   status: "occupied", 
+   *   type: "regular" 
+   * });
+   * // Returns "#ef4444" (red for occupied)
+   * ```
+   */
   const getSpaceColor = (space: Space) => {
     if (space.status === "occupied") {
       return "#ef4444";
@@ -232,10 +393,28 @@ export default function ViewParkingLotsScreen() {
   const mergedAisleWidth = 0.1;
   const baseScaleValue = 25;
 
+  /**
+   * Gets the aisle width after a specific row
+   * Returns merged width if the aisle has been merged, standard width otherwise
+   * 
+   * @function getAisleWidth
+   * @param {number} afterRow - The row index to check after
+   * @param {number[]} mergedAisles - Array of merged aisle indices
+   * @returns {number} The width of the aisle in meters
+   */
   const getAisleWidth = (afterRow: number, mergedAisles: number[]) => {
     return mergedAisles.includes(afterRow) ? mergedAisleWidth : aisleWidth;
   };
 
+  /**
+   * Calculates the total height of the parking lot
+   * Accounts for all rows and aisles (both standard and merged)
+   * 
+   * @function calculateLotHeight
+   * @param {number} rows - Number of rows in the lot
+   * @param {number[]} mergedAisles - Array of merged aisle indices
+   * @returns {number} Total height in meters
+   */
   const calculateLotHeight = (rows: number, mergedAisles: number[]): number => {
     let totalHeight = 0;
     for (let r = 0; r < rows; r++) {
@@ -247,6 +426,15 @@ export default function ViewParkingLotsScreen() {
     return totalHeight;
   };
 
+  /**
+   * Calculates the Y position for a given row
+   * Takes into account all previous rows and their aisles
+   * 
+   * @function getRowYPosition
+   * @param {number} row - The row index to calculate position for
+   * @param {number[]} mergedAisles - Array of merged aisle indices
+   * @returns {number} Y coordinate in meters
+   */
   const getRowYPosition = (row: number, mergedAisles: number[]): number => {
     let y = 0;
     for (let r = 0; r < row; r++) {
@@ -961,13 +1149,13 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   fullscreenTextButton: {
-  paddingVertical: 4,
-  paddingHorizontal: 8,
-},
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
 
-fullscreenText: {
-  color: "#388E3C",
-  fontSize: 14,
-  fontWeight: "600",
-},
+  fullscreenText: {
+    color: "#388E3C",
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });

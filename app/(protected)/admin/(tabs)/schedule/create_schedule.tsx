@@ -1,17 +1,42 @@
+/**
+ * @file create_schedule.tsx
+ * @description Multi-step wizard for creating parking reservations (Admin)
+ * @module app/(protected)/admin/(tabs)/schedule
+ * 
+ * This is the main container for the 3-step schedule creation process:
+ * 1. ParkingStep - Select user, location, lot, and spot
+ * 2. ReservationParkingStep - Set date, time, and recurrence
+ * 3. ReviewSubmitStep - Review and confirm submission
+ * 
+ * The component manages shared form state across all steps and handles
+ * final submission to the backend API.
+ */
+import type { ReservationData } from '@/types/global.types';
+import { headerStyles } from '@/utils/globalStyles';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View, Text , Button} from 'react-native';
-import { Appbar } from 'react-native-paper';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import ParkingStep from './components/ParkingStep';
 import ProgressIndicator from './components/ProgressIndicator';
 import ReservationParkingStep from './components/ReservationParkingStep';
 import ReviewSubmitStep from './components/ReviewSubmitStep';
-import type { ReservationData } from '@/types/global.types';
-import ParkingStep from './components/ParkingStep';
-import { headerStyles } from '@/utils/globalStyles';
-import { Ionicons } from '@expo/vector-icons';
 
-
-
+/**
+ * CreateSchedule Component
+ * 
+ * Main wizard container that orchestrates the 3-step schedule creation flow.
+ * Maintains form state across steps and handles navigation between them.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered multi-step form
+ * 
+ * @example
+ * ```tsx
+ * // Navigated to via router:
+ * router.push('/admin/(tabs)/schedule/create_schedule')
+ * ```
+ */
 export default function App() {
   const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -31,14 +56,33 @@ export default function App() {
     col: 0,
   });
 
+  /**
+   * Advances to the next step in the wizard
+   * Only called after current step validation passes
+   */
   const handleNext = (): void => {
     if (currentStep < 3) setCurrentStep(currentStep + 1);
   };
 
+  /**
+   * Returns to the previous step in the wizard
+   * Preserves all form data for editing
+   */
   const handlePrevious = (): void => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
+  /**
+   * Submits the complete reservation to the backend API
+   * 
+   * Transforms the form data into the API-expected format:
+   * - Converts Date objects to ISO strings
+   * - Maps UI field names to database column names
+   * - Includes all recurring dates if applicable
+   * 
+   * @async
+   * @throws {Error} If API request fails
+   */
   const handleSubmit = async () => {
     const reservation = {
       user_id: reservationData.user_id,
