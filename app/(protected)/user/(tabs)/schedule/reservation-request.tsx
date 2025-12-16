@@ -1,12 +1,11 @@
 import { headerStyles } from "@/utils/globalStyles";
 import { useRouter } from "expo-router";
 import {
-  ArrowLeft,
   Calendar,
   Clock,
   MapPin,
   Plus,
-  X,
+  X
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -23,6 +22,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+/**
+ * Represents a scheduled parking reservation
+ * @interface Schedule
+ * @property {number} id - Unique identifier for the schedule
+ * @property {string} spotNumber - Parking spot identifier (e.g., "A-24")
+ * @property {string} location - Descriptive location of the parking spot
+ * @property {string} timeRange - Time range string (e.g., "8:00 AM - 6:00 PM")
+ * @property {string} date - Date string representation
+ * @property {boolean} isActive - Whether this reservation is currently active
+ */
 interface Schedule {
   id: number;
   spotNumber: string;
@@ -32,6 +41,16 @@ interface Schedule {
   isActive: boolean;
 }
 
+/**
+ * Form data structure for creating new parking reservations
+ * @interface ReservationForm
+ * @property {string} startTime - Start time in 24-hour format (HH:MM)
+ * @property {string} endTime - End time in 24-hour format (HH:MM)
+ * @property {string} parkingLot - Selected parking lot name
+ * @property {string} date - Date in MM/DD/YYYY format
+ * @property {boolean} isRecurring - Whether the reservation repeats weekly
+ * @property {string[]} recurringDays - Array of day IDs for recurring reservations
+ */
 interface ReservationForm {
   startTime: string;
   endTime: string;
@@ -41,6 +60,32 @@ interface ReservationForm {
   recurringDays: string[];
 }
 
+/**
+ * ReservationRequestScreen - User interface for managing parking reservations
+ * 
+ * This component provides comprehensive reservation management functionality:
+ * - View current and upcoming parking reservations
+ * - Create new one-time reservations
+ * - Set up recurring weekly reservations
+ * - Select specific parking lots
+ * - Comprehensive form validation:
+ *   - Date format validation (MM/DD/YYYY)
+ *   - Date range checking (no past dates)
+ *   - Time format validation (24-hour HH:MM)
+ *   - Time range validation (end after start)
+ *   - Required field validation
+ * - Helpful tips and guidelines for users
+ * - Platform-specific dialogs (web vs native)
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered reservation request screen
+ * 
+ * @example
+ * ```tsx
+ * // Navigate to reservation screen
+ * router.push('/user/reservations');
+ * ```
+ */
 export default function ReservationRequestScreen() {
   const router = useRouter();
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -98,12 +143,25 @@ export default function ReservationRequestScreen() {
     { id: "sun", label: "Sun" },
   ];
 
+    /**
+   * Opens the reservation request modal
+   * Resets any existing form data
+   * 
+   * @function handleRequestSpot
+   * @returns {void}
+   */
   const handleRequestSpot = () => {
     console.log("Request spot button pressed");
     setIsModalVisible(true);
     console.log("Modal visibility set to:", true);
   };
 
+  /**
+   * Closes the reservation modal and resets form data
+   * 
+   * @function handleCloseModal
+   * @returns {void}
+   */
   const handleCloseModal = () => {
     setIsModalVisible(false);
     setFormData({
@@ -116,6 +174,20 @@ export default function ReservationRequestScreen() {
     });
   };
 
+  /**
+   * Toggles a day selection for recurring reservations
+   * Adds the day if not selected, removes it if already selected
+   * 
+   * @function toggleDay
+   * @param {string} dayId - The day identifier to toggle
+   * @returns {void}
+   * 
+   * @example
+   * ```tsx
+   * toggleDay("mon"); // Adds Monday if not selected
+   * toggleDay("mon"); // Removes Monday if already selected
+   * ```
+   */
   const toggleDay = (dayId: string) => {
     setFormData(prev => ({
       ...prev,
@@ -125,6 +197,41 @@ export default function ReservationRequestScreen() {
     }));
   };
 
+  /**
+   * Validates and submits the reservation request
+   * 
+   * Performs comprehensive validation:
+   * 1. Date validation:
+   *    - Required field check
+   *    - Format validation (MM/DD/YYYY)
+   *    - Month range (01-12)
+   *    - Day range based on month
+   *    - No past dates allowed
+   * 
+   * 2. Time validation:
+   *    - Required field checks
+   *    - Format validation (24-hour HH:MM)
+   *    - End time must be after start time
+   * 
+   * 3. Parking lot validation:
+   *    - Required field check
+   * 
+   * 4. Recurring validation:
+   *    - At least one day must be selected if recurring
+   * 
+   * Displays platform-appropriate success/error messages
+   * Closes modal on successful submission
+   * 
+   * @function handleSubmitRequest
+   * @returns {void}
+   * 
+   * @example
+   * ```tsx
+   * <TouchableOpacity onPress={handleSubmitRequest}>
+   *   <Text>Submit Request</Text>
+   * </TouchableOpacity>
+   * ```
+   */
   const handleSubmitRequest = () => {
     console.log("Submit button pressed");
     console.log("Form data:", formData);
